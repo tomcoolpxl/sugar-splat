@@ -375,7 +375,7 @@ export default class Board {
             targets: graphics,
             scaleX: 1.05,
             scaleY: 1.05,
-            alpha: alpha - 0.1,
+            alpha: 0.8,
             duration: 1000,
             yoyo: true,
             repeat: -1,

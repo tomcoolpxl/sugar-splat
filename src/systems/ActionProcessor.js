@@ -37,6 +37,9 @@ export default class ActionProcessor {
             const processedCells = new Set();
             while (processingQueue.length > 0) {
                 const action = processingQueue.shift();
+                
+                if (!this.board.isValidCell(action.row, action.col)) continue;
+
                 const key = `${action.row},${action.col}`;
                 if (processedCells.has(key)) continue;
                 processedCells.add(key);
@@ -115,19 +118,26 @@ export default class ActionProcessor {
 
         const adjacentCells = new Set();
         const specialsToActivate = [];
+        const cellsToClear = [];
+
         for (const cell of cells) {
             this.board.getAdjacentCells(cell.row, cell.col).forEach(adj => adjacentCells.add(`${adj.row},${adj.col}`));
             const target = this.board.candies[cell.row][cell.col];
-            if (target && target.isSpecial && target !== candy) specialsToActivate.push(target);
+            if (target && target.isSpecial && target !== candy) {
+                specialsToActivate.push(target);
+            } else {
+                cellsToClear.push(cell);
+            }
         }
         await this.board.unlockAdjacentTiles(adjacentCells);
 
         const score = this.board.calculateScore(cells.length, 1) + 50;
         this.scene.events.emit('scoreUpdate', score, 1);
 
-        await this.board.clearCandies(cells);
-        for (const special of specialsToActivate) {
-            if (special.scene) await this.activateSpecial(special);
+        await this.board.clearCandies(cellsToClear);
+        
+        if (specialsToActivate.length > 0) {
+            await Promise.all(specialsToActivate.map(s => this.activateSpecial(s)));
         }
     }
 }
