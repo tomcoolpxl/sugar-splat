@@ -143,27 +143,29 @@ export default class Board {
         jellyGraphics.setDepth(0.5);
 
         // Color based on layers (darker = more layers)
-        const alpha = layers === 2 ? 0.6 : 0.4;
-        const color = layers === 2 ? 0xff69b4 : 0xffb6c1;
+        // Increased alpha for better visibility
+        const alpha = layers === 2 ? 0.8 : 0.6;
+        const color = layers === 2 ? 0xff1493 : 0xff69b4; // Deeper pinks
 
         jellyGraphics.fillStyle(color, alpha);
+        // Made jelly larger to be visible behind candies (cellSize - 4 instead of -8)
         jellyGraphics.fillRoundedRect(
-            x - this.cellSize / 2 + 4,
-            y - this.cellSize / 2 + 4,
-            this.cellSize - 8,
-            this.cellSize - 8,
-            10
+            x - this.cellSize / 2 + 2,
+            y - this.cellSize / 2 + 2,
+            this.cellSize - 4,
+            this.cellSize - 4,
+            12
         );
 
         // Add border for double jelly
         if (layers === 2) {
-            jellyGraphics.lineStyle(3, 0xff1493, 0.8);
+            jellyGraphics.lineStyle(4, 0xffffff, 0.8);
             jellyGraphics.strokeRoundedRect(
-                x - this.cellSize / 2 + 4,
-                y - this.cellSize / 2 + 4,
-                this.cellSize - 8,
-                this.cellSize - 8,
-                10
+                x - this.cellSize / 2 + 2,
+                y - this.cellSize / 2 + 2,
+                this.cellSize - 4,
+                this.cellSize - 4,
+                12
             );
         }
 
@@ -429,49 +431,54 @@ export default class Board {
         this.inputLocked = true;
         this.deselectCandy();
 
-        // Check for special + special combo BEFORE swap
-        const bothSpecial = candy1.isSpecial && candy2.isSpecial;
-        const oneSpecial = candy1.isSpecial || candy2.isSpecial;
+        try {
+            // Check for special + special combo BEFORE swap
+            const bothSpecial = candy1.isSpecial && candy2.isSpecial;
+            const oneSpecial = candy1.isSpecial || candy2.isSpecial;
 
-        // Perform the swap animation
-        await this.swapCandies(candy1, candy2);
-
-        // Handle special + special combinations
-        if (bothSpecial) {
-            this.scene.events.emit('validSwap');
-            await this.activateSpecialCombo(candy1, candy2);
-            await this.applyGravity();
-            await this.fillEmptySpaces();
-            await this.processCascades();
-            this.inputLocked = false;
-            this.scene.events.emit('cascadeComplete');
-            return;
-        }
-
-        // Check for matches
-        const matches = this.findMatches();
-
-        // If one candy is special and gets matched, it activates
-        if (matches.length > 0) {
-            this.scene.events.emit('validSwap');
-            await this.processMatches(matches);
-            this.scene.events.emit('cascadeComplete');
-        } else if (oneSpecial) {
-            // Swapping a special with non-matching candy still activates it
-            const specialCandy = candy1.isSpecial ? candy1 : candy2;
-            this.scene.events.emit('validSwap');
-            await this.activateSpecial(specialCandy);
-            await this.applyGravity();
-            await this.fillEmptySpaces();
-            await this.processCascades();
-            this.scene.events.emit('cascadeComplete');
-        } else {
-            // Invalid swap - revert
+            // Perform the swap animation
             await this.swapCandies(candy1, candy2);
-            this.scene.events.emit('invalidSwap');
-        }
 
-        this.inputLocked = false;
+            // Handle special + special combinations
+            if (bothSpecial) {
+                this.scene.events.emit('validSwap');
+                await this.activateSpecialCombo(candy1, candy2);
+                await this.applyGravity();
+                await this.fillEmptySpaces();
+                await this.processCascades();
+                this.scene.events.emit('cascadeComplete');
+                return;
+            }
+
+            // Check for matches
+            const matches = this.findMatches();
+
+            // If one candy is special and gets matched, it activates
+            if (matches.length > 0) {
+                this.scene.events.emit('validSwap');
+                await this.processMatches(matches);
+                this.scene.events.emit('cascadeComplete');
+            } else if (oneSpecial) {
+                // Swapping a special with non-matching candy still activates it
+                const specialCandy = candy1.isSpecial ? candy1 : candy2;
+                this.scene.events.emit('validSwap');
+                await this.activateSpecial(specialCandy);
+                await this.applyGravity();
+                await this.fillEmptySpaces();
+                await this.processCascades();
+                this.scene.events.emit('cascadeComplete');
+            } else {
+                // Invalid swap - revert
+                await this.swapCandies(candy1, candy2);
+                this.scene.events.emit('invalidSwap');
+            }
+        } catch (error) {
+            console.error('Error during swap processing:', error);
+            // Attempt to revert swap if something went wrong? 
+            // Ideally we just unlock input so the game isn't soft-locked.
+        } finally {
+            this.inputLocked = false;
+        }
     }
 
     swapCandies(candy1, candy2) {
@@ -705,47 +712,25 @@ export default class Board {
         };
     }
 
-    async processMatches(matches) {
+    // Unified board processing loop (handles matches -> clearing -> gravity -> repeat)
+    async processBoardState(initialMatches = []) {
+        let matches = initialMatches.length > 0 ? initialMatches : this.findMatches();
         let cascadeLevel = 0;
 
         while (matches.length > 0) {
             cascadeLevel++;
 
-            const cellsToClear = new Map();
+            // 1. Collect all initial actions from matches
+            // We use a Queue to handle recursive explosions
+            const processingQueue = [];
+            const cellsToClear = new Map(); // Key: "row,col", Value: {row, col, delay}
             const specialsToCreate = [];
-            const adjacentToMatches = new Set();
-            const specialsToAnimate = []; // Track specials that need visual effects
+            const adjacentToUnlock = new Set();
+            const specialsToAnimate = new Set();
 
+            // Populate queue with initial matches
             for (const match of matches) {
-                // Check if any candy in this match is already a special that should activate
-                for (const cell of match.cells) {
-                    const candy = this.candies[cell.row][cell.col];
-                    if (candy && candy.isSpecial) {
-                        // Track this special for animation
-                        specialsToAnimate.push(candy);
-
-                        const additionalCells = await this.getSpecialActivationCells(candy);
-                        for (const addCell of additionalCells) {
-                            const key = `${addCell.row},${addCell.col}`;
-                            if (!cellsToClear.has(key)) {
-                                cellsToClear.set(key, addCell);
-                            }
-                        }
-                    }
-
-                    // Track cells adjacent to this match (for unlocking)
-                    this.getAdjacentCells(cell.row, cell.col).forEach(adj => {
-                        adjacentToMatches.add(`${adj.row},${adj.col}`);
-                    });
-                }
-
-                for (const cell of match.cells) {
-                    const key = `${cell.row},${cell.col}`;
-                    if (!cellsToClear.has(key)) {
-                        cellsToClear.set(key, cell);
-                    }
-                }
-
+                // Determine special creation from this match
                 if (match.specialToCreate && match.specialPosition) {
                     specialsToCreate.push({
                         type: match.specialToCreate,
@@ -753,33 +738,104 @@ export default class Board {
                         candyType: match.type
                     });
                 }
+
+                // Add all matched cells to queue to be processed
+                for (const cell of match.cells) {
+                    processingQueue.push({
+                        type: 'match_clear',
+                        row: cell.row,
+                        col: cell.col,
+                        source: null // No specific source for match clearing
+                    });
+                }
             }
 
-            // Show visual effects for all specials being activated
-            for (const special of specialsToAnimate) {
-                await this.showSpecialActivation(special);
+            // 2. Process the Queue (Handle Chain Reactions)
+            const processedCells = new Set(); // To avoid infinite loops or double processing
+
+            while (processingQueue.length > 0) {
+                const action = processingQueue.shift();
+                const key = `${action.row},${action.col}`;
+
+                if (processedCells.has(key)) continue;
+                processedCells.add(key);
+
+                const candy = this.candies[action.row][action.col];
+                
+                // Add to clear list
+                if (!cellsToClear.has(key)) {
+                    cellsToClear.set(key, { row: action.row, col: action.col });
+                }
+
+                // Identify neighbors for unlocking (Jelly/Locks adjacent to clear)
+                this.getAdjacentCells(action.row, action.col).forEach(adj => {
+                    adjacentToUnlock.add(`${adj.row},${adj.col}`);
+                });
+
+                // If this cell contains a special candy, trigger it!
+                // (Unless it's being created this turn - handled by specialsToCreate check later)
+                if (candy && candy.isSpecial) {
+                    specialsToAnimate.add(candy);
+                    
+                    // Get affected cells based on special type
+                    const affectedCells = await this.getSpecialActivationCells(candy);
+                    
+                    for (const cell of affectedCells) {
+                        // Add affected cells to queue
+                        processingQueue.push({
+                            type: 'special_hit',
+                            row: cell.row,
+                            col: cell.col,
+                            source: candy
+                        });
+                    }
+                    
+                    // Trigger "specialActivated" event for sound/score
+                    this.scene.events.emit('specialActivated', candy.specialType, candy.row, candy.col);
+                }
+            }
+
+            // 3. Visuals & Scoring
+            
+            // Show special activation animations
+            const animatePromises = [];
+            for (const specialCandy of specialsToAnimate) {
+                animatePromises.push(this.showSpecialActivation(specialCandy));
+            }
+            if (animatePromises.length > 0) {
+                await Promise.all(animatePromises);
             }
 
             // Unlock adjacent locked tiles
-            await this.unlockAdjacentTiles(adjacentToMatches);
+            await this.unlockAdjacentTiles(adjacentToUnlock);
 
-            // Calculate score
-            const score = this.calculateScore(cellsToClear.size, cascadeLevel);
+            // Calculate & Emit Score
+            // Base score on number of cleared tiles + bonuses for specials
+            const uniqueClears = cellsToClear.size;
+            const score = this.calculateScore(uniqueClears, cascadeLevel);
             this.scene.events.emit('scoreUpdate', score, cascadeLevel);
 
-            // Clear candies and handle jelly
+            // 4. Execution (Clear Board)
             const clearList = Array.from(cellsToClear.values());
             await this.clearCandiesWithSpecials(clearList, specialsToCreate);
 
-            // Apply gravity
+            // 5. Physics (Gravity & Refill)
             await this.applyGravity();
-
-            // Fill empty spaces
             await this.fillEmptySpaces();
 
-            // Check for new matches (cascade)
+            // 6. Check for new matches (loop continues)
             matches = this.findMatches();
         }
+    }
+
+    // Process matches found after a swap
+    async processMatches(matches) {
+        await this.processBoardState(matches);
+    }
+
+    // Process cascades (gravity caused matches)
+    async processCascades() {
+        await this.processBoardState();
     }
 
     getAdjacentCells(row, col) {
@@ -812,74 +868,6 @@ export default class Board {
         if (unlocked.length > 0) {
             // Small delay for unlock animation
             await new Promise(resolve => this.scene.time.delayedCall(150, resolve));
-        }
-    }
-
-    async processCascades() {
-        let matches = this.findMatches();
-        let cascadeLevel = 0;
-
-        while (matches.length > 0) {
-            cascadeLevel++;
-
-            const cellsToClear = new Map();
-            const specialsToCreate = [];
-            const adjacentToMatches = new Set();
-            const specialsToAnimate = []; // Track specials that need visual effects
-
-            for (const match of matches) {
-                for (const cell of match.cells) {
-                    const candy = this.candies[cell.row][cell.col];
-                    if (candy && candy.isSpecial) {
-                        // Track this special for animation
-                        specialsToAnimate.push(candy);
-
-                        const additionalCells = await this.getSpecialActivationCells(candy);
-                        for (const addCell of additionalCells) {
-                            const key = `${addCell.row},${addCell.col}`;
-                            if (!cellsToClear.has(key)) {
-                                cellsToClear.set(key, addCell);
-                            }
-                        }
-                    }
-
-                    this.getAdjacentCells(cell.row, cell.col).forEach(adj => {
-                        adjacentToMatches.add(`${adj.row},${adj.col}`);
-                    });
-                }
-
-                for (const cell of match.cells) {
-                    const key = `${cell.row},${cell.col}`;
-                    if (!cellsToClear.has(key)) {
-                        cellsToClear.set(key, cell);
-                    }
-                }
-
-                if (match.specialToCreate && match.specialPosition) {
-                    specialsToCreate.push({
-                        type: match.specialToCreate,
-                        position: match.specialPosition,
-                        candyType: match.type
-                    });
-                }
-            }
-
-            // Show visual effects for all specials being activated
-            for (const special of specialsToAnimate) {
-                await this.showSpecialActivation(special);
-            }
-
-            await this.unlockAdjacentTiles(adjacentToMatches);
-
-            const score = this.calculateScore(cellsToClear.size, cascadeLevel);
-            this.scene.events.emit('scoreUpdate', score, cascadeLevel);
-
-            const clearList = Array.from(cellsToClear.values());
-            await this.clearCandiesWithSpecials(clearList, specialsToCreate);
-            await this.applyGravity();
-            await this.fillEmptySpaces();
-
-            matches = this.findMatches();
         }
     }
 

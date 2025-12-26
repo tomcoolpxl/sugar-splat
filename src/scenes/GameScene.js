@@ -1,4 +1,5 @@
 import Board from '../objects/Board.js';
+import SoundManager from '../systems/SoundManager.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -19,6 +20,9 @@ export default class GameScene extends Phaser.Scene {
     create() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
+
+        // Initialize Sound Manager
+        this.soundManager = new SoundManager(this);
 
         // Load level data
         this.loadLevel(this.currentLevel);
@@ -604,6 +608,9 @@ export default class GameScene extends Phaser.Scene {
         this.events.on('scoreUpdate', (points, cascadeLevel) => {
             this.score += points;
             this.scoreText.setText(`Score: ${this.score}`);
+            
+            // Play sound
+            this.soundManager.play(cascadeLevel > 1 ? 'cascade' : 'match');
 
             // Update objective display based on type
             if (this.objective === 'score') {
@@ -620,9 +627,15 @@ export default class GameScene extends Phaser.Scene {
             this.resetHintTimer();
         });
 
+        // Special activated event
+        this.events.on('specialActivated', (type) => {
+            this.soundManager.play(type === 'bomb' ? 'bomb' : 'line');
+        });
+
         // Jelly cleared event
         this.events.on('jellyCleared', (row, col) => {
             this.jellyCleared++;
+            this.soundManager.play('line');
             const remaining = this.jellyTarget - this.jellyCleared;
             this.objectiveText.setText(`🍮 Jelly: ${remaining}`);
             this.updateProgressBar();
@@ -640,6 +653,7 @@ export default class GameScene extends Phaser.Scene {
         // Jelly hit (double->single) event
         this.events.on('jellyHit', (row, col) => {
             this.jellyCleared++;
+            this.soundManager.play('click');
             const remaining = this.jellyTarget - this.jellyCleared;
             this.objectiveText.setText(`🍮 Jelly: ${remaining}`);
             this.updateProgressBar();
@@ -647,12 +661,14 @@ export default class GameScene extends Phaser.Scene {
 
         // Lock broken event
         this.events.on('lockBroken', (row, col) => {
+            this.soundManager.play('line');
             // Visual feedback - screen flash
             this.cameras.main.flash(100, 135, 206, 235, false);
         });
 
         // Valid swap - decrement moves
         this.events.on('validSwap', () => {
+            this.soundManager.play('swap');
             this.movesRemaining--;
             this.movesText.setText(`Moves: ${this.movesRemaining}`);
 
@@ -697,6 +713,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Invalid swap feedback
         this.events.on('invalidSwap', () => {
+            this.soundManager.play('invalid');
             // Could add shake or sound effect here
             this.resetHintTimer();
         });
@@ -848,6 +865,7 @@ export default class GameScene extends Phaser.Scene {
 
     showWinScreen() {
         this.isGameOver = true;
+        this.soundManager.play('win');
         this.board.inputLocked = true;
         this.clearHint();
 
@@ -988,6 +1006,7 @@ export default class GameScene extends Phaser.Scene {
 
     showLoseScreen() {
         this.isGameOver = true;
+        this.soundManager.play('invalid');
         this.board.inputLocked = true;
         this.clearHint();
 
@@ -1264,12 +1283,24 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
-    update() {
+    update(time, delta) {
         // Check for stuck board
         if (!this.isGameOver && !this.board.inputLocked) {
             if (!this.board.hasValidMoves()) {
                 this.board.shuffle();
             }
+        }
+
+        // Watchdog for input lock
+        if (this.board.inputLocked) {
+            this.lockTimer = (this.lockTimer || 0) + delta;
+            if (this.lockTimer > 5000) { // 5 seconds max lock time
+                console.warn('Input lock watchdog triggered - forcing unlock');
+                this.board.inputLocked = false;
+                this.lockTimer = 0;
+            }
+        } else {
+            this.lockTimer = 0;
         }
     }
 
