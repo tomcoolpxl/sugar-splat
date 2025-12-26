@@ -6,14 +6,14 @@ export default class SoundManager {
         
         // Define sound types and their fallback synth parameters
         this.soundDefs = {
-            'swap': { type: 'sine', freqStart: 300, freqEnd: 500, duration: 0.1 },
-            'match': { type: 'triangle', freqStart: 400, freqEnd: 800, duration: 0.15 },
-            'invalid': { type: 'sawtooth', freqStart: 150, freqEnd: 100, duration: 0.2 },
-            'cascade': { type: 'sine', freqStart: 600, freqEnd: 1200, duration: 0.2 },
-            'win': { type: 'sine', freqStart: 400, freqEnd: 1000, duration: 0.5, arpeggio: true },
+            'swap': { type: 'sine', freqStart: 400, freqEnd: 600, duration: 0.1 },
+            'match': { type: 'triangle', freqStart: 440, freqEnd: 880, duration: 0.15 },
+            'invalid': { type: 'sawtooth', freqStart: 150, freqEnd: 100, duration: 0.15 },
+            'cascade': { type: 'sine', freqStart: 880, freqEnd: 1760, duration: 0.2 },
+            'win': { type: 'triangle', freqStart: 523.25, freqEnd: 1046.50, duration: 0.6, arpeggio: true }, // C Major
             'click': { type: 'square', freqStart: 800, freqEnd: 800, duration: 0.05 },
-            'bomb': { type: 'noise', duration: 0.4 }, // Special handling
-            'line': { type: 'sawtooth', freqStart: 800, freqEnd: 200, duration: 0.3 }
+            'bomb': { type: 'noise', duration: 0.4 },
+            'line': { type: 'sawtooth', freqStart: 600, freqEnd: 300, duration: 0.25 }
         };
     }
 

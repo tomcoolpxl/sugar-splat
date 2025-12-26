@@ -818,27 +818,55 @@ export default class GameScene extends Phaser.Scene {
         const validMove = this.board.findValidMove();
         if (!validMove) return;
 
-        // Highlight the two candies
+        // Visual Hint: Hand cursor moving between the two candies
+        const [cell1, cell2] = validMove;
+        const pos1 = this.board.gridToWorld(cell1.row, cell1.col);
+        const pos2 = this.board.gridToWorld(cell2.row, cell2.col);
+
+        if (!this.hintHand) {
+            this.hintHand = this.add.sprite(0, 0, 'hand').setDepth(100);
+        }
+        
+        this.hintHand.setPosition(pos1.x, pos1.y);
+        this.hintHand.setVisible(true);
+        this.hintHand.setAlpha(1);
+
+        this.hintHandTween = this.tweens.add({
+            targets: this.hintHand,
+            x: pos2.x,
+            y: pos2.y,
+            duration: 800,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+
+        // Also highlight the candies slightly
         validMove.forEach(cell => {
             const candy = this.board.candies[cell.row][cell.col];
             if (candy) {
                 this.hintCandies.push(candy);
-
-                // Pulsing glow effect
                 this.tweens.add({
                     targets: candy,
-                    scaleX: 1.15,
-                    scaleY: 1.15,
-                    duration: 500,
+                    scaleX: 1.1,
+                    scaleY: 1.1,
+                    duration: 400,
                     yoyo: true,
-                    repeat: -1,
-                    ease: 'Sine.easeInOut'
+                    repeat: -1
                 });
             }
         });
     }
 
     clearHint() {
+        if (this.hintHand) {
+            this.hintHand.setVisible(false);
+            if (this.hintHandTween) {
+                this.hintHandTween.stop();
+                this.hintHandTween = null;
+            }
+        }
+
         this.hintCandies.forEach(candy => {
             if (candy && candy.active) {
                 this.tweens.killTweensOf(candy);

@@ -320,6 +320,18 @@ export default class Board {
             graphics.strokeRoundedRect(x - this.cellSize / 2 + 2, y - this.cellSize / 2 + 2, this.cellSize - 4, this.cellSize - 4, 12);
         }
         this.jellySprites[row][col] = graphics;
+
+        // Add breathing animation
+        this.scene.tweens.add({
+            targets: graphics,
+            scaleX: 1.05,
+            scaleY: 1.05,
+            alpha: alpha - 0.1,
+            duration: 1000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
     }
 
     drawLockOverlays() {
@@ -524,6 +536,20 @@ export default class Board {
 
     async showBigExplosion(row, col) {
         const { x, y } = this.gridToWorld(row, col);
+        
+        // Shockwave ring
+        const ring = this.scene.add.graphics();
+        ring.lineStyle(6, 0xffffff, 1);
+        ring.strokeCircle(x, y, this.cellSize);
+        this.scene.tweens.add({
+            targets: ring,
+            scaleX: 3,
+            scaleY: 3,
+            alpha: 0,
+            duration: 500,
+            onComplete: () => ring.destroy()
+        });
+
         const c = this.scene.add.graphics().fillStyle(0xff6600, 0.7).fillCircle(x, y, this.cellSize * 2.5);
         this.scene.cameras.main.shake(200, 0.01);
         return new Promise(res => this.scene.tweens.add({ targets: c, alpha: 0, scaleX: 1.5, scaleY: 1.5, duration: 400, onComplete: () => { c.destroy(); res(); } }));

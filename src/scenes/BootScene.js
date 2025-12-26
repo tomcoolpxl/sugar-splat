@@ -396,6 +396,31 @@ export default class BootScene extends Phaser.Scene {
         lockGraphics.lineBetween(56, 8, 8, 56);
         lockGraphics.generateTexture('lock', 64, 64);
         lockGraphics.destroy();
+
+        // Hand/Arrow Cursor
+        const handGraphics = this.add.graphics();
+        handGraphics.fillStyle(0xffffff, 1);
+        handGraphics.lineStyle(3, 0x000000, 1);
+        
+        // Draw an arrow pointing up-left
+        const arrowPoly = new Phaser.Geom.Polygon([
+            32, 60, // Bottom right of stem
+            32, 32, // Top right of stem
+            50, 32, // Right wing
+            20, 0,  // Tip
+            -10, 32,// Left wing
+            8, 32,  // Top left of stem
+            8, 60   // Bottom left of stem
+        ]);
+        
+        // Translate to center
+        const points = arrowPoly.points.map(p => ({ x: p.x + 10, y: p.y }));
+        
+        handGraphics.fillPoints(points, true);
+        handGraphics.strokePoints(points, true);
+        
+        handGraphics.generateTexture('hand', 64, 64);
+        handGraphics.destroy();
     }
 
     create() {
