@@ -7,6 +7,10 @@ export default class MenuScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
+        // Initialize Sound Manager
+        this.soundManager = new SoundManager(this);
+        this.soundManager.startMusic();
+
         // Background gradient
         this.createBackground(width, height);
 
@@ -154,6 +158,12 @@ export default class MenuScene extends Phaser.Scene {
 
             // Toggle game sound
             this.sound.mute = !newState;
+            
+            // Re-check music state
+            if (newState) {
+                // If turning on, we might need to restart/resume music logic if it was suppressed
+                // But startMusic() handles mute check internally on each note
+            }
         });
 
         // Apply saved sound state

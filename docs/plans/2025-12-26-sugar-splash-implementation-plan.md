@@ -306,22 +306,20 @@ This document outlines the step-by-step implementation plan for Sugar Splash. Ea
 
 ## Phase 13: Audio
 
-### Step 13.1: Sound Effect Integration
-- Add placeholder sound files (or generate with jsfxr/similar)
-- Implement sounds: select, swap, invalid, match, cascade
-- Implement sounds: level complete, level fail, button click
-- Test: Sounds play at correct moments
+### Step 13.1: Synth Sound Polishing
+- Refine `SoundManager.js` synth parameters for all actions.
+- Implement sounds: select, swap, invalid, match, cascade.
+- Implement sounds: level complete, level fail, button click.
+- Test: Sounds play at correct moments and feel cohesive.
 
-### Step 13.2: Background Music
-- Add looping background track
-- Fade in on menu scene
-- Continue across scenes
-- Test: Music plays and loops
+### Step 13.2: Procedural Background Music (Optional)
+- Explore generating a simple looping melody using WebAudio.
+- Test: Music complements the synth SFX.
 
 ### Step 13.3: Audio Controls
-- Implement mute toggle (saves to localStorage)
-- Apply mute state on game load
-- Test: Mute toggle works correctly
+- Implement mute toggle (saves to localStorage).
+- Apply mute state on game load.
+- Test: Mute toggle works correctly.
 
 ---
 

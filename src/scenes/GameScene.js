@@ -23,6 +23,12 @@ export default class GameScene extends Phaser.Scene {
 
         // Initialize Sound Manager
         this.soundManager = new SoundManager(this);
+        
+        // Apply saved mute state
+        const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
+        this.sound.mute = !soundOn;
+
+        this.soundManager.startMusic();
 
         // Load level data
         this.loadLevel(this.currentLevel);
@@ -1040,7 +1046,7 @@ export default class GameScene extends Phaser.Scene {
 
     showLoseScreen() {
         this.isGameOver = true;
-        this.soundManager.play('invalid');
+        this.soundManager.play('levelFail');
         this.board.inputLocked = true;
         this.clearHint();
 

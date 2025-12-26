@@ -123,8 +123,10 @@ export default class Board {
         this.lastClickTime = now;
 
         if (this.selectedCandy === null) {
+            this.scene.soundManager.play('select');
             this.selectCandy(candy);
         } else if (this.selectedCandy === candy) {
+            this.scene.soundManager.play('click');
             this.deselectCandy();
         } else if (this.isAdjacent(this.selectedCandy.row, this.selectedCandy.col, candy.row, candy.col)) {
             if (this.locked[candy.row][candy.col]) {
