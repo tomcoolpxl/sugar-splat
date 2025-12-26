@@ -1016,8 +1016,52 @@ export default class Board {
 
         let cells = [];
 
-        if ((type1 === 'line_h' && type2 === 'line_v') ||
-            (type1 === 'line_v' && type2 === 'line_h')) {
+        // 1. Color Bomb + Color Bomb (Clear Board)
+        if (type1 === 'color_bomb' && type2 === 'color_bomb') {
+            for (let r = 0; r < this.rows; r++) {
+                for (let c = 0; c < this.cols; c++) {
+                    if (this.candies[r][c]) {
+                        cells.push({ row: r, col: c });
+                    }
+                }
+            }
+            await this.showBigExplosion(candy1.row, candy1.col);
+        }
+        // 2. Color Bomb + Striped/Bomb
+        else if (type1 === 'color_bomb' || type2 === 'color_bomb') {
+            const colorBomb = type1 === 'color_bomb' ? candy1 : candy2;
+            const otherCandy = type1 === 'color_bomb' ? candy2 : candy1;
+            const targetColor = otherCandy.candyType;
+            const targetSpecial = otherCandy.specialType === 'bomb' ? 'bomb' : (Math.random() > 0.5 ? 'line_h' : 'line_v');
+
+            const targets = [];
+            for (let r = 0; r < this.rows; r++) {
+                for (let c = 0; c < this.cols; c++) {
+                    if (this.grid[r][c] === targetColor && this.candies[r][c]) {
+                        targets.push(this.candies[r][c]);
+                    }
+                }
+            }
+
+            // Convert all targets to special
+            for (const target of targets) {
+                target.makeSpecial(targetSpecial);
+                // Visual delay
+                await new Promise(resolve => this.scene.time.delayedCall(20, resolve));
+            }
+
+            // Explode them all
+            const activationPromises = targets.map(t => this.activateSpecial(t));
+            await Promise.all(activationPromises);
+            
+            // Clear the original combo pieces
+            cells.push({ row: candy1.row, col: candy1.col });
+            cells.push({ row: candy2.row, col: candy2.col });
+        }
+        // 3. Striped + Striped
+        else if ((type1 === 'line_h' && type2 === 'line_v') ||
+            (type1 === 'line_v' && type2 === 'line_h') ||
+            (type1.startsWith('line') && type2.startsWith('line'))) {
             const row = candy1.row;
             const col = candy1.col;
 
@@ -1029,7 +1073,9 @@ export default class Board {
             }
 
             await this.showCrossEffect(row, col);
-        } else if ((type1 === 'bomb' && type2 === 'bomb')) {
+        } 
+        // 4. Bomb + Bomb
+        else if ((type1 === 'bomb' && type2 === 'bomb')) {
             const row = candy1.row;
             const col = candy1.col;
 
@@ -1042,7 +1088,9 @@ export default class Board {
             }
 
             await this.showBigExplosion(row, col);
-        } else if ((type1 === 'bomb' || type2 === 'bomb')) {
+        } 
+        // 5. Bomb + Striped
+        else if ((type1 === 'bomb' || type2 === 'bomb')) {
             const bombCandy = type1 === 'bomb' ? candy1 : candy2;
             const lineCandy = type1 === 'bomb' ? candy2 : candy1;
             const row = bombCandy.row;
@@ -1067,7 +1115,9 @@ export default class Board {
             }
 
             await this.showBigExplosion(row, col);
-        } else {
+        } 
+        // Fallback (e.g. Line + Line same direction not caught above)
+        else {
             const row = candy1.row;
             const col = candy1.col;
 
@@ -1083,10 +1133,18 @@ export default class Board {
 
         // Unlock adjacent tiles
         const adjacentCells = new Set();
+        const specialsToActivate = [];
+
         for (const cell of cells) {
             this.getAdjacentCells(cell.row, cell.col).forEach(adj => {
                 adjacentCells.add(`${adj.row},${adj.col}`);
             });
+
+            // Check for collateral specials (e.g. Line+Line hits a Bomb)
+            const targetCandy = this.candies[cell.row][cell.col];
+            if (targetCandy && targetCandy.isSpecial && targetCandy !== candy1 && targetCandy !== candy2) {
+                specialsToActivate.push(targetCandy);
+            }
         }
         await this.unlockAdjacentTiles(adjacentCells);
 
@@ -1094,6 +1152,18 @@ export default class Board {
         this.scene.events.emit('scoreUpdate', score, 1);
 
         await this.clearCandies(cells);
+
+        // Recursively trigger collateral specials
+        for (const special of specialsToActivate) {
+            // Check if still valid (might have been cleared but object exists)
+            // activateSpecial handles destroyed sprites gracefully if we check grid?
+            // Actually clearCandies nulls the grid.
+            // But we have the reference. activateSpecial uses row/col.
+            // We need to ensure we don't double-activate or crash.
+            if (special.scene) { // Check if not destroyed
+                 await this.activateSpecial(special);
+            }
+        }
     }
 
     async showSpecialActivation(candy) {

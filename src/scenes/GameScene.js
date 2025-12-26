@@ -863,25 +863,31 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
-    showWinScreen() {
+    async showWinScreen() {
         this.isGameOver = true;
-        this.soundManager.play('win');
         this.board.inputLocked = true;
         this.clearHint();
+
+        // Play Bonus Round if moves remaining
+        if (this.movesRemaining > 0) {
+            await this.playBonusRound();
+        }
+
+        this.soundManager.play('win');
 
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
         // Calculate stars based on moves remaining (generous thresholds)
-        const movesUsed = this.levelConfig.moves - this.movesRemaining;
-        const efficiency = this.movesRemaining / this.levelConfig.moves;
-        let stars = 1; // Always get 1 star for completing
-        if (efficiency >= 0.15) stars = 2; // 15%+ moves remaining = 2 stars
-        if (efficiency >= 0.35) stars = 3; // 35%+ moves remaining = 3 stars
+        // Note: movesRemaining is now 0 after bonus round, so we use the stored initial moves
+        // actually we already burned them. We should track score efficiency instead.
+        // Or just give stars based on Final Score vs Target Score.
+        const scoreRatio = this.score / this.targetScore;
+        let stars = 1;
+        if (scoreRatio >= 1.2) stars = 2;
+        if (scoreRatio >= 1.5) stars = 3;
 
-        // Add moves remaining bonus to score
-        const movesBonus = this.movesRemaining * 100;
-        this.score += movesBonus;
+        // Update score display
         this.scoreText.setText(`Score: ${this.score}`);
 
         // Save progress
@@ -937,14 +943,6 @@ export default class GameScene extends Phaser.Scene {
         }).setOrigin(0.5);
         container.add(scoreText);
 
-        // Moves remaining bonus
-        const bonusText = this.add.text(0, 30, `Moves left: +${this.movesRemaining * 100} bonus`, {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '20px',
-            color: '#666666'
-        }).setOrigin(0.5);
-        container.add(bonusText);
-
         // Next level button
         if (this.currentLevel < 20) {
             this.createWinButton(container, 0, 100, 'Next Level', () => {
@@ -982,26 +980,49 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
-    createWinButton(container, x, y, text, callback) {
-        const btn = this.add.image(x, y, 'button').setInteractive({ useHandCursor: true });
-        const btnText = this.add.text(x, y, text, {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '24px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
+    async playBonusRound() {
+        const title = this.add.text(this.cameras.main.width / 2, this.cameras.main.height / 2, 'SUGAR CRUSH!', {
+            fontFamily: 'Arial Black', fontSize: '64px', color: '#ffeb3b', stroke: '#ff0000', strokeThickness: 8
+        }).setOrigin(0.5).setDepth(1000).setScale(0);
 
-        container.add(btn);
-        container.add(btnText);
+        this.tweens.add({
+            targets: title, scaleX: 1, scaleY: 1, duration: 500, ease: 'Back.out',
+            yoyo: true, hold: 1000, onComplete: () => title.destroy()
+        });
 
-        btn.on('pointerover', () => {
-            btn.setScale(1.1);
-            btnText.setScale(1.1);
-        });
-        btn.on('pointerout', () => {
-            btn.setScale(1);
-            btnText.setScale(1);
-        });
-        btn.on('pointerup', callback);
+        await new Promise(r => this.time.delayedCall(1500, r));
+
+        // Convert moves to specials
+        while (this.movesRemaining > 0) {
+            this.movesRemaining--;
+            this.movesText.setText(`Moves: ${this.movesRemaining}`);
+            this.soundManager.play('swap');
+
+            // Pick random non-special candy
+            const candidates = [];
+            for (let r = 0; r < this.board.rows; r++) {
+                for (let c = 0; c < this.board.cols; c++) {
+                    const candy = this.board.candies[r][c];
+                    if (candy && !candy.isSpecial) candidates.push(candy);
+                }
+            }
+
+            if (candidates.length > 0) {
+                const target = Phaser.Utils.Array.GetRandom(candidates);
+                const type = Math.random() > 0.7 ? 'bomb' : (Math.random() > 0.5 ? 'line_h' : 'line_v');
+                target.makeSpecial(type);
+                
+                // Add score
+                this.score += 2000;
+                this.scoreText.setText(`Score: ${this.score}`);
+                
+                // Visual delay
+                await new Promise(r => this.time.delayedCall(200, r));
+            }
+        }
+
+        // Explode everything
+        await this.board.processBoardState();
     }
 
     showLoseScreen() {
