@@ -1239,6 +1239,10 @@ export default class GameScene extends Phaser.Scene {
         btn.on('pointerup', callback);
     }
 
+    createWinButton(container, x, y, text, callback) {
+        this.createMenuButton(container, x, y, text, callback);
+    }
+
     showQuitConfirmation(pauseOverlay, pauseMenu) {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;

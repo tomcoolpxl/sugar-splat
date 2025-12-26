@@ -139,6 +139,42 @@ export default class Board {
         }
     }
 
+    selectCandy(candy) {
+        this.selectedCandy = candy;
+        this.selectedCandyTween = this.scene.tweens.add({
+            targets: candy,
+            alpha: 0.5,
+            duration: 300,
+            yoyo: true,
+            repeat: -1
+        });
+    }
+
+    deselectCandy() {
+        if (this.selectedCandy) {
+            if (this.selectedCandyTween) {
+                this.selectedCandyTween.stop();
+                this.selectedCandyTween = null;
+            }
+            this.selectedCandy.setAlpha(1);
+            this.selectedCandy = null;
+        }
+    }
+
+    showLockedFeedback(candy) {
+        const lock = this.lockSprites[candy.row][candy.col];
+        const target = lock || candy;
+        const originalX = target.x;
+        this.scene.tweens.add({
+            targets: target,
+            x: originalX + 5,
+            duration: 50,
+            yoyo: true,
+            repeat: 3,
+            onComplete: () => { target.x = originalX; }
+        });
+    }
+
     async activateTap(candy) {
         this.inputLocked = true;
         this.deselectCandy();
@@ -268,15 +304,25 @@ export default class Board {
 
         const adjacentCells = new Set();
         const specialsToActivate = [];
+        const cellsToClear = [];
+
         for (const cell of cells) {
             this.getAdjacentCells(cell.row, cell.col).forEach(adj => adjacentCells.add(`${adj.row},${adj.col}`));
             const target = this.candies[cell.row][cell.col];
-            if (target && target.isSpecial && target !== candy1 && target !== candy2) specialsToActivate.push(target);
+            if (target && target.isSpecial && target !== candy1 && target !== candy2) {
+                specialsToActivate.push(target);
+            } else {
+                cellsToClear.push(cell);
+            }
         }
         await this.unlockAdjacentTiles(adjacentCells);
         this.scene.events.emit('scoreUpdate', this.calculateScore(cells.length, 1) + 100, 1);
-        await this.clearCandies(cells);
-        for (const s of specialsToActivate) if (s.scene) await this.activateSpecial(s);
+        
+        await this.clearCandies(cellsToClear);
+        
+        if (specialsToActivate.length > 0) {
+            await Promise.all(specialsToActivate.map(s => this.activateSpecial(s)));
+        }
     }
 
     async detonateAllSpecials() {
@@ -525,9 +571,16 @@ export default class Board {
         } else if (candy.specialType === 'bomb') {
             graphics.setPosition(x, y);
             graphics.fillStyle(0xffff00, 0.6).fillCircle(0, 0, this.cellSize * 1.5);
-            this.scene.tweens.add({ targets: graphics, alpha: 0, scaleX: 2, scaleY: 2, duration: 300, onComplete: () => { graphics.destroy(); } });
-            return; // Return early as we handled the promise/tween differently? No, need to match signature.
-            // Actually the original returned a promise.
+            return new Promise(res => {
+                this.scene.tweens.add({ 
+                    targets: graphics, 
+                    alpha: 0, 
+                    scaleX: 2, 
+                    scaleY: 2, 
+                    duration: 300, 
+                    onComplete: () => { graphics.destroy(); res(); } 
+                });
+            });
         } else if (candy.specialType === 'color_bomb') {
             graphics.setPosition(x, y);
             graphics.lineStyle(4, 0xffffff, 1).strokeCircle(0, 0, this.cellSize * 2);
