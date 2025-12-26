@@ -108,6 +108,9 @@ export default class Candy extends Phaser.GameObjects.Image {
             case 'bomb':
                 this.setTexture(`candy_${this.candyType}_bomb`);
                 break;
+            case 'color_bomb':
+                this.setTexture('candy_color_bomb');
+                break;
         }
 
         // Creation animation

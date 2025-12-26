@@ -30,6 +30,8 @@ export default class Board {
 
         // Selection state
         this.selectedCandy = null;
+        this.lastClickTime = 0;
+        this.lastClickCandy = null;
 
         // Lock input during animations
         this.inputLocked = false;
@@ -369,6 +371,19 @@ export default class Board {
             return;
         }
 
+        // Double click detection
+        const now = Date.now();
+        if (this.lastClickCandy === candy && now - this.lastClickTime < 300) {
+            if (candy.isSpecial) {
+                this.activateTap(candy);
+                this.lastClickCandy = null;
+                this.lastClickTime = 0;
+                return;
+            }
+        }
+        this.lastClickCandy = candy;
+        this.lastClickTime = now;
+
         if (this.selectedCandy === null) {
             this.selectCandy(candy);
         } else if (this.selectedCandy === candy) {
@@ -384,6 +399,31 @@ export default class Board {
         } else {
             this.deselectCandy();
             this.selectCandy(candy);
+        }
+    }
+
+    async activateTap(candy) {
+        this.inputLocked = true;
+        this.deselectCandy();
+
+        try {
+            this.scene.events.emit('validSwap'); // Trigger sound/move count
+            
+            // For color bomb tap, pick random color or random target
+            if (candy.specialType === 'color_bomb') {
+                await this.activateSpecial(candy, null); // null target = random color
+            } else {
+                await this.activateSpecial(candy);
+            }
+
+            await this.applyGravity();
+            await this.fillEmptySpaces();
+            await this.processCascades();
+            this.scene.events.emit('cascadeComplete');
+        } catch (error) {
+            console.error('Error during tap activation:', error);
+        } finally {
+            this.inputLocked = false;
         }
     }
 
@@ -462,7 +502,7 @@ export default class Board {
                 // Swapping a special with non-matching candy still activates it
                 const specialCandy = candy1.isSpecial ? candy1 : candy2;
                 this.scene.events.emit('validSwap');
-                await this.activateSpecial(specialCandy);
+                await this.activateSpecial(specialCandy, candy1 === specialCandy ? candy2 : candy1);
                 await this.applyGravity();
                 await this.fillEmptySpaces();
                 await this.processCascades();
@@ -674,7 +714,7 @@ export default class Board {
             const midIndex = Math.floor(match.cells.length / 2);
             result.specialPosition = match.cells[midIndex];
         } else if (match.length >= 5) {
-            result.specialToCreate = 'bomb';
+            result.specialToCreate = 'color_bomb';
             const midIndex = Math.floor(match.cells.length / 2);
             result.specialPosition = match.cells[midIndex];
         }
@@ -871,7 +911,7 @@ export default class Board {
         }
     }
 
-    async getSpecialActivationCells(candy) {
+    async getSpecialActivationCells(candy, targetCandy = null) {
         const cells = [];
         const row = candy.row;
         const col = candy.col;
@@ -896,6 +936,38 @@ export default class Board {
                     }
                 }
             }
+        } else if (candy.specialType === 'color_bomb') {
+            // Determine target color
+            let targetColor = -1;
+            if (targetCandy) {
+                targetColor = targetCandy.candyType;
+            } else {
+                // Pick random color present on board
+                const availableColors = [];
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        if (this.grid[r][c] >= 0 && this.grid[r][c] < this.candyTypes) {
+                            availableColors.push(this.grid[r][c]);
+                        }
+                    }
+                }
+                if (availableColors.length > 0) {
+                    targetColor = Phaser.Utils.Array.GetRandom(availableColors);
+                }
+            }
+
+            // Select all candies of that color
+            if (targetColor !== -1) {
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        if (this.grid[r][c] === targetColor && this.candies[r][c]) {
+                            cells.push({ row: r, col: c });
+                        }
+                    }
+                }
+            }
+            // Always include the bomb itself
+            cells.push({ row, col });
         }
 
         return cells;

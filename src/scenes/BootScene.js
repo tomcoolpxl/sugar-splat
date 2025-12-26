@@ -309,6 +309,42 @@ export default class BootScene extends Phaser.Scene {
             graphics.generateTexture(`candy_${index}_bomb`, size, size);
             graphics.destroy();
         });
+
+        // Color Bomb (Multi-colored "Sprinkle" Bomb)
+        const cbGraphics = this.add.graphics();
+        this.drawColorBomb(cbGraphics, size);
+        cbGraphics.generateTexture('candy_color_bomb', size, size);
+        cbGraphics.destroy();
+    }
+
+    drawColorBomb(graphics, size) {
+        const center = size / 2;
+        const radius = size / 2 - 4;
+
+        // Dark background
+        graphics.fillStyle(0x333333, 1);
+        graphics.fillCircle(center, center, radius);
+
+        // White border/glow
+        graphics.lineStyle(2, 0xffffff, 1);
+        graphics.strokeCircle(center, center, radius);
+
+        // Colorful sprinkles
+        const colors = [0xff4757, 0x3742fa, 0x2ed573, 0xffa502, 0xa55eea, 0xff7f50];
+        
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const dist = radius * 0.6;
+            const x = center + Math.cos(angle) * dist;
+            const y = center + Math.sin(angle) * dist;
+            
+            graphics.fillStyle(colors[i % colors.length], 1);
+            graphics.fillCircle(x, y, 5);
+        }
+        
+        // Center dot
+        graphics.fillStyle(0xffffff, 1);
+        graphics.fillCircle(center, center, 6);
     }
 
     createUITextures() {
