@@ -102,6 +102,9 @@ export default class Board {
 
     onCandyClick(candy) {
         if (this.inputLocked) return;
+        if (this.selectedCandy && !this.selectedCandy.active) {
+            this.selectedCandy = null;
+        }
         if (this.locked[candy.row][candy.col]) {
             this.showLockedFeedback(candy);
             return;
