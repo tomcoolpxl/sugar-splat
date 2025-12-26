@@ -10,6 +10,11 @@ export default class ActionProcessor {
 
         while (matches.length > 0) {
             cascadeLevel++;
+            if (cascadeLevel > 20) {
+                console.warn('Infinite loop detected in cascade - breaking safety');
+                break;
+            }
+            
             const processingQueue = [];
             const cellsToClear = new Map();
             const specialsToCreate = [];

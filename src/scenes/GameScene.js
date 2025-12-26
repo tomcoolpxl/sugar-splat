@@ -36,9 +36,6 @@ export default class GameScene extends Phaser.Scene {
         // HUD
         this.createHUD(width, height);
 
-        // Pause button
-        this.createPauseButton(width, height);
-
         // Set up event listeners
         this.setupEvents();
 
@@ -587,22 +584,6 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
-    createPauseButton(width, height) {
-        this.pauseBtn = this.add.text(width - 50, 70, '⏸️', {
-            fontSize: '36px'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        this.pauseBtn.setDepth(50);
-
-        this.isPaused = false;
-
-        this.pauseBtn.on('pointerup', () => {
-            if (!this.isPaused && !this.isGameOver) {
-                this.isPaused = true;
-                this.showPauseMenu();
-            }
-        });
-    }
-
     setupEvents() {
         // Score update from board
         this.events.on('scoreUpdate', (points, cascadeLevel) => {
@@ -975,6 +956,10 @@ export default class GameScene extends Phaser.Scene {
         if (this.currentLevel < 20) {
             this.createWinButton(container, 0, 100, 'Next Level', () => {
                 this.scene.restart({ level: this.currentLevel + 1 });
+            });
+        } else {
+            this.createWinButton(container, 0, 100, 'Main Menu', () => {
+                this.scene.start('MenuScene');
             });
         }
 

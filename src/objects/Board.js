@@ -520,9 +520,16 @@ export default class Board {
         } else if (candy.specialType === 'line_v') {
             graphics.fillStyle(0xffffff, 0.8).fillRect(x - 10, this.y, 20, this.rows * this.cellSize);
         } else if (candy.specialType === 'bomb') {
-            graphics.fillStyle(0xffff00, 0.6).fillCircle(x, y, this.cellSize * 1.5);
+            graphics.setPosition(x, y);
+            graphics.fillStyle(0xffff00, 0.6).fillCircle(0, 0, this.cellSize * 1.5);
+            this.scene.tweens.add({ targets: graphics, alpha: 0, scaleX: 2, scaleY: 2, duration: 300, onComplete: () => { graphics.destroy(); } });
+            return; // Return early as we handled the promise/tween differently? No, need to match signature.
+            // Actually the original returned a promise.
         } else if (candy.specialType === 'color_bomb') {
-            graphics.lineStyle(4, 0xffffff, 1).strokeCircle(x, y, this.cellSize * 2);
+            graphics.setPosition(x, y);
+            graphics.lineStyle(4, 0xffffff, 1).strokeCircle(0, 0, this.cellSize * 2);
+            this.scene.tweens.add({ targets: graphics, alpha: 0, scaleX: 1.5, scaleY: 1.5, duration: 300, onComplete: () => { graphics.destroy(); } });
+            return new Promise(res => setTimeout(res, 300));
         }
         return new Promise(res => this.scene.tweens.add({ targets: graphics, alpha: 0, duration: 300, onComplete: () => { graphics.destroy(); res(); } }));
     }
@@ -538,9 +545,9 @@ export default class Board {
         const { x, y } = this.gridToWorld(row, col);
         
         // Shockwave ring
-        const ring = this.scene.add.graphics();
+        const ring = this.scene.add.graphics({ x, y });
         ring.lineStyle(6, 0xffffff, 1);
-        ring.strokeCircle(x, y, this.cellSize);
+        ring.strokeCircle(0, 0, this.cellSize);
         this.scene.tweens.add({
             targets: ring,
             scaleX: 3,
@@ -550,7 +557,8 @@ export default class Board {
             onComplete: () => ring.destroy()
         });
 
-        const c = this.scene.add.graphics().fillStyle(0xff6600, 0.7).fillCircle(x, y, this.cellSize * 2.5);
+        const c = this.scene.add.graphics({ x, y });
+        c.fillStyle(0xff6600, 0.7).fillCircle(0, 0, this.cellSize * 2.5);
         this.scene.cameras.main.shake(200, 0.01);
         return new Promise(res => this.scene.tweens.add({ targets: c, alpha: 0, scaleX: 1.5, scaleY: 1.5, duration: 400, onComplete: () => { c.destroy(); res(); } }));
     }
