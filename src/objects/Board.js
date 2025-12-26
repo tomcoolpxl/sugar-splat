@@ -1,4 +1,7 @@
 import Candy from './Candy.js';
+import MatchLogic from '../systems/MatchLogic.js';
+import ActionProcessor from '../systems/ActionProcessor.js';
+import { GameConfig } from '../Config.js';
 
 export default class Board {
     constructor(scene, config) {
@@ -17,11 +20,8 @@ export default class Board {
         this.candies = [];
 
         // Blocker data
-        // jelly[row][col] = 0 (none), 1 (single), 2 (double)
         this.jelly = [];
         this.jellySprites = [];
-
-        // locked[row][col] = true/false
         this.locked = [];
         this.lockSprites = [];
 
@@ -35,6 +35,10 @@ export default class Board {
 
         // Lock input during animations
         this.inputLocked = false;
+
+        // Initialize Systems
+        this.matchLogic = new MatchLogic(this);
+        this.actionProcessor = new ActionProcessor(this);
 
         // Track cells being cleared to avoid double-clearing
         this.clearingCells = new Set();
@@ -63,315 +67,46 @@ export default class Board {
             }
         }
 
-        // Apply level blockers if configured
-        if (this.levelConfig) {
-            this.applyLevelBlockers();
-        }
-
-        // Draw cell backgrounds
+        if (this.levelConfig) this.applyLevelBlockers();
         this.drawCellBackgrounds();
-
-        // Draw jelly layer (before candies)
         this.drawJellyLayer();
-
-        // Fill the board with candies (no initial matches)
         this.fillBoard();
-
-        // Draw lock overlays (after candies)
         this.drawLockOverlays();
     }
 
     applyLevelBlockers() {
-        // Apply jelly from level config
         if (this.levelConfig.jelly) {
             for (const cell of this.levelConfig.jelly) {
-                if (this.isValidCell(cell.row, cell.col)) {
-                    this.jelly[cell.row][cell.col] = cell.layers || 1;
-                }
+                if (this.isValidCell(cell.row, cell.col)) this.jelly[cell.row][cell.col] = cell.layers || 1;
             }
         }
-
-        // Apply locked tiles from level config
         if (this.levelConfig.locked) {
             for (const cell of this.levelConfig.locked) {
-                if (this.isValidCell(cell.row, cell.col)) {
-                    this.locked[cell.row][cell.col] = true;
-                }
+                if (this.isValidCell(cell.row, cell.col)) this.locked[cell.row][cell.col] = true;
             }
         }
     }
 
-    drawCellBackgrounds() {
-        const graphics = this.scene.add.graphics();
-        graphics.setDepth(0);
+    // --- Delegation Methods ---
 
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                const { x, y } = this.gridToWorld(row, col);
-                const alpha = (row + col) % 2 === 0 ? 0.1 : 0.15;
-                graphics.fillStyle(0xffffff, alpha);
-                graphics.fillRoundedRect(
-                    x - this.cellSize / 2 + 2,
-                    y - this.cellSize / 2 + 2,
-                    this.cellSize - 4,
-                    this.cellSize - 4,
-                    8
-                );
-            }
-        }
-    }
+    findMatches() { return this.matchLogic.findMatches(); }
+    hasValidMoves() { return this.matchLogic.hasValidMoves(); }
+    findValidMove() { return this.matchLogic.findValidMove(); }
 
-    drawJellyLayer() {
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                if (this.jelly[row][col] > 0) {
-                    this.createJellySprite(row, col);
-                }
-            }
-        }
-    }
+    async processBoardState(matches) { return this.actionProcessor.processBoardState(matches); }
+    async processMatches(matches) { return this.actionProcessor.processBoardState(matches); }
+    async processCascades() { return this.actionProcessor.processBoardState(); }
+    async activateSpecial(candy, target) { return this.actionProcessor.activateSpecial(candy, target); }
 
-    createJellySprite(row, col) {
-        const { x, y } = this.gridToWorld(row, col);
-        const layers = this.jelly[row][col];
-
-        // Remove existing sprite if any
-        if (this.jellySprites[row][col]) {
-            this.jellySprites[row][col].destroy();
-        }
-
-        // Create jelly graphic
-        const jellyGraphics = this.scene.add.graphics();
-        jellyGraphics.setDepth(0.5);
-
-        // Color based on layers (darker = more layers)
-        // Increased alpha for better visibility
-        const alpha = layers === 2 ? 0.8 : 0.6;
-        const color = layers === 2 ? 0xff1493 : 0xff69b4; // Deeper pinks
-
-        jellyGraphics.fillStyle(color, alpha);
-        // Made jelly larger to be visible behind candies (cellSize - 4 instead of -8)
-        jellyGraphics.fillRoundedRect(
-            x - this.cellSize / 2 + 2,
-            y - this.cellSize / 2 + 2,
-            this.cellSize - 4,
-            this.cellSize - 4,
-            12
-        );
-
-        // Add border for double jelly
-        if (layers === 2) {
-            jellyGraphics.lineStyle(4, 0xffffff, 0.8);
-            jellyGraphics.strokeRoundedRect(
-                x - this.cellSize / 2 + 2,
-                y - this.cellSize / 2 + 2,
-                this.cellSize - 4,
-                this.cellSize - 4,
-                12
-            );
-        }
-
-        this.jellySprites[row][col] = jellyGraphics;
-    }
-
-    drawLockOverlays() {
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                if (this.locked[row][col]) {
-                    this.createLockSprite(row, col);
-                }
-            }
-        }
-    }
-
-    createLockSprite(row, col) {
-        const { x, y } = this.gridToWorld(row, col);
-
-        // Remove existing sprite if any
-        if (this.lockSprites[row][col]) {
-            this.lockSprites[row][col].destroy();
-        }
-
-        // Create lock graphic (cage/ice appearance)
-        const lockGraphics = this.scene.add.graphics();
-        lockGraphics.setDepth(2);
-
-        const size = this.cellSize - 8;
-        const left = x - size / 2;
-        const top = y - size / 2;
-
-        // Ice/cage appearance
-        lockGraphics.lineStyle(3, 0x87ceeb, 0.9);
-
-        // Vertical bars
-        for (let i = 0; i <= 3; i++) {
-            const barX = left + (size / 3) * i;
-            lockGraphics.lineBetween(barX, top, barX, top + size);
-        }
-
-        // Horizontal bars
-        for (let i = 0; i <= 3; i++) {
-            const barY = top + (size / 3) * i;
-            lockGraphics.lineBetween(left, barY, left + size, barY);
-        }
-
-        // Corner accents
-        lockGraphics.fillStyle(0x87ceeb, 0.5);
-        lockGraphics.fillCircle(left, top, 4);
-        lockGraphics.fillCircle(left + size, top, 4);
-        lockGraphics.fillCircle(left, top + size, 4);
-        lockGraphics.fillCircle(left + size, top + size, 4);
-
-        this.lockSprites[row][col] = lockGraphics;
-
-        // Also disable the candy's interactivity
-        const candy = this.candies[row][col];
-        if (candy) {
-            candy.disableInteractive();
-        }
-    }
-
-    removeLockSprite(row, col) {
-        if (this.lockSprites[row][col]) {
-            // Animate lock breaking
-            const lockSprite = this.lockSprites[row][col];
-
-            this.scene.tweens.add({
-                targets: lockSprite,
-                alpha: 0,
-                scaleX: 1.3,
-                scaleY: 1.3,
-                duration: 300,
-                ease: 'Power2',
-                onComplete: () => {
-                    lockSprite.destroy();
-                }
-            });
-
-            this.lockSprites[row][col] = null;
-        }
-
-        // Re-enable candy interactivity
-        const candy = this.candies[row][col];
-        if (candy) {
-            candy.setInteractive({ useHandCursor: true });
-        }
-
-        // Emit event for feedback
-        this.scene.events.emit('lockBroken', row, col);
-    }
-
-    fillBoard() {
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                if (this.grid[row][col] === -1) {
-                    const candyType = this.getValidCandyType(row, col);
-                    this.createCandy(row, col, candyType);
-
-                    // If cell is locked, disable interactivity
-                    if (this.locked[row][col]) {
-                        this.candies[row][col].disableInteractive();
-                    }
-                }
-            }
-        }
-    }
-
-    getValidCandyType(row, col) {
-        const invalidTypes = new Set();
-
-        // Check horizontal (left 2 cells)
-        if (col >= 2) {
-            const type1 = this.grid[row][col - 1];
-            const type2 = this.grid[row][col - 2];
-            if (type1 !== -1 && type1 === type2) {
-                invalidTypes.add(type1);
-            }
-        }
-
-        // Check vertical (top 2 cells)
-        if (row >= 2) {
-            const type1 = this.grid[row - 1][col];
-            const type2 = this.grid[row - 2][col];
-            if (type1 !== -1 && type1 === type2) {
-                invalidTypes.add(type1);
-            }
-        }
-
-        const validTypes = [];
-        for (let i = 0; i < this.candyTypes; i++) {
-            if (!invalidTypes.has(i)) {
-                validTypes.push(i);
-            }
-        }
-
-        if (validTypes.length === 0) {
-            return Phaser.Math.Between(0, this.candyTypes - 1);
-        }
-
-        return Phaser.Utils.Array.GetRandom(validTypes);
-    }
-
-    createCandy(row, col, type, animated = false) {
-        const { x, y } = this.gridToWorld(row, col);
-
-        const candy = new Candy(this.scene, x, y, type, row, col);
-        candy.setDisplaySize(this.cellSize - 12, this.cellSize - 12);
-        candy.setDepth(1);
-
-        candy.on('pointerdown', () => this.onCandyClick(candy));
-
-        this.grid[row][col] = type;
-        this.candies[row][col] = candy;
-
-        if (animated) {
-            candy.y = this.y - this.cellSize;
-            candy.setAlpha(0);
-            this.scene.tweens.add({
-                targets: candy,
-                y: y,
-                alpha: 1,
-                duration: 200 + row * 50,
-                ease: 'Bounce.easeOut'
-            });
-        }
-
-        return candy;
-    }
-
-    gridToWorld(row, col) {
-        return {
-            x: this.x + col * this.cellSize + this.cellSize / 2,
-            y: this.y + row * this.cellSize + this.cellSize / 2
-        };
-    }
-
-    worldToGrid(worldX, worldY) {
-        const col = Math.floor((worldX - this.x) / this.cellSize);
-        const row = Math.floor((worldY - this.y) / this.cellSize);
-        return { row, col };
-    }
-
-    isValidCell(row, col) {
-        return row >= 0 && row < this.rows && col >= 0 && col < this.cols;
-    }
-
-    isAdjacent(row1, col1, row2, col2) {
-        const rowDiff = Math.abs(row1 - row2);
-        const colDiff = Math.abs(col1 - col2);
-        return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
-    }
+    // --- Input & Board State Management ---
 
     onCandyClick(candy) {
         if (this.inputLocked) return;
-
-        // Can't select locked candies - show feedback
         if (this.locked[candy.row][candy.col]) {
             this.showLockedFeedback(candy);
             return;
         }
 
-        // Double click detection
         const now = Date.now();
         if (this.lastClickCandy === candy && now - this.lastClickTime < 300) {
             if (candy.isSpecial) {
@@ -389,7 +124,6 @@ export default class Board {
         } else if (this.selectedCandy === candy) {
             this.deselectCandy();
         } else if (this.isAdjacent(this.selectedCandy.row, this.selectedCandy.col, candy.row, candy.col)) {
-            // Can't swap with locked candy
             if (this.locked[candy.row][candy.col]) {
                 this.showLockedFeedback(candy);
                 this.deselectCandy();
@@ -405,81 +139,27 @@ export default class Board {
     async activateTap(candy) {
         this.inputLocked = true;
         this.deselectCandy();
-
         try {
-            this.scene.events.emit('validSwap'); // Trigger sound/move count
-            
-            // For color bomb tap, pick random color or random target
-            if (candy.specialType === 'color_bomb') {
-                await this.activateSpecial(candy, null); // null target = random color
-            } else {
-                await this.activateSpecial(candy);
-            }
-
+            this.scene.events.emit('validSwap');
+            await this.activateSpecial(candy);
             await this.applyGravity();
             await this.fillEmptySpaces();
             await this.processCascades();
             this.scene.events.emit('cascadeComplete');
-        } catch (error) {
-            console.error('Error during tap activation:', error);
         } finally {
             this.inputLocked = false;
-        }
-    }
-
-    showLockedFeedback(candy) {
-        // Shake the locked tile
-        const startX = candy.x;
-        this.scene.tweens.add({
-            targets: candy,
-            x: startX + 5,
-            duration: 50,
-            yoyo: true,
-            repeat: 3,
-            ease: 'Power2',
-            onComplete: () => {
-                candy.x = startX;
-            }
-        });
-
-        // Flash the lock overlay
-        const lockSprite = this.lockSprites[candy.row][candy.col];
-        if (lockSprite) {
-            this.scene.tweens.add({
-                targets: lockSprite,
-                alpha: 0.3,
-                duration: 100,
-                yoyo: true,
-                repeat: 1
-            });
-        }
-    }
-
-    selectCandy(candy) {
-        this.selectedCandy = candy;
-        candy.select();
-    }
-
-    deselectCandy() {
-        if (this.selectedCandy) {
-            this.selectedCandy.deselect();
-            this.selectedCandy = null;
         }
     }
 
     async trySwap(candy1, candy2) {
         this.inputLocked = true;
         this.deselectCandy();
-
         try {
-            // Check for special + special combo BEFORE swap
             const bothSpecial = candy1.isSpecial && candy2.isSpecial;
             const oneSpecial = candy1.isSpecial || candy2.isSpecial;
 
-            // Perform the swap animation
             await this.swapCandies(candy1, candy2);
 
-            // Handle special + special combinations
             if (bothSpecial) {
                 this.scene.events.emit('validSwap');
                 await this.activateSpecialCombo(candy1, candy2);
@@ -490,16 +170,12 @@ export default class Board {
                 return;
             }
 
-            // Check for matches
             const matches = this.findMatches();
-
-            // If one candy is special and gets matched, it activates
             if (matches.length > 0) {
                 this.scene.events.emit('validSwap');
                 await this.processMatches(matches);
                 this.scene.events.emit('cascadeComplete');
             } else if (oneSpecial) {
-                // Swapping a special with non-matching candy still activates it
                 const specialCandy = candy1.isSpecial ? candy1 : candy2;
                 this.scene.events.emit('validSwap');
                 await this.activateSpecial(specialCandy, candy1 === specialCandy ? candy2 : candy1);
@@ -508,31 +184,25 @@ export default class Board {
                 await this.processCascades();
                 this.scene.events.emit('cascadeComplete');
             } else {
-                // Invalid swap - revert
                 await this.swapCandies(candy1, candy2);
                 this.scene.events.emit('invalidSwap');
             }
-        } catch (error) {
-            console.error('Error during swap processing:', error);
-            // Attempt to revert swap if something went wrong? 
-            // Ideally we just unlock input so the game isn't soft-locked.
         } finally {
             this.inputLocked = false;
         }
     }
 
+    // --- Animation & Grid Logic ---
+
     swapCandies(candy1, candy2) {
         return new Promise((resolve) => {
-            // Swap grid data
             const tempType = this.grid[candy1.row][candy1.col];
             this.grid[candy1.row][candy1.col] = this.grid[candy2.row][candy2.col];
             this.grid[candy2.row][candy2.col] = tempType;
 
-            // Swap sprite references
             this.candies[candy1.row][candy1.col] = candy2;
             this.candies[candy2.row][candy2.col] = candy1;
 
-            // Swap row/col properties
             const tempRow = candy1.row;
             const tempCol = candy1.col;
             candy1.row = candy2.row;
@@ -540,1250 +210,363 @@ export default class Board {
             candy2.row = tempRow;
             candy2.col = tempCol;
 
-            // Animate the swap
             const pos1 = this.gridToWorld(candy1.row, candy1.col);
             const pos2 = this.gridToWorld(candy2.row, candy2.col);
 
-            this.scene.tweens.add({
-                targets: candy1,
-                x: pos1.x,
-                y: pos1.y,
-                duration: 150,
-                ease: 'Power2'
-            });
-
-            this.scene.tweens.add({
-                targets: candy2,
-                x: pos2.x,
-                y: pos2.y,
-                duration: 150,
-                ease: 'Power2',
-                onComplete: resolve
-            });
+            this.scene.tweens.add({ targets: candy1, x: pos1.x, y: pos1.y, duration: GameConfig?.BOARD?.ANIMATION_SPEED?.SWAP || 150, ease: 'Power2' });
+            this.scene.tweens.add({ targets: candy2, x: pos2.x, y: pos2.y, duration: GameConfig?.BOARD?.ANIMATION_SPEED?.SWAP || 150, ease: 'Power2', onComplete: resolve });
         });
-    }
-
-    findMatches() {
-        const matches = [];
-
-        // Find all horizontal matches first
-        const horizontalMatches = [];
-        for (let row = 0; row < this.rows; row++) {
-            let col = 0;
-            while (col < this.cols) {
-                const type = this.grid[row][col];
-                if (type === -1 || this.locked[row][col]) {
-                    col++;
-                    continue;
-                }
-
-                let matchLength = 1;
-                while (col + matchLength < this.cols &&
-                       this.grid[row][col + matchLength] === type &&
-                       !this.locked[row][col + matchLength]) {
-                    matchLength++;
-                }
-
-                if (matchLength >= 3) {
-                    const cells = [];
-                    for (let i = 0; i < matchLength; i++) {
-                        cells.push({ row, col: col + i });
-                    }
-                    horizontalMatches.push({
-                        type,
-                        cells,
-                        direction: 'horizontal',
-                        length: matchLength,
-                        startRow: row,
-                        startCol: col
-                    });
-                }
-                col += Math.max(1, matchLength);
-            }
-        }
-
-        // Find all vertical matches
-        const verticalMatches = [];
-        for (let col = 0; col < this.cols; col++) {
-            let row = 0;
-            while (row < this.rows) {
-                const type = this.grid[row][col];
-                if (type === -1 || this.locked[row][col]) {
-                    row++;
-                    continue;
-                }
-
-                let matchLength = 1;
-                while (row + matchLength < this.rows &&
-                       this.grid[row + matchLength][col] === type &&
-                       !this.locked[row + matchLength][col]) {
-                    matchLength++;
-                }
-
-                if (matchLength >= 3) {
-                    const cells = [];
-                    for (let i = 0; i < matchLength; i++) {
-                        cells.push({ row: row + i, col });
-                    }
-                    verticalMatches.push({
-                        type,
-                        cells,
-                        direction: 'vertical',
-                        length: matchLength,
-                        startRow: row,
-                        startCol: col
-                    });
-                }
-                row += Math.max(1, matchLength);
-            }
-        }
-
-        // Detect T and L shapes by finding intersections
-        const intersections = this.findIntersections(horizontalMatches, verticalMatches);
-
-        // Process matches and determine special tiles to create
-        for (const hMatch of horizontalMatches) {
-            const intersection = intersections.find(i =>
-                i.horizontal === hMatch || i.vertical === hMatch
-            );
-
-            if (intersection) {
-                continue;
-            }
-
-            matches.push(this.createMatchObject(hMatch, null));
-        }
-
-        for (const vMatch of verticalMatches) {
-            const intersection = intersections.find(i =>
-                i.horizontal === vMatch || i.vertical === vMatch
-            );
-
-            if (intersection) {
-                continue;
-            }
-
-            matches.push(this.createMatchObject(vMatch, null));
-        }
-
-        // Add intersection matches (T and L shapes)
-        for (const intersection of intersections) {
-            matches.push(this.createIntersectionMatch(intersection));
-        }
-
-        return matches;
-    }
-
-    findIntersections(horizontalMatches, verticalMatches) {
-        const intersections = [];
-
-        for (const hMatch of horizontalMatches) {
-            for (const vMatch of verticalMatches) {
-                if (hMatch.type !== vMatch.type) continue;
-
-                for (const hCell of hMatch.cells) {
-                    for (const vCell of vMatch.cells) {
-                        if (hCell.row === vCell.row && hCell.col === vCell.col) {
-                            intersections.push({
-                                horizontal: hMatch,
-                                vertical: vMatch,
-                                intersectCell: hCell,
-                                type: hMatch.type
-                            });
-                        }
-                    }
-                }
-            }
-        }
-
-        return intersections;
-    }
-
-    createMatchObject(match, intersection) {
-        const result = {
-            type: match.type,
-            cells: [...match.cells],
-            direction: match.direction,
-            length: match.length,
-            specialToCreate: null,
-            specialPosition: null
-        };
-
-        if (match.length === 4) {
-            result.specialToCreate = match.direction === 'horizontal' ? 'line_h' : 'line_v';
-            const midIndex = Math.floor(match.cells.length / 2);
-            result.specialPosition = match.cells[midIndex];
-        } else if (match.length >= 5) {
-            result.specialToCreate = 'color_bomb';
-            const midIndex = Math.floor(match.cells.length / 2);
-            result.specialPosition = match.cells[midIndex];
-        }
-
-        return result;
-    }
-
-    createIntersectionMatch(intersection) {
-        const allCells = [];
-        const cellSet = new Set();
-
-        for (const cell of intersection.horizontal.cells) {
-            const key = `${cell.row},${cell.col}`;
-            if (!cellSet.has(key)) {
-                allCells.push(cell);
-                cellSet.add(key);
-            }
-        }
-
-        for (const cell of intersection.vertical.cells) {
-            const key = `${cell.row},${cell.col}`;
-            if (!cellSet.has(key)) {
-                allCells.push(cell);
-                cellSet.add(key);
-            }
-        }
-
-        return {
-            type: intersection.type,
-            cells: allCells,
-            direction: 'intersection',
-            length: allCells.length,
-            specialToCreate: 'bomb',
-            specialPosition: intersection.intersectCell
-        };
-    }
-
-    // Unified board processing loop (handles matches -> clearing -> gravity -> repeat)
-    async processBoardState(initialMatches = []) {
-        let matches = initialMatches.length > 0 ? initialMatches : this.findMatches();
-        let cascadeLevel = 0;
-
-        while (matches.length > 0) {
-            cascadeLevel++;
-
-            // 1. Collect all initial actions from matches
-            // We use a Queue to handle recursive explosions
-            const processingQueue = [];
-            const cellsToClear = new Map(); // Key: "row,col", Value: {row, col, delay}
-            const specialsToCreate = [];
-            const adjacentToUnlock = new Set();
-            const specialsToAnimate = new Set();
-
-            // Populate queue with initial matches
-            for (const match of matches) {
-                // Determine special creation from this match
-                if (match.specialToCreate && match.specialPosition) {
-                    specialsToCreate.push({
-                        type: match.specialToCreate,
-                        position: match.specialPosition,
-                        candyType: match.type
-                    });
-                }
-
-                // Add all matched cells to queue to be processed
-                for (const cell of match.cells) {
-                    processingQueue.push({
-                        type: 'match_clear',
-                        row: cell.row,
-                        col: cell.col,
-                        source: null // No specific source for match clearing
-                    });
-                }
-            }
-
-            // 2. Process the Queue (Handle Chain Reactions)
-            const processedCells = new Set(); // To avoid infinite loops or double processing
-
-            while (processingQueue.length > 0) {
-                const action = processingQueue.shift();
-                const key = `${action.row},${action.col}`;
-
-                if (processedCells.has(key)) continue;
-                processedCells.add(key);
-
-                const candy = this.candies[action.row][action.col];
-                
-                // Add to clear list
-                if (!cellsToClear.has(key)) {
-                    cellsToClear.set(key, { row: action.row, col: action.col });
-                }
-
-                // Identify neighbors for unlocking (Jelly/Locks adjacent to clear)
-                this.getAdjacentCells(action.row, action.col).forEach(adj => {
-                    adjacentToUnlock.add(`${adj.row},${adj.col}`);
-                });
-
-                // If this cell contains a special candy, trigger it!
-                // (Unless it's being created this turn - handled by specialsToCreate check later)
-                if (candy && candy.isSpecial) {
-                    specialsToAnimate.add(candy);
-                    
-                    // Get affected cells based on special type
-                    const affectedCells = await this.getSpecialActivationCells(candy);
-                    
-                    for (const cell of affectedCells) {
-                        // Add affected cells to queue
-                        processingQueue.push({
-                            type: 'special_hit',
-                            row: cell.row,
-                            col: cell.col,
-                            source: candy
-                        });
-                    }
-                    
-                    // Trigger "specialActivated" event for sound/score
-                    this.scene.events.emit('specialActivated', candy.specialType, candy.row, candy.col);
-                }
-            }
-
-            // 3. Visuals & Scoring
-            
-            // Show special activation animations
-            const animatePromises = [];
-            for (const specialCandy of specialsToAnimate) {
-                animatePromises.push(this.showSpecialActivation(specialCandy));
-            }
-            if (animatePromises.length > 0) {
-                await Promise.all(animatePromises);
-            }
-
-            // Unlock adjacent locked tiles
-            await this.unlockAdjacentTiles(adjacentToUnlock);
-
-            // Calculate & Emit Score
-            // Base score on number of cleared tiles + bonuses for specials
-            const uniqueClears = cellsToClear.size;
-            const score = this.calculateScore(uniqueClears, cascadeLevel);
-            this.scene.events.emit('scoreUpdate', score, cascadeLevel);
-
-            // 4. Execution (Clear Board)
-            const clearList = Array.from(cellsToClear.values());
-            await this.clearCandiesWithSpecials(clearList, specialsToCreate);
-
-            // 5. Physics (Gravity & Refill)
-            await this.applyGravity();
-            await this.fillEmptySpaces();
-
-            // 6. Check for new matches (loop continues)
-            matches = this.findMatches();
-        }
-    }
-
-    // Process matches found after a swap
-    async processMatches(matches) {
-        await this.processBoardState(matches);
-    }
-
-    // Process cascades (gravity caused matches)
-    async processCascades() {
-        await this.processBoardState();
-    }
-
-    getAdjacentCells(row, col) {
-        const adjacent = [];
-        const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-
-        for (const [dr, dc] of directions) {
-            const newRow = row + dr;
-            const newCol = col + dc;
-            if (this.isValidCell(newRow, newCol)) {
-                adjacent.push({ row: newRow, col: newCol });
-            }
-        }
-
-        return adjacent;
-    }
-
-    async unlockAdjacentTiles(adjacentCells) {
-        const unlocked = [];
-
-        for (const key of adjacentCells) {
-            const [row, col] = key.split(',').map(Number);
-            if (this.locked[row][col]) {
-                this.locked[row][col] = false;
-                this.removeLockSprite(row, col);
-                unlocked.push({ row, col });
-            }
-        }
-
-        if (unlocked.length > 0) {
-            // Small delay for unlock animation
-            await new Promise(resolve => this.scene.time.delayedCall(150, resolve));
-        }
-    }
-
-    async getSpecialActivationCells(candy, targetCandy = null) {
-        const cells = [];
-        const row = candy.row;
-        const col = candy.col;
-
-        if (candy.specialType === 'line_h') {
-            for (let c = 0; c < this.cols; c++) {
-                if (this.candies[row][c]) {
-                    cells.push({ row, col: c });
-                }
-            }
-        } else if (candy.specialType === 'line_v') {
-            for (let r = 0; r < this.rows; r++) {
-                if (this.candies[r][col]) {
-                    cells.push({ row: r, col });
-                }
-            }
-        } else if (candy.specialType === 'bomb') {
-            for (let r = row - 1; r <= row + 1; r++) {
-                for (let c = col - 1; c <= col + 1; c++) {
-                    if (this.isValidCell(r, c) && this.candies[r][c]) {
-                        cells.push({ row: r, col: c });
-                    }
-                }
-            }
-        } else if (candy.specialType === 'color_bomb') {
-            // Determine target color
-            let targetColor = -1;
-            if (targetCandy) {
-                targetColor = targetCandy.candyType;
-            } else {
-                // Pick random color present on board
-                const availableColors = [];
-                for (let r = 0; r < this.rows; r++) {
-                    for (let c = 0; c < this.cols; c++) {
-                        if (this.grid[r][c] >= 0 && this.grid[r][c] < this.candyTypes) {
-                            availableColors.push(this.grid[r][c]);
-                        }
-                    }
-                }
-                if (availableColors.length > 0) {
-                    targetColor = Phaser.Utils.Array.GetRandom(availableColors);
-                }
-            }
-
-            // Select all candies of that color
-            if (targetColor !== -1) {
-                for (let r = 0; r < this.rows; r++) {
-                    for (let c = 0; c < this.cols; c++) {
-                        if (this.grid[r][c] === targetColor && this.candies[r][c]) {
-                            cells.push({ row: r, col: c });
-                        }
-                    }
-                }
-            }
-            // Always include the bomb itself
-            cells.push({ row, col });
-        }
-
-        return cells;
-    }
-
-    async activateSpecial(candy) {
-        const cells = await this.getSpecialActivationCells(candy);
-
-        this.scene.events.emit('specialActivated', candy.specialType, candy.row, candy.col);
-
-        await this.showSpecialActivation(candy);
-
-        // Unlock adjacent tiles for special activation too
-        const adjacentCells = new Set();
-        for (const cell of cells) {
-            this.getAdjacentCells(cell.row, cell.col).forEach(adj => {
-                adjacentCells.add(`${adj.row},${adj.col}`);
-            });
-        }
-        await this.unlockAdjacentTiles(adjacentCells);
-
-        const score = this.calculateScore(cells.length, 1) + 50;
-        this.scene.events.emit('scoreUpdate', score, 1);
-
-        const specialsToActivate = [];
-        for (const cell of cells) {
-            const targetCandy = this.candies[cell.row][cell.col];
-            if (targetCandy && targetCandy.isSpecial && targetCandy !== candy) {
-                specialsToActivate.push(targetCandy);
-            }
-        }
-
-        await this.clearCandies(cells);
-
-        for (const special of specialsToActivate) {
-            if (this.candies[special.row] && this.candies[special.row][special.col] === null) {
-                continue;
-            }
-            await this.activateSpecial(special);
-        }
     }
 
     async activateSpecialCombo(candy1, candy2) {
         const type1 = candy1.specialType;
         const type2 = candy2.specialType;
-
         let cells = [];
 
-        // 1. Color Bomb + Color Bomb (Clear Board)
         if (type1 === 'color_bomb' && type2 === 'color_bomb') {
-            for (let r = 0; r < this.rows; r++) {
-                for (let c = 0; c < this.cols; c++) {
-                    if (this.candies[r][c]) {
-                        cells.push({ row: r, col: c });
-                    }
-                }
-            }
+            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) if (this.candies[r][c]) cells.push({ row: r, col: c });
             await this.showBigExplosion(candy1.row, candy1.col);
-        }
-        // 2. Color Bomb + Striped/Bomb
-        else if (type1 === 'color_bomb' || type2 === 'color_bomb') {
+        } else if (type1 === 'color_bomb' || type2 === 'color_bomb') {
             const colorBomb = type1 === 'color_bomb' ? candy1 : candy2;
-            const otherCandy = type1 === 'color_bomb' ? candy2 : candy1;
-            const targetColor = otherCandy.candyType;
-            const targetSpecial = otherCandy.specialType === 'bomb' ? 'bomb' : (Math.random() > 0.5 ? 'line_h' : 'line_v');
+            const other = type1 === 'color_bomb' ? candy2 : candy1;
+            const targetColor = other.candyType;
+            const targetSpecial = other.specialType === 'bomb' ? 'bomb' : (Math.random() > 0.5 ? 'line_h' : 'line_v');
 
             const targets = [];
-            for (let r = 0; r < this.rows; r++) {
-                for (let c = 0; c < this.cols; c++) {
-                    if (this.grid[r][c] === targetColor && this.candies[r][c]) {
-                        targets.push(this.candies[r][c]);
-                    }
-                }
-            }
+            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) if (this.grid[r][c] === targetColor && this.candies[r][c]) targets.push(this.candies[r][c]);
 
-            // Convert all targets to special
             for (const target of targets) {
                 target.makeSpecial(targetSpecial);
-                // Visual delay
-                await new Promise(resolve => this.scene.time.delayedCall(20, resolve));
+                await new Promise(r => this.scene.time.delayedCall(20, r));
             }
-
-            // Explode them all
-            const activationPromises = targets.map(t => this.activateSpecial(t));
-            await Promise.all(activationPromises);
-            
-            // Clear the original combo pieces
-            cells.push({ row: candy1.row, col: candy1.col });
-            cells.push({ row: candy2.row, col: candy2.col });
-        }
-        // 3. Striped + Striped
-        else if ((type1 === 'line_h' && type2 === 'line_v') ||
-            (type1 === 'line_v' && type2 === 'line_h') ||
-            (type1.startsWith('line') && type2.startsWith('line'))) {
+            await Promise.all(targets.map(t => this.activateSpecial(t)));
+            cells.push({ row: candy1.row, col: candy1.col }, { row: candy2.row, col: candy2.col });
+        } else {
             const row = candy1.row;
             const col = candy1.col;
-
-            for (let c = 0; c < this.cols; c++) {
-                if (this.candies[row][c]) cells.push({ row, col: c });
-            }
-            for (let r = 0; r < this.rows; r++) {
-                if (this.candies[r][col] && r !== row) cells.push({ row: r, col });
-            }
-
-            await this.showCrossEffect(row, col);
-        } 
-        // 4. Bomb + Bomb
-        else if ((type1 === 'bomb' && type2 === 'bomb')) {
-            const row = candy1.row;
-            const col = candy1.col;
-
-            for (let r = row - 2; r <= row + 2; r++) {
-                for (let c = col - 2; c <= col + 2; c++) {
-                    if (this.isValidCell(r, c) && this.candies[r][c]) {
-                        cells.push({ row: r, col: c });
-                    }
-                }
-            }
-
-            await this.showBigExplosion(row, col);
-        } 
-        // 5. Bomb + Striped
-        else if ((type1 === 'bomb' || type2 === 'bomb')) {
-            const bombCandy = type1 === 'bomb' ? candy1 : candy2;
-            const lineCandy = type1 === 'bomb' ? candy2 : candy1;
-            const row = bombCandy.row;
-            const col = bombCandy.col;
-
-            if (lineCandy.specialType === 'line_h') {
-                for (let r = row - 1; r <= row + 1; r++) {
-                    if (r >= 0 && r < this.rows) {
-                        for (let c = 0; c < this.cols; c++) {
-                            if (this.candies[r][c]) cells.push({ row: r, col: c });
-                        }
-                    }
-                }
+            if (type1.startsWith('line') && type2.startsWith('line')) {
+                for (let c = 0; c < this.cols; c++) if (this.candies[row][c]) cells.push({ row, col: c });
+                for (let r = 0; r < this.rows; r++) if (this.candies[r][col] && r !== row) cells.push({ row: r, col });
+                await this.showCrossEffect(row, col);
+            } else if (type1 === 'bomb' && type2 === 'bomb') {
+                for (let r = row - 2; r <= row + 2; r++) for (let c = col - 2; c <= col + 2; c++) if (this.isValidCell(r, c) && this.candies[r][c]) cells.push({ row: r, col: c });
+                await this.showBigExplosion(row, col);
             } else {
-                for (let c = col - 1; c <= col + 1; c++) {
-                    if (c >= 0 && c < this.cols) {
-                        for (let r = 0; r < this.rows; r++) {
-                            if (this.candies[r][c]) cells.push({ row: r, col: c });
-                        }
-                    }
+                const line = type1.startsWith('line') ? candy1 : candy2;
+                const bomb = type1 === 'bomb' ? candy1 : candy2;
+                if (line.specialType === 'line_h') {
+                    for (let r = bomb.row - 1; r <= bomb.row + 1; r++) if (r >= 0 && r < this.rows) for (let c = 0; c < this.cols; c++) if (this.candies[r][c]) cells.push({ row: r, col: c });
+                } else {
+                    for (let c = bomb.col - 1; c <= bomb.col + 1; c++) if (c >= 0 && c < this.cols) for (let r = 0; r < this.rows; r++) if (this.candies[r][col]) cells.push({ row: r, col: c });
                 }
+                await this.showBigExplosion(bomb.row, bomb.col);
             }
-
-            await this.showBigExplosion(row, col);
-        } 
-        // Fallback (e.g. Line + Line same direction not caught above)
-        else {
-            const row = candy1.row;
-            const col = candy1.col;
-
-            for (let c = 0; c < this.cols; c++) {
-                if (this.candies[row][c]) cells.push({ row, col: c });
-            }
-            for (let r = 0; r < this.rows; r++) {
-                if (this.candies[r][col] && r !== row) cells.push({ row: r, col });
-            }
-
-            await this.showCrossEffect(row, col);
         }
 
-        // Unlock adjacent tiles
         const adjacentCells = new Set();
         const specialsToActivate = [];
-
         for (const cell of cells) {
-            this.getAdjacentCells(cell.row, cell.col).forEach(adj => {
-                adjacentCells.add(`${adj.row},${adj.col}`);
-            });
-
-            // Check for collateral specials (e.g. Line+Line hits a Bomb)
-            const targetCandy = this.candies[cell.row][cell.col];
-            if (targetCandy && targetCandy.isSpecial && targetCandy !== candy1 && targetCandy !== candy2) {
-                specialsToActivate.push(targetCandy);
-            }
+            this.getAdjacentCells(cell.row, cell.col).forEach(adj => adjacentCells.add(`${adj.row},${adj.col}`));
+            const target = this.candies[cell.row][cell.col];
+            if (target && target.isSpecial && target !== candy1 && target !== candy2) specialsToActivate.push(target);
         }
         await this.unlockAdjacentTiles(adjacentCells);
-
-        const score = this.calculateScore(cells.length, 1) + 100;
-        this.scene.events.emit('scoreUpdate', score, 1);
-
+        this.scene.events.emit('scoreUpdate', this.calculateScore(cells.length, 1) + 100, 1);
         await this.clearCandies(cells);
+        for (const s of specialsToActivate) if (s.scene) await this.activateSpecial(s);
+    }
 
-        // Recursively trigger collateral specials
-        for (const special of specialsToActivate) {
-            // Check if still valid (might have been cleared but object exists)
-            // activateSpecial handles destroyed sprites gracefully if we check grid?
-            // Actually clearCandies nulls the grid.
-            // But we have the reference. activateSpecial uses row/col.
-            // We need to ensure we don't double-activate or crash.
-            if (special.scene) { // Check if not destroyed
-                 await this.activateSpecial(special);
+    async detonateAllSpecials() {
+        const specials = [];
+        for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) if (this.candies[r][c] && this.candies[r][c].isSpecial) specials.push(this.candies[r][c]);
+        if (specials.length > 0) {
+            await Promise.all(specials.map(s => s.scene ? this.activateSpecial(s) : Promise.resolve()));
+            await this.applyGravity();
+            await this.fillEmptySpaces();
+            await this.processCascades();
+        }
+    }
+
+    // --- Helper Visual Methods ---
+
+    gridToWorld(row, col) { return { x: this.x + col * this.cellSize + this.cellSize / 2, y: this.y + row * this.cellSize + this.cellSize / 2 }; }
+    isValidCell(row, col) { return row >= 0 && row < this.rows && col >= 0 && col < this.cols; }
+    isAdjacent(r1, c1, r2, c2) { return (Math.abs(r1 - r2) === 1 && c1 === c2) || (Math.abs(c1 - c2) === 1 && r1 === r2); }
+
+    drawCellBackgrounds() {
+        const graphics = this.scene.add.graphics();
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                const { x, y } = this.gridToWorld(r, c);
+                graphics.fillStyle(0xffffff, (r + c) % 2 === 0 ? 0.1 : 0.15);
+                graphics.fillRoundedRect(x - this.cellSize / 2 + 2, y - this.cellSize / 2 + 2, this.cellSize - 4, this.cellSize - 4, 8);
             }
         }
     }
 
-    async showSpecialActivation(candy) {
-        return new Promise(resolve => {
-            const { x, y } = this.gridToWorld(candy.row, candy.col);
+    drawJellyLayer() {
+        for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) if (this.jelly[r][c] > 0) this.createJellySprite(r, c);
+    }
 
-            if (candy.specialType === 'line_h') {
-                const beam = this.scene.add.graphics();
-                beam.fillStyle(0xffffff, 0.8);
-                beam.fillRect(this.x, y - 10, this.cols * this.cellSize, 20);
+    createJellySprite(row, col) {
+        const { x, y } = this.gridToWorld(row, col);
+        const layers = this.jelly[row][col];
+        if (this.jellySprites[row][col]) this.jellySprites[row][col].destroy();
+        const graphics = this.scene.add.graphics().setDepth(0.5);
+        graphics.fillStyle(layers === 2 ? 0xff1493 : 0xff69b4, layers === 2 ? 0.8 : 0.6);
+        graphics.fillRoundedRect(x - this.cellSize / 2 + 2, y - this.cellSize / 2 + 2, this.cellSize - 4, this.cellSize - 4, 12);
+        if (layers === 2) {
+            graphics.lineStyle(4, 0xffffff, 0.8);
+            graphics.strokeRoundedRect(x - this.cellSize / 2 + 2, y - this.cellSize / 2 + 2, this.cellSize - 4, this.cellSize - 4, 12);
+        }
+        this.jellySprites[row][col] = graphics;
+    }
 
-                this.scene.tweens.add({
-                    targets: beam,
-                    alpha: 0,
-                    duration: 300,
-                    onComplete: () => {
-                        beam.destroy();
-                        resolve();
-                    }
-                });
-            } else if (candy.specialType === 'line_v') {
-                const beam = this.scene.add.graphics();
-                beam.fillStyle(0xffffff, 0.8);
-                beam.fillRect(x - 10, this.y, 20, this.rows * this.cellSize);
+    drawLockOverlays() {
+        for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) if (this.locked[r][c]) this.createLockSprite(r, c);
+    }
 
-                this.scene.tweens.add({
-                    targets: beam,
-                    alpha: 0,
-                    duration: 300,
-                    onComplete: () => {
-                        beam.destroy();
-                        resolve();
-                    }
-                });
-            } else if (candy.specialType === 'bomb') {
-                const circle = this.scene.add.graphics();
-                circle.fillStyle(0xffff00, 0.6);
-                circle.fillCircle(x, y, this.cellSize * 1.5);
+    createLockSprite(row, col) {
+        const { x, y } = this.gridToWorld(row, col);
+        if (this.lockSprites[row][col]) this.lockSprites[row][col].destroy();
+        const graphics = this.scene.add.graphics().setDepth(2);
+        const size = this.cellSize - 8;
+        const left = x - size / 2, top = y - size / 2;
+        graphics.lineStyle(3, 0x87ceeb, 0.9);
+        for (let i = 0; i <= 3; i++) {
+            graphics.lineBetween(left + (size / 3) * i, top, left + (size / 3) * i, top + size);
+            graphics.lineBetween(left, top + (size / 3) * i, left + size, top + (size / 3) * i);
+        }
+        this.lockSprites[row][col] = graphics;
+        if (this.candies[row][col]) this.candies[row][col].disableInteractive();
+    }
 
-                this.scene.tweens.add({
-                    targets: circle,
-                    alpha: 0,
-                    scaleX: 2,
-                    scaleY: 2,
-                    duration: 300,
-                    onComplete: () => {
-                        circle.destroy();
-                        resolve();
-                    }
-                });
-            } else {
-                resolve();
+    removeLockSprite(row, col) {
+        if (this.lockSprites[row][col]) {
+            const sprite = this.lockSprites[row][col];
+            this.scene.tweens.add({ targets: sprite, alpha: 0, scaleX: 1.3, scaleY: 1.3, duration: 300, onComplete: () => sprite.destroy() });
+            this.lockSprites[row][col] = null;
+        }
+        if (this.candies[row][col]) this.candies[row][col].setInteractive({ useHandCursor: true });
+        this.scene.events.emit('lockBroken', row, col);
+    }
+
+    fillBoard() {
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                if (this.grid[r][c] === -1) {
+                    const type = this.getValidCandyType(r, c);
+                    this.createCandy(r, c, type);
+                    if (this.locked[r][c]) this.candies[r][c].disableInteractive();
+                }
             }
-        });
+        }
     }
 
-    async showCrossEffect(row, col) {
-        return new Promise(resolve => {
-            const { x, y } = this.gridToWorld(row, col);
-
-            const hBeam = this.scene.add.graphics();
-            hBeam.fillStyle(0xffffff, 0.8);
-            hBeam.fillRect(this.x, y - 15, this.cols * this.cellSize, 30);
-
-            const vBeam = this.scene.add.graphics();
-            vBeam.fillStyle(0xffffff, 0.8);
-            vBeam.fillRect(x - 15, this.y, 30, this.rows * this.cellSize);
-
-            this.scene.tweens.add({
-                targets: [hBeam, vBeam],
-                alpha: 0,
-                duration: 400,
-                onComplete: () => {
-                    hBeam.destroy();
-                    vBeam.destroy();
-                    resolve();
-                }
-            });
-        });
+    getValidCandyType(row, col) {
+        const invalid = new Set();
+        if (col >= 2 && this.grid[row][col - 1] === this.grid[row][col - 2]) invalid.add(this.grid[row][col - 1]);
+        if (row >= 2 && this.grid[row - 1][col] === this.grid[row - 2][col]) invalid.add(this.grid[row - 1][col]);
+        const valid = [];
+        for (let i = 0; i < this.candyTypes; i++) if (!invalid.has(i)) valid.push(i);
+        return Phaser.Utils.Array.GetRandom(valid.length ? valid : [0]);
     }
 
-    async showBigExplosion(row, col) {
-        return new Promise(resolve => {
-            const { x, y } = this.gridToWorld(row, col);
+    createCandy(row, col, type, animated = false) {
+        const { x, y } = this.gridToWorld(row, col);
+        const candy = new Candy(this.scene, x, y, type, row, col);
+        candy.setDisplaySize(this.cellSize - 12, this.cellSize - 12).setDepth(1);
+        candy.on('pointerdown', () => this.onCandyClick(candy));
+        this.grid[row][col] = type;
+        this.candies[row][col] = candy;
+        if (animated) {
+            candy.y = this.y - this.cellSize;
+            this.scene.tweens.add({ targets: candy, y: y, alpha: 1, duration: 200 + row * 50, ease: 'Bounce.easeOut' });
+        }
+        return candy;
+    }
 
-            const circle = this.scene.add.graphics();
-            circle.fillStyle(0xff6600, 0.7);
-            circle.fillCircle(x, y, this.cellSize * 2.5);
+    // --- Action Methods ---
 
-            this.scene.cameras.main.shake(200, 0.01);
-
-            this.scene.tweens.add({
-                targets: circle,
-                alpha: 0,
-                scaleX: 1.5,
-                scaleY: 1.5,
-                duration: 400,
-                onComplete: () => {
-                    circle.destroy();
-                    resolve();
+    async applyGravity() {
+        const tweens = [];
+        for (let c = 0; c < this.cols; c++) {
+            let emptyRow = this.rows - 1;
+            for (let r = this.rows - 1; r >= 0; r--) {
+                if (this.grid[r][c] !== -1) {
+                    if (r !== emptyRow) {
+                        const candy = this.candies[r][c];
+                        this.grid[emptyRow][c] = this.grid[r][c];
+                        this.grid[r][c] = -1;
+                        this.candies[emptyRow][c] = candy;
+                        this.candies[r][c] = null;
+                        candy.row = emptyRow;
+                        const target = this.gridToWorld(emptyRow, c);
+                        tweens.push({ targets: candy, y: target.y, duration: 100 + (emptyRow - r) * 50, ease: 'Bounce.easeOut' });
+                    }
+                    emptyRow--;
                 }
-            });
-        });
+            }
+        }
+        if (tweens.length === 0) return;
+        await Promise.all(tweens.map(t => new Promise(res => this.scene.tweens.add({ ...t, onComplete: res }))));
+    }
+
+    async fillEmptySpaces() {
+        const tweens = [];
+        for (let c = 0; c < this.cols; c++) {
+            let emptyCount = 0;
+            for (let r = 0; r < this.rows; r++) if (this.grid[r][c] === -1) emptyCount++;
+            for (let r = 0; r < this.rows; r++) {
+                if (this.grid[r][c] === -1) {
+                    const type = this.getValidCandyType(r, c);
+                    const { x, y } = this.gridToWorld(r, c);
+                    const candy = new Candy(this.scene, x, this.y - this.cellSize * (emptyCount - r), type, r, c);
+                    candy.setDisplaySize(this.cellSize - 12, this.cellSize - 12).setDepth(1).on('pointerdown', () => this.onCandyClick(candy));
+                    this.grid[r][c] = type;
+                    this.candies[r][c] = candy;
+                    tweens.push({ targets: candy, y: y, duration: 200 + r * 50, ease: 'Bounce.easeOut' });
+                }
+            }
+        }
+        if (tweens.length === 0) return;
+        await Promise.all(tweens.map(t => new Promise(res => this.scene.tweens.add({ ...t, onComplete: res }))));
     }
 
     async clearCandiesWithSpecials(cells, specialsToCreate) {
-        return new Promise((resolve) => {
-            const specialPositions = new Set(
-                specialsToCreate.map(s => `${s.position.row},${s.position.col}`)
-            );
-
-            const cellsToClear = cells.filter(cell => {
-                const key = `${cell.row},${cell.col}`;
-                return !specialPositions.has(key);
-            });
-
-            let completed = 0;
-            const total = cellsToClear.length + specialsToCreate.length;
-
-            if (total === 0) {
-                resolve();
-                return;
+        const specialPos = new Set(specialsToCreate.map(s => `${s.position.row},${s.position.col}`));
+        const toClear = cells.filter(c => !specialPos.has(`${c.row},${c.col}`));
+        
+        const promises = toClear.map((cell, i) => {
+            const candy = this.candies[cell.row][cell.col];
+            if (candy) {
+                this.handleJellyAt(cell.row, cell.col);
+                this.grid[cell.row][cell.col] = -1;
+                this.candies[cell.row][cell.col] = null;
+                this.scene.events.emit('candyCleared', cell.row, cell.col, candy.candyType);
+                return new Promise(res => this.scene.tweens.add({ targets: candy, scaleX: 0, scaleY: 0, alpha: 0, duration: 200, delay: i * 20, onComplete: () => { candy.destroy(); res(); } }));
             }
-
-            // Clear regular cells
-            cellsToClear.forEach((cell, index) => {
-                const candy = this.candies[cell.row][cell.col];
-                if (candy) {
-                    // Handle jelly
-                    this.handleJellyAt(cell.row, cell.col);
-
-                    this.grid[cell.row][cell.col] = -1;
-                    this.candies[cell.row][cell.col] = null;
-
-                    this.scene.tweens.add({
-                        targets: candy,
-                        scaleX: 0,
-                        scaleY: 0,
-                        alpha: 0,
-                        duration: 200,
-                        delay: index * 20,
-                        ease: 'Back.easeIn',
-                        onComplete: () => {
-                            candy.destroy();
-                            completed++;
-                            if (completed === total) resolve();
-                        }
-                    });
-
-                    this.scene.events.emit('candyCleared', cell.row, cell.col, candy.candyType);
-                } else {
-                    completed++;
-                    if (completed === total) resolve();
-                }
-            });
-
-            // Create special tiles
-            specialsToCreate.forEach((special) => {
-                const { row, col } = special.position;
-                const oldCandy = this.candies[row][col];
-
-                // Handle jelly at special position too
-                this.handleJellyAt(row, col);
-
-                if (oldCandy) {
-                    this.scene.tweens.add({
-                        targets: oldCandy,
-                        scaleX: 1.3,
-                        scaleY: 1.3,
-                        duration: 150,
-                        yoyo: true,
-                        onComplete: () => {
-                            oldCandy.makeSpecial(special.type);
-                            completed++;
-                            if (completed === total) resolve();
-                        }
-                    });
-                } else {
-                    const { x, y } = this.gridToWorld(row, col);
-                    const newCandy = new Candy(this.scene, x, y, special.candyType, row, col);
-                    newCandy.setDisplaySize(this.cellSize - 12, this.cellSize - 12);
-                    newCandy.setDepth(1);
-                    newCandy.on('pointerdown', () => this.onCandyClick(newCandy));
-                    newCandy.makeSpecial(special.type);
-
-                    this.grid[row][col] = special.candyType;
-                    this.candies[row][col] = newCandy;
-
-                    newCandy.setScale(0);
-                    this.scene.tweens.add({
-                        targets: newCandy,
-                        scaleX: 1,
-                        scaleY: 1,
-                        duration: 200,
-                        ease: 'Back.easeOut',
-                        onComplete: () => {
-                            completed++;
-                            if (completed === total) resolve();
-                        }
-                    });
-                }
-            });
+            return Promise.resolve();
         });
+
+        const specialPromises = specialsToCreate.map(special => {
+            const { row, col } = special.position;
+            const old = this.candies[row][col];
+            this.handleJellyAt(row, col);
+            if (old) {
+                return new Promise(res => this.scene.tweens.add({ targets: old, scaleX: 1.3, scaleY: 1.3, duration: 150, yoyo: true, onComplete: () => { old.makeSpecial(special.type); res(); } }));
+            } else {
+                const candy = this.createCandy(row, col, special.candyType);
+                candy.makeSpecial(special.type);
+                candy.setScale(0);
+                return new Promise(res => this.scene.tweens.add({ targets: candy, scaleX: 1, scaleY: 1, duration: 200, onComplete: res }));
+            }
+        });
+
+        await Promise.all([...promises, ...specialPromises]);
+    }
+
+    async clearCandies(cells) {
+        const promises = cells.map((cell, i) => {
+            const candy = this.candies[cell.row][cell.col];
+            if (candy) {
+                this.handleJellyAt(cell.row, cell.col);
+                if (this.locked[cell.row][cell.col]) { this.locked[cell.row][cell.col] = false; this.removeLockSprite(cell.row, cell.col); }
+                this.grid[cell.row][cell.col] = -1;
+                this.candies[cell.row][cell.col] = null;
+                this.scene.events.emit('candyCleared', cell.row, cell.col, candy.candyType);
+                return new Promise(res => this.scene.tweens.add({ targets: candy, scaleX: 0, scaleY: 0, alpha: 0, duration: 200, delay: i * 20, onComplete: () => { candy.destroy(); res(); } }));
+            }
+            return Promise.resolve();
+        });
+        await Promise.all(promises);
     }
 
     handleJellyAt(row, col) {
         if (this.jelly[row][col] > 0) {
             this.jelly[row][col]--;
-
             if (this.jelly[row][col] === 0) {
-                // Jelly fully cleared
                 if (this.jellySprites[row][col]) {
-                    this.animateJellyClear(row, col);
+                    const sprite = this.jellySprites[row][col];
+                    this.scene.tweens.add({ targets: sprite, alpha: 0, scaleX: 1.2, scaleY: 1.2, duration: 200, onComplete: () => sprite.destroy() });
                 }
                 this.scene.events.emit('jellyCleared', row, col);
             } else {
-                // Double jelly reduced to single
                 this.createJellySprite(row, col);
                 this.scene.events.emit('jellyHit', row, col);
             }
         }
     }
 
-    animateJellyClear(row, col) {
-        const jellySprite = this.jellySprites[row][col];
-        if (jellySprite) {
-            this.scene.tweens.add({
-                targets: jellySprite,
-                alpha: 0,
-                scaleX: 1.2,
-                scaleY: 1.2,
-                duration: 200,
-                onComplete: () => {
-                    jellySprite.destroy();
-                }
-            });
-            this.jellySprites[row][col] = null;
+    calculateScore(tiles, cascade) { return Math.floor(10 * tiles * Math.pow(1.5, cascade - 1)); }
+
+    async showSpecialActivation(candy) {
+        const { x, y } = this.gridToWorld(candy.row, candy.col);
+        const graphics = this.scene.add.graphics();
+        if (candy.specialType === 'line_h') {
+            graphics.fillStyle(0xffffff, 0.8).fillRect(this.x, y - 10, this.cols * this.cellSize, 20);
+        } else if (candy.specialType === 'line_v') {
+            graphics.fillStyle(0xffffff, 0.8).fillRect(x - 10, this.y, 20, this.rows * this.cellSize);
+        } else if (candy.specialType === 'bomb') {
+            graphics.fillStyle(0xffff00, 0.6).fillCircle(x, y, this.cellSize * 1.5);
+        } else if (candy.specialType === 'color_bomb') {
+            graphics.lineStyle(4, 0xffffff, 1).strokeCircle(x, y, this.cellSize * 2);
         }
+        return new Promise(res => this.scene.tweens.add({ targets: graphics, alpha: 0, duration: 300, onComplete: () => { graphics.destroy(); res(); } }));
     }
 
-    calculateScore(tilesCleared, cascadeLevel) {
-        const baseScore = 10 * tilesCleared;
-        const multiplier = Math.pow(1.5, cascadeLevel - 1);
-        return Math.floor(baseScore * multiplier);
+    async showCrossEffect(row, col) {
+        const { x, y } = this.gridToWorld(row, col);
+        const h = this.scene.add.graphics().fillStyle(0xffffff, 0.8).fillRect(this.x, y - 15, this.cols * this.cellSize, 30);
+        const v = this.scene.add.graphics().fillStyle(0xffffff, 0.8).fillRect(x - 15, this.y, 30, this.rows * this.cellSize);
+        return new Promise(res => this.scene.tweens.add({ targets: [h, v], alpha: 0, duration: 400, onComplete: () => { h.destroy(); v.destroy(); res(); } }));
     }
 
-    clearCandies(cells) {
-        return new Promise((resolve) => {
-            let completed = 0;
-            const total = cells.length;
-
-            if (total === 0) {
-                resolve();
-                return;
-            }
-
-            cells.forEach((cell, index) => {
-                const candy = this.candies[cell.row][cell.col];
-                if (candy) {
-                    // Handle jelly
-                    this.handleJellyAt(cell.row, cell.col);
-
-                    // Handle locked (shouldn't happen but just in case)
-                    if (this.locked[cell.row][cell.col]) {
-                        this.locked[cell.row][cell.col] = false;
-                        this.removeLockSprite(cell.row, cell.col);
-                    }
-
-                    this.grid[cell.row][cell.col] = -1;
-                    this.candies[cell.row][cell.col] = null;
-
-                    this.scene.tweens.add({
-                        targets: candy,
-                        scaleX: 0,
-                        scaleY: 0,
-                        alpha: 0,
-                        duration: 200,
-                        delay: index * 20,
-                        ease: 'Back.easeIn',
-                        onComplete: () => {
-                            candy.destroy();
-                            completed++;
-                            if (completed === total) resolve();
-                        }
-                    });
-
-                    this.scene.events.emit('candyCleared', cell.row, cell.col, candy.candyType);
-                } else {
-                    completed++;
-                    if (completed === total) resolve();
-                }
-            });
-        });
+    async showBigExplosion(row, col) {
+        const { x, y } = this.gridToWorld(row, col);
+        const c = this.scene.add.graphics().fillStyle(0xff6600, 0.7).fillCircle(x, y, this.cellSize * 2.5);
+        this.scene.cameras.main.shake(200, 0.01);
+        return new Promise(res => this.scene.tweens.add({ targets: c, alpha: 0, scaleX: 1.5, scaleY: 1.5, duration: 400, onComplete: () => { c.destroy(); res(); } }));
     }
 
-    applyGravity() {
-        return new Promise((resolve) => {
-            const tweens = [];
-
-            for (let col = 0; col < this.cols; col++) {
-                let emptyRow = this.rows - 1;
-
-                for (let row = this.rows - 1; row >= 0; row--) {
-                    if (this.grid[row][col] !== -1) {
-                        if (row !== emptyRow) {
-                            const candy = this.candies[row][col];
-
-                            this.grid[emptyRow][col] = this.grid[row][col];
-                            this.grid[row][col] = -1;
-                            this.candies[emptyRow][col] = candy;
-                            this.candies[row][col] = null;
-
-                            const oldRow = candy.row;
-                            candy.row = emptyRow;
-
-                            const targetPos = this.gridToWorld(emptyRow, col);
-                            const distance = emptyRow - oldRow;
-
-                            tweens.push({
-                                targets: candy,
-                                y: targetPos.y,
-                                duration: 100 + distance * 50,
-                                ease: 'Bounce.easeOut'
-                            });
-                        }
-                        emptyRow--;
-                    }
-                }
-            }
-
-            if (tweens.length === 0) {
-                resolve();
-                return;
-            }
-
-            let completed = 0;
-            tweens.forEach(config => {
-                this.scene.tweens.add({
-                    ...config,
-                    onComplete: () => {
-                        completed++;
-                        if (completed === tweens.length) resolve();
-                    }
-                });
-            });
-        });
-    }
-
-    fillEmptySpaces() {
-        return new Promise((resolve) => {
-            const tweens = [];
-
-            for (let col = 0; col < this.cols; col++) {
-                let emptyCount = 0;
-
-                for (let row = 0; row < this.rows; row++) {
-                    if (this.grid[row][col] === -1) {
-                        emptyCount++;
-                    }
-                }
-
-                for (let row = 0; row < this.rows; row++) {
-                    if (this.grid[row][col] === -1) {
-                        const candyType = this.getValidCandyType(row, col);
-                        const { x, y } = this.gridToWorld(row, col);
-
-                        const candy = new Candy(this.scene, x, this.y - this.cellSize * (emptyCount - row), candyType, row, col);
-                        candy.setDisplaySize(this.cellSize - 12, this.cellSize - 12);
-                        candy.setDepth(1);
-                        candy.on('pointerdown', () => this.onCandyClick(candy));
-
-                        this.grid[row][col] = candyType;
-                        this.candies[row][col] = candy;
-
-                        tweens.push({
-                            targets: candy,
-                            y: y,
-                            duration: 200 + row * 50,
-                            ease: 'Bounce.easeOut'
-                        });
-                    }
-                }
-            }
-
-            if (tweens.length === 0) {
-                resolve();
-                return;
-            }
-
-            let completed = 0;
-            tweens.forEach(config => {
-                this.scene.tweens.add({
-                    ...config,
-                    onComplete: () => {
-                        completed++;
-                        if (completed === tweens.length) resolve();
-                    }
-                });
-            });
-        });
-    }
-
-    hasValidMoves() {
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                // Skip locked cells
-                if (this.locked[row][col]) continue;
-
-                const candy = this.candies[row][col];
-                if (candy && candy.isSpecial) {
-                    // Check if special can swap with unlocked adjacent
-                    if (col < this.cols - 1 && this.candies[row][col + 1] && !this.locked[row][col + 1]) return true;
-                    if (row < this.rows - 1 && this.candies[row + 1][col] && !this.locked[row + 1][col]) return true;
-                }
-
-                // Try swap right (skip if either is locked)
-                if (col < this.cols - 1 && !this.locked[row][col + 1]) {
-                    this.swapGridData(row, col, row, col + 1);
-                    if (this.findMatches().length > 0) {
-                        this.swapGridData(row, col, row, col + 1);
-                        return true;
-                    }
-                    this.swapGridData(row, col, row, col + 1);
-                }
-
-                // Try swap down
-                if (row < this.rows - 1 && !this.locked[row + 1][col]) {
-                    this.swapGridData(row, col, row + 1, col);
-                    if (this.findMatches().length > 0) {
-                        this.swapGridData(row, col, row + 1, col);
-                        return true;
-                    }
-                    this.swapGridData(row, col, row + 1, col);
-                }
-            }
-        }
-
-        return false;
-    }
-
-    swapGridData(row1, col1, row2, col2) {
-        const temp = this.grid[row1][col1];
-        this.grid[row1][col1] = this.grid[row2][col2];
-        this.grid[row2][col2] = temp;
-    }
-
-    findValidMove() {
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                if (this.locked[row][col]) continue;
-
-                if (col < this.cols - 1 && !this.locked[row][col + 1]) {
-                    this.swapGridData(row, col, row, col + 1);
-                    if (this.findMatches().length > 0) {
-                        this.swapGridData(row, col, row, col + 1);
-                        return [
-                            { row, col },
-                            { row, col: col + 1 }
-                        ];
-                    }
-                    this.swapGridData(row, col, row, col + 1);
-                }
-
-                if (row < this.rows - 1 && !this.locked[row + 1][col]) {
-                    this.swapGridData(row, col, row + 1, col);
-                    if (this.findMatches().length > 0) {
-                        this.swapGridData(row, col, row + 1, col);
-                        return [
-                            { row, col },
-                            { row: row + 1, col }
-                        ];
-                    }
-                    this.swapGridData(row, col, row + 1, col);
-                }
-            }
-        }
-
-        return null;
-    }
-
-    async shuffle(attempts = 0) {
-        const maxAttempts = 10;
-
-        // Safety check to prevent infinite recursion
-        if (attempts >= maxAttempts) {
-            console.warn('Shuffle: Max attempts reached, forcing valid board');
-            // Force regenerate the entire board as last resort
-            await this.forceRegenerateBoard();
-            this.inputLocked = false;
-            return;
-        }
-
+    async shuffle() {
         this.inputLocked = true;
-
-        const allCandies = [];
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                if (this.grid[row][col] !== -1 &&
-                    this.candies[row][col] &&
-                    !this.candies[row][col].isSpecial &&
-                    !this.locked[row][col]) {
-                    allCandies.push(this.grid[row][col]);
-                }
-            }
+        const all = [];
+        for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) if (this.grid[r][c] !== -1 && !this.candies[r][c].isSpecial && !this.locked[r][c]) all.push(this.grid[r][c]);
+        Phaser.Utils.Array.Shuffle(all);
+        let idx = 0;
+        for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) if (this.candies[r][c] && !this.candies[r][c].isSpecial && !this.locked[r][c]) {
+            const type = all[idx++];
+            this.grid[r][c] = type;
+            this.candies[r][c].candyType = type;
+            this.candies[r][c].setTexture(`candy_${type}`);
+            this.scene.tweens.add({ targets: this.candies[r][c], scaleX: 0, duration: 150, yoyo: true });
         }
-
-        Phaser.Utils.Array.Shuffle(allCandies);
-
-        let index = 0;
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                const candy = this.candies[row][col];
-                if (candy && !candy.isSpecial && !this.locked[row][col]) {
-                    const newType = allCandies[index++];
-                    this.grid[row][col] = newType;
-                    candy.candyType = newType;
-                    candy.setTexture(`candy_${newType}`);
-
-                    this.scene.tweens.add({
-                        targets: candy,
-                        scaleX: 0,
-                        duration: 150,
-                        yoyo: true,
-                        ease: 'Power2'
-                    });
-                }
-            }
-        }
-
-        await new Promise(resolve => this.scene.time.delayedCall(300, resolve));
-
-        if (!this.hasValidMoves()) {
-            await this.shuffle(attempts + 1);
-            return;
-        }
-
+        await new Promise(r => this.scene.time.delayedCall(300, r));
+        if (!this.hasValidMoves()) await this.shuffle();
         this.inputLocked = false;
     }
 
-    async forceRegenerateBoard() {
-        // Destroy all non-special, non-locked candies and regenerate
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                const candy = this.candies[row][col];
-                if (candy && !candy.isSpecial && !this.locked[row][col]) {
-                    candy.destroy();
-                    this.candies[row][col] = null;
-                    this.grid[row][col] = -1;
-                }
-            }
-        }
+    getAdjacentCells(row, col) {
+        const adj = [];
+        [[ -1, 0 ], [ 1, 0 ], [ 0, -1 ], [ 0, 1 ]].forEach(([ dr, dc ]) => {
+            if (this.isValidCell(row + dr, col + dc)) adj.push({ row: row + dr, col: col + dc });
+        });
+        return adj;
+    }
 
-        // Refill with valid candy types (no initial matches)
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                if (this.grid[row][col] === -1) {
-                    const candyType = this.getValidCandyType(row, col);
-                    this.createCandy(row, col, candyType, true);
-                }
-            }
+    async unlockAdjacentTiles(keys) {
+        for (const key of keys) {
+            const [ r, c ] = key.split(',').map(Number);
+            if (this.locked[r][c]) { this.locked[r][c] = false; this.removeLockSprite(r, c); }
         }
-
-        await new Promise(resolve => this.scene.time.delayedCall(500, resolve));
     }
 
     destroy() {
-        // Clean up all candies, jelly sprites, and lock sprites
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                if (this.candies[row] && this.candies[row][col]) {
-                    this.candies[row][col].destroy();
-                    this.candies[row][col] = null;
-                }
-                if (this.jellySprites[row] && this.jellySprites[row][col]) {
-                    this.jellySprites[row][col].destroy();
-                    this.jellySprites[row][col] = null;
-                }
-                if (this.lockSprites[row] && this.lockSprites[row][col]) {
-                    this.lockSprites[row][col].destroy();
-                    this.lockSprites[row][col] = null;
-                }
-            }
-        }
-    }
-
-    // Helper to count remaining jelly
-    countRemainingJelly() {
-        let count = 0;
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                count += this.jelly[row][col];
-            }
-        }
-        return count;
-    }
-
-    // Helper to count remaining locked tiles
-    countRemainingLocked() {
-        let count = 0;
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                if (this.locked[row][col]) count++;
-            }
-        }
-        return count;
-    }
-
-    destroy() {
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                if (this.candies[row][col]) {
-                    this.candies[row][col].destroy();
-                }
-                if (this.jellySprites[row][col]) {
-                    this.jellySprites[row][col].destroy();
-                }
-                if (this.lockSprites[row][col]) {
-                    this.lockSprites[row][col].destroy();
-                }
-            }
+        for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) {
+            if (this.candies[r][c]) this.candies[r][c].destroy();
+            if (this.jellySprites[r][c]) this.jellySprites[r][c].destroy();
+            if (this.lockSprites[r][c]) this.lockSprites[r][c].destroy();
         }
     }
 }

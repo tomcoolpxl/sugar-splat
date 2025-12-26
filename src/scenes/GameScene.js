@@ -1022,7 +1022,7 @@ export default class GameScene extends Phaser.Scene {
         }
 
         // Explode everything
-        await this.board.processBoardState();
+        await this.board.detonateAllSpecials();
     }
 
     showLoseScreen() {
