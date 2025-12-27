@@ -27,6 +27,11 @@ export default class GameScene extends Phaser.Scene {
             collect: {},
             drop: 0
         };
+
+        // Powerup system state
+        this.powerups = { hammer: 0, bomb: 0, rowcol: 0, colorblast: 0 };
+        this.powerupMode = null;  // null or powerup type when selecting target
+        this.powerupButtons = {};
     }
 
     create() {
@@ -53,6 +58,10 @@ export default class GameScene extends Phaser.Scene {
 
         // HUD
         this.createHUD(width, height);
+
+        // Load and display powerups
+        this.loadPowerups();
+        this.createPowerupBar(width, height);
 
         // Set up event listeners
         this.setupEvents();
@@ -299,6 +308,400 @@ export default class GameScene extends Phaser.Scene {
                 strokeThickness: 3
             }).setOrigin(0.5);
         }
+    }
+
+    // --- Powerup System ---
+
+    loadPowerups() {
+        try {
+            const saveData = localStorage.getItem('sugarSplash_save');
+            if (saveData) {
+                const parsed = JSON.parse(saveData);
+                if (parsed.powerups) {
+                    this.powerups = { ...this.powerups, ...parsed.powerups };
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to load powerups:', e);
+        }
+    }
+
+    savePowerups() {
+        try {
+            const saveKey = 'sugarSplash_save';
+            let saveData = localStorage.getItem(saveKey);
+            saveData = saveData ? JSON.parse(saveData) : { levels: {} };
+            saveData.powerups = this.powerups;
+            localStorage.setItem(saveKey, JSON.stringify(saveData));
+        } catch (e) {
+            console.warn('Failed to save powerups:', e);
+        }
+    }
+
+    createPowerupBar(width, height) {
+        const powerupTypes = ['hammer', 'bomb', 'rowcol', 'colorblast'];
+        const barY = height - 70;
+        const buttonSize = 50;
+        const spacing = 15;
+        const totalWidth = powerupTypes.length * (buttonSize + spacing) - spacing;
+        const startX = 40;
+
+        // Create powerup buttons
+        powerupTypes.forEach((type, index) => {
+            const x = startX + index * (buttonSize + spacing) + buttonSize / 2;
+            const config = GameConfig.POWERUPS[type];
+
+            // Button background
+            const bg = this.add.graphics({ x, y: barY });
+            bg.fillStyle(this.powerups[type] > 0 ? 0x4a4a6a : 0x2a2a3a, 0.9);
+            bg.fillRoundedRect(-buttonSize / 2, -buttonSize / 2, buttonSize, buttonSize, 10);
+            bg.setInteractive(
+                new Phaser.Geom.Rectangle(-buttonSize / 2, -buttonSize / 2, buttonSize, buttonSize),
+                Phaser.Geom.Rectangle.Contains
+            );
+
+            // Icon
+            const icon = this.add.text(x, barY - 5, config.icon, {
+                fontSize: '28px'
+            }).setOrigin(0.5);
+
+            // Count badge
+            const count = this.add.text(x + 15, barY + 15, `${this.powerups[type]}`, {
+                fontFamily: 'Arial Black',
+                fontSize: '14px',
+                color: this.powerups[type] > 0 ? '#ffffff' : '#666666',
+                stroke: '#000000',
+                strokeThickness: 2
+            }).setOrigin(0.5);
+
+            // Store references
+            this.powerupButtons[type] = { bg, icon, count };
+
+            // Click handler
+            bg.on('pointerup', () => this.onPowerupClick(type));
+            bg.on('pointerover', () => {
+                if (this.powerups[type] > 0) {
+                    this.tweens.add({ targets: [bg, icon], scaleX: 1.1, scaleY: 1.1, duration: 100 });
+                }
+            });
+            bg.on('pointerout', () => {
+                if (this.powerupMode !== type) {
+                    this.tweens.add({ targets: [bg, icon], scaleX: 1, scaleY: 1, duration: 100 });
+                }
+            });
+        });
+    }
+
+    onPowerupClick(type) {
+        if (this.isGameOver || this.board.inputLocked) return;
+
+        // Cancel if clicking same powerup
+        if (this.powerupMode === type) {
+            this.cancelPowerupMode();
+            return;
+        }
+
+        // Check if player has this powerup
+        if (this.powerups[type] <= 0) {
+            // Flash red to indicate empty
+            const btn = this.powerupButtons[type];
+            if (btn) {
+                this.tweens.add({
+                    targets: btn.bg,
+                    alpha: 0.5,
+                    duration: 100,
+                    yoyo: true,
+                    repeat: 1
+                });
+            }
+            return;
+        }
+
+        // Enter powerup mode
+        this.powerupMode = type;
+        if (this.soundManager) this.soundManager.play('select');
+
+        // Highlight selected button
+        const btn = this.powerupButtons[type];
+        if (btn) {
+            this.tweens.add({ targets: [btn.bg, btn.icon], scaleX: 1.15, scaleY: 1.15, duration: 150 });
+        }
+
+        // Dim the board slightly
+        if (!this.powerupOverlay) {
+            this.powerupOverlay = this.add.graphics();
+        }
+        this.powerupOverlay.clear();
+        this.powerupOverlay.fillStyle(0x000000, 0.2);
+        this.powerupOverlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
+        this.powerupOverlay.setDepth(5);
+
+        // Show cancel hint
+        this.showPowerupHint(type);
+    }
+
+    showPowerupHint(type) {
+        const config = GameConfig.POWERUPS[type];
+        if (this.powerupHintText?.scene) {
+            this.powerupHintText.destroy();
+        }
+        this.powerupHintText = this.add.text(
+            this.cameras.main.width / 2,
+            160,
+            `Tap a candy to use ${config.name}`,
+            {
+                fontFamily: 'Arial, sans-serif',
+                fontSize: '20px',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 3
+            }
+        ).setOrigin(0.5).setDepth(10);
+    }
+
+    cancelPowerupMode() {
+        if (!this.powerupMode) return;
+
+        const btn = this.powerupButtons[this.powerupMode];
+        if (btn) {
+            this.tweens.add({ targets: [btn.bg, btn.icon], scaleX: 1, scaleY: 1, duration: 150 });
+        }
+
+        this.powerupMode = null;
+
+        if (this.powerupOverlay) {
+            this.powerupOverlay.clear();
+        }
+
+        if (this.powerupHintText?.scene) {
+            this.powerupHintText.destroy();
+            this.powerupHintText = null;
+        }
+    }
+
+    updatePowerupButton(type) {
+        const btn = this.powerupButtons[type];
+        if (!btn) return;
+
+        // Update count
+        btn.count.setText(`${this.powerups[type]}`);
+        btn.count.setColor(this.powerups[type] > 0 ? '#ffffff' : '#666666');
+
+        // Update background
+        btn.bg.clear();
+        btn.bg.fillStyle(this.powerups[type] > 0 ? 0x4a4a6a : 0x2a2a3a, 0.9);
+        btn.bg.fillRoundedRect(-25, -25, 50, 50, 10);
+    }
+
+    async activatePowerup(type, row, col, candy) {
+        // Use up the powerup
+        this.powerups[type]--;
+        this.updatePowerupButton(type);
+        this.savePowerups();
+        this.cancelPowerupMode();
+
+        // Lock input during activation
+        this.board.inputLocked = true;
+
+        try {
+            switch (type) {
+                case 'hammer':
+                    await this.activateHammer(row, col, candy);
+                    break;
+                case 'bomb':
+                    await this.activateBombPowerup(row, col);
+                    break;
+                case 'rowcol':
+                    await this.activateRowCol(row, col);
+                    break;
+                case 'colorblast':
+                    await this.activateColorBlast(row, col, candy);
+                    break;
+            }
+
+            // Process any cascades
+            await this.board.applyGravity();
+            await this.board.fillEmptySpaces();
+            await this.board.processCascades();
+            this.events.emit('cascadeComplete');
+        } finally {
+            this.board.inputLocked = false;
+        }
+    }
+
+    async activateHammer(row, col, candy) {
+        if (!candy || !candy.active) return;
+
+        // Hammer animation
+        const pos = this.board.gridToWorld(row, col);
+
+        // Show hammer icon slamming down
+        const hammer = this.add.text(pos.x, pos.y - 60, '🔨', { fontSize: '48px' }).setOrigin(0.5).setDepth(100);
+
+        await new Promise(resolve => {
+            this.tweens.add({
+                targets: hammer,
+                y: pos.y,
+                rotation: 0.3,
+                duration: 200,
+                ease: 'Quad.easeIn',
+                onComplete: () => {
+                    this.cameras.main.shake(100, 0.01);
+                    if (this.soundManager) this.soundManager.play('bomb');
+
+                    // Particles
+                    if (this.emitter) {
+                        this.emitter.setConfig({
+                            speed: { min: 100, max: 200 },
+                            scale: { start: 0.5, end: 0 },
+                            lifespan: 400,
+                            tint: candy.tint || 0xffffff
+                        });
+                        this.emitter.emitParticleAt(pos.x, pos.y, 15);
+                    }
+
+                    hammer.destroy();
+                    resolve();
+                }
+            });
+        });
+
+        // Clear the candy and handle jelly
+        this.board.handleJellyAt(row, col);
+        await this.board.clearCandies([{ row, col }]);
+    }
+
+    async activateBombPowerup(row, col) {
+        const pos = this.board.gridToWorld(row, col);
+
+        // Show bomb explosion effect
+        const ring = this.add.graphics({ x: pos.x, y: pos.y });
+        ring.fillStyle(0xff6600, 0.7);
+        ring.fillCircle(0, 0, this.board.cellSize);
+
+        this.cameras.main.shake(200, 0.015);
+        if (this.soundManager) this.soundManager.play('bomb');
+
+        await new Promise(resolve => {
+            this.tweens.add({
+                targets: ring,
+                scaleX: 2,
+                scaleY: 2,
+                alpha: 0,
+                duration: 300,
+                onComplete: () => {
+                    ring.destroy();
+                    resolve();
+                }
+            });
+        });
+
+        // Clear 3x3 area
+        const cells = [];
+        for (let r = row - 1; r <= row + 1; r++) {
+            for (let c = col - 1; c <= col + 1; c++) {
+                if (this.board.isValidCell(r, c) && this.board.candies[r][c]) {
+                    this.board.handleJellyAt(r, c);
+                    cells.push({ row: r, col: c });
+                }
+            }
+        }
+
+        const score = this.board.calculateScore(cells.length, 1);
+        this.events.emit('scoreUpdate', score, 1);
+        await this.board.clearCandies(cells);
+    }
+
+    async activateRowCol(row, col) {
+        const pos = this.board.gridToWorld(row, col);
+        const cells = [];
+
+        // Clear both row and column for maximum effect
+        // Row
+        for (let c = 0; c < this.board.cols; c++) {
+            if (this.board.candies[row][c]) {
+                this.board.handleJellyAt(row, c);
+                cells.push({ row, col: c });
+            }
+        }
+        // Column (avoid duplicating center)
+        for (let r = 0; r < this.board.rows; r++) {
+            if (r !== row && this.board.candies[r][col]) {
+                this.board.handleJellyAt(r, col);
+                cells.push({ row: r, col });
+            }
+        }
+
+        // Cross effect visual
+        const h = this.add.graphics()
+            .fillStyle(0xffff00, 0.8)
+            .fillRect(this.board.x, pos.y - 15, this.board.cols * this.board.cellSize, 30);
+        const v = this.add.graphics()
+            .fillStyle(0xffff00, 0.8)
+            .fillRect(pos.x - 15, this.board.y, 30, this.board.rows * this.board.cellSize);
+
+        if (this.soundManager) this.soundManager.play('line');
+
+        await new Promise(resolve => {
+            this.tweens.add({
+                targets: [h, v],
+                alpha: 0,
+                duration: 400,
+                onComplete: () => {
+                    h.destroy();
+                    v.destroy();
+                    resolve();
+                }
+            });
+        });
+
+        const score = this.board.calculateScore(cells.length, 1);
+        this.events.emit('scoreUpdate', score, 1);
+        await this.board.clearCandies(cells);
+    }
+
+    async activateColorBlast(row, col, candy) {
+        if (!candy) return;
+
+        const targetType = candy.candyType;
+        const cells = [];
+
+        // Find all candies of this color
+        for (let r = 0; r < this.board.rows; r++) {
+            for (let c = 0; c < this.board.cols; c++) {
+                const cell = this.board.candies[r][c];
+                if (cell && cell.candyType === targetType) {
+                    this.board.handleJellyAt(r, c);
+                    cells.push({ row: r, col: c });
+                }
+            }
+        }
+
+        // Rainbow effect - particles from each candy
+        const centerPos = this.board.gridToWorld(row, col);
+        const colors = [0xff0000, 0xff7f00, 0xffff00, 0x00ff00, 0x0000ff, 0x8b00ff];
+
+        for (const cell of cells) {
+            const pos = this.board.gridToWorld(cell.row, cell.col);
+            if (this.emitter) {
+                this.emitter.setConfig({
+                    speed: { min: 50, max: 150 },
+                    scale: { start: 0.4, end: 0 },
+                    lifespan: 500,
+                    tint: colors[Math.floor(Math.random() * colors.length)]
+                });
+                this.emitter.emitParticleAt(pos.x, pos.y, 5);
+            }
+        }
+
+        if (this.soundManager) this.soundManager.play('bomb');
+        this.cameras.main.shake(150, 0.01);
+
+        await new Promise(r => setTimeout(r, 200));
+
+        const score = this.board.calculateScore(cells.length, 1) + 100;
+        this.events.emit('scoreUpdate', score, 1);
+        await this.board.clearCandies(cells);
     }
 
     updateProgressBar() {
@@ -598,6 +1001,9 @@ export default class GameScene extends Phaser.Scene {
 
         this.saveProgress(stars);
 
+        // Award powerups based on stars
+        const awardedPowerups = this.awardPowerups(stars);
+
         const overlay = this.add.graphics();
         overlay.fillStyle(0x000000, 0.7);
         overlay.fillRect(0, 0, width, height);
@@ -606,9 +1012,11 @@ export default class GameScene extends Phaser.Scene {
         const container = this.add.container(width / 2, height / 2);
         container.setDepth(501);
 
+        // Adjust panel size if we have powerup rewards
+        const panelHeight = awardedPowerups.length > 0 ? 500 : 440;
         const panel = this.add.graphics();
         panel.fillStyle(0xffffff, 0.95);
-        panel.fillRoundedRect(-180, -220, 360, 440, 25);
+        panel.fillRoundedRect(-180, -220, 360, panelHeight, 25);
         container.add(panel);
 
         const title = this.add.text(0, -170, 'Level Complete!', {
@@ -628,14 +1036,69 @@ export default class GameScene extends Phaser.Scene {
         }).setOrigin(0.5);
         container.add(scoreText);
 
-        if (this.currentLevel < 20) {
-            this.createWinButton(container, 0, 80, 'Next Level', () => this.scene.restart({ level: this.currentLevel + 1 }));
-        } else {
-            this.createWinButton(container, 0, 80, 'Main Menu', () => this.scene.start('MenuScene'));
+        // Display powerup rewards
+        if (awardedPowerups.length > 0) {
+            const rewardLabel = this.add.text(0, 35, 'Rewards:', {
+                fontFamily: 'Arial, sans-serif', fontSize: '20px', color: '#666666'
+            }).setOrigin(0.5);
+            container.add(rewardLabel);
+
+            const spacing = 60;
+            const startX = -((awardedPowerups.length - 1) * spacing) / 2;
+
+            awardedPowerups.forEach((type, index) => {
+                const config = GameConfig.POWERUPS[type];
+                const rewardIcon = this.add.text(startX + index * spacing, 70, config.icon, {
+                    fontSize: '36px'
+                }).setOrigin(0.5).setScale(0);
+                container.add(rewardIcon);
+
+                // Animated entrance with bounce
+                this.tweens.add({
+                    targets: rewardIcon,
+                    scaleX: 1.2,
+                    scaleY: 1.2,
+                    duration: 400,
+                    delay: 800 + index * 200,
+                    ease: 'Back.easeOut',
+                    onStart: () => {
+                        if (this.soundManager) this.soundManager.play('select');
+                    }
+                });
+
+                // "+1" text
+                const plusOne = this.add.text(startX + index * spacing + 20, 50, '+1', {
+                    fontFamily: 'Arial Black',
+                    fontSize: '16px',
+                    color: '#4ade80',
+                    stroke: '#ffffff',
+                    strokeThickness: 2
+                }).setOrigin(0.5).setAlpha(0);
+                container.add(plusOne);
+
+                this.tweens.add({
+                    targets: plusOne,
+                    alpha: 1,
+                    y: 40,
+                    duration: 300,
+                    delay: 900 + index * 200,
+                    ease: 'Power2'
+                });
+            });
         }
 
-        this.createWinButton(container, 0, 145, 'Replay', () => this.scene.restart({ level: this.currentLevel }));
-        this.createWinButton(container, 0, 210, 'Level Select', () => this.scene.start('LevelSelectScene'));
+        // Adjust button positions based on whether we have rewards
+        const buttonStartY = awardedPowerups.length > 0 ? 120 : 80;
+        const buttonSpacing = 55;
+
+        if (this.currentLevel < 20) {
+            this.createWinButton(container, 0, buttonStartY, 'Next Level', () => this.scene.restart({ level: this.currentLevel + 1 }));
+        } else {
+            this.createWinButton(container, 0, buttonStartY, 'Main Menu', () => this.scene.start('MenuScene'));
+        }
+
+        this.createWinButton(container, 0, buttonStartY + buttonSpacing, 'Replay', () => this.scene.restart({ level: this.currentLevel }));
+        this.createWinButton(container, 0, buttonStartY + buttonSpacing * 2, 'Level Select', () => this.scene.start('LevelSelectScene'));
 
         container.setScale(0.5); container.setAlpha(0);
         this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, alpha: 1, duration: 400, ease: 'Back.easeOut' });
@@ -659,6 +1122,50 @@ export default class GameScene extends Phaser.Scene {
         } catch (e) {
             console.warn('Failed to save progress:', e);
         }
+    }
+
+    // Award powerups based on stars earned
+    awardPowerups(stars) {
+        const awarded = [];
+
+        // 1 star: 30% chance of 1 powerup
+        // 2 stars: 1 random powerup guaranteed
+        // 3 stars: 1 random powerup + 50% chance of second
+        if (stars === 1) {
+            if (Math.random() < 0.3) {
+                awarded.push(this.selectRandomPowerup());
+            }
+        } else if (stars === 2) {
+            awarded.push(this.selectRandomPowerup());
+        } else if (stars >= 3) {
+            awarded.push(this.selectRandomPowerup());
+            if (Math.random() < 0.5) {
+                awarded.push(this.selectRandomPowerup());
+            }
+        }
+
+        // Add to inventory
+        for (const type of awarded) {
+            this.powerups[type]++;
+            this.updatePowerupButton(type);
+        }
+        this.savePowerups();
+
+        return awarded;
+    }
+
+    // Weighted random powerup selection
+    selectRandomPowerup() {
+        const powerupConfig = GameConfig.POWERUPS;
+        const types = Object.keys(powerupConfig);
+        const totalWeight = types.reduce((sum, type) => sum + (powerupConfig[type].weight || 25), 0);
+
+        let rand = Math.random() * totalWeight;
+        for (const type of types) {
+            rand -= (powerupConfig[type].weight || 25);
+            if (rand <= 0) return type;
+        }
+        return types[0]; // Fallback to first type
     }
 
     showPauseMenu() {

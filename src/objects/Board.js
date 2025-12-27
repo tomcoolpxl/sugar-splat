@@ -102,6 +102,13 @@ export default class Board {
 
     onCandyClick(candy) {
         if (this.inputLocked) return;
+
+        // Check if scene is in powerup mode
+        if (this.scene.powerupMode) {
+            this.scene.activatePowerup(this.scene.powerupMode, candy.row, candy.col, candy);
+            return;
+        }
+
         if (this.selectedCandy && !this.selectedCandy.active) {
             this.selectedCandy = null;
         }

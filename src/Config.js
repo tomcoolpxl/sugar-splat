@@ -53,6 +53,34 @@ export const GameConfig = {
         LOCK_COLOR: 0x87ceeb
     },
 
+    // Powerup System
+    POWERUPS: {
+        hammer: {
+            name: 'Hammer',
+            icon: '🔨',
+            description: 'Destroy any single tile',
+            weight: 40  // Drop weight for rewards
+        },
+        bomb: {
+            name: 'Bomb',
+            icon: '💣',
+            description: 'Explode a 3x3 area',
+            weight: 30
+        },
+        rowcol: {
+            name: 'Lightning',
+            icon: '⚡',
+            description: 'Clear entire row or column',
+            weight: 20
+        },
+        colorblast: {
+            name: 'Rainbow',
+            icon: '🌈',
+            description: 'Remove all of one color',
+            weight: 10
+        }
+    },
+
     // Audio Configuration
     AUDIO: {
         MASTER_VOLUME: 0.3,
