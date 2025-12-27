@@ -16,8 +16,9 @@ function getSharedAudioContext() {
 }
 
 export default class SoundManager {
-    constructor(scene) {
+    constructor(scene, level = 1) {
         this.scene = scene;
+        this.level = level;
         // Use our own AudioContext instead of Phaser's to avoid "cut" errors
         this.context = getSharedAudioContext();
         this.masterVolume = GameConfig.AUDIO.MASTER_VOLUME;
@@ -39,6 +40,27 @@ export default class SoundManager {
 
         // Music config from centralized settings
         this.musicConfig = GameConfig.AUDIO.MUSIC;
+
+        // Load sound palette for this level
+        this.loadPalette(level);
+    }
+
+    loadPalette(level) {
+        const palettes = this.musicConfig?.PALETTES;
+        const levelPalettes = this.musicConfig?.LEVEL_PALETTES;
+
+        if (!palettes || !levelPalettes) {
+            // Fallback to default chiptune sounds
+            this.palette = {
+                bass: { type: 'triangle', vol: 0.8 },
+                arp: { type: 'square', vol: 0.3 },
+                melody: { type: 'square', vol: 0.6 }
+            };
+            return;
+        }
+
+        const paletteName = levelPalettes[level] || 'chiptune';
+        this.palette = palettes[paletteName] || palettes.chiptune;
     }
 
     play(key) {
@@ -263,25 +285,30 @@ export default class SoundManager {
 
         const vol = GameConfig.AUDIO.MUSIC_VOLUME_MULTIPLIER * 0.5;
 
-        // --- Triangle Bass on beats 0 and 8 ---
+        // Get instrument settings from palette
+        const bassSettings = this.palette?.bass || { type: 'triangle', vol: 0.8 };
+        const arpSettings = this.palette?.arp || { type: 'square', vol: 0.3 };
+        const melodySettings = this.palette?.melody || { type: 'square', vol: 0.6 };
+
+        // --- Bass on beats 0 and 8 ---
         if (step === 0 || step === 8) {
-            this.playChipNote(chord.bass, 0.4, 'triangle', vol * 0.8, time);
+            this.playChipNote(chord.bass, 0.4, bassSettings.type, vol * bassSettings.vol, time);
         }
 
-        // --- Arpeggiated chord (square wave, soft) ---
+        // --- Arpeggiated chord ---
         // Play arpeggio notes on steps 0,2,4,6,8,10,12,14 (8th notes)
         if (step % 2 === 0 && arp) {
             const arpIndex = (step / 2) % arp.length;
-            this.playChipNote(arp[arpIndex], 0.15, 'square', vol * 0.3, time);
+            this.playChipNote(arp[arpIndex], 0.15, arpSettings.type, vol * arpSettings.vol, time);
         }
 
-        // --- Melody (square wave, prominent) ---
+        // --- Melody ---
         // Play melody on steps 0,4,8,12 (quarter notes)
         if (step % 4 === 0 && melody && melody.length > 0) {
             const melodyIndex = (this.stepIndex / 4) % melody.length;
             const melodyNote = melody[melodyIndex];
             if (melodyNote > 0) { // -1 = rest
-                this.playChipNote(melodyNote, 0.35, 'square', vol * 0.6, time);
+                this.playChipNote(melodyNote, 0.35, melodySettings.type, vol * melodySettings.vol, time);
             }
         }
     }

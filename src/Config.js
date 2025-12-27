@@ -155,7 +155,72 @@ export const GameConfig = {
 
             // Structure: A-B-C-A-D-A (theme, variation, playful, theme, calm, theme)
             SECTIONS: ['A', 'B', 'C', 'A', 'D', 'A'],
-            MEASURES_PER_SECTION: 4  // Each section plays for 4 chord cycles
+            MEASURES_PER_SECTION: 4,  // Each section plays for 4 chord cycles
+
+            // Sound palettes for different levels - defines instrument timbres
+            // Each palette creates a distinct mood while using the same melodies
+            PALETTES: {
+                // Soft & Gentle - early levels (sine-heavy, mellow)
+                gentle: {
+                    bass: { type: 'sine', vol: 0.9 },
+                    arp: { type: 'triangle', vol: 0.35 },
+                    melody: { type: 'triangle', vol: 0.7 }
+                },
+                // Classic Chiptune - bright and crisp
+                chiptune: {
+                    bass: { type: 'triangle', vol: 0.8 },
+                    arp: { type: 'square', vol: 0.3 },
+                    melody: { type: 'square', vol: 0.6 }
+                },
+                // Warm & Rich - fuller sound with sawtooth
+                warm: {
+                    bass: { type: 'triangle', vol: 0.85 },
+                    arp: { type: 'triangle', vol: 0.25 },
+                    melody: { type: 'sawtooth', vol: 0.45 }
+                },
+                // Dreamy - soft sine tones, spacious
+                dreamy: {
+                    bass: { type: 'sine', vol: 0.7 },
+                    arp: { type: 'sine', vol: 0.4 },
+                    melody: { type: 'triangle', vol: 0.65 }
+                },
+                // Punchy - more aggressive, game-like
+                punchy: {
+                    bass: { type: 'sawtooth', vol: 0.6 },
+                    arp: { type: 'square', vol: 0.25 },
+                    melody: { type: 'square', vol: 0.55 }
+                },
+                // Crystal - bright and shimmery
+                crystal: {
+                    bass: { type: 'triangle', vol: 0.75 },
+                    arp: { type: 'sine', vol: 0.45 },
+                    melody: { type: 'sine', vol: 0.8 }
+                }
+            },
+
+            // Level to palette mapping (cycles through for variety)
+            LEVEL_PALETTES: {
+                1: 'gentle',      // Easy intro - soft sounds
+                2: 'gentle',
+                3: 'chiptune',    // Classic game feel
+                4: 'chiptune',
+                5: 'warm',        // Richer as difficulty increases
+                6: 'dreamy',      // Jelly intro - ethereal
+                7: 'dreamy',
+                8: 'chiptune',
+                9: 'crystal',     // Bright and clear
+                10: 'warm',
+                11: 'punchy',     // New mechanics - energetic
+                12: 'crystal',
+                13: 'chiptune',
+                14: 'warm',
+                15: 'punchy',
+                16: 'crystal',    // Challenge levels
+                17: 'dreamy',
+                18: 'punchy',
+                19: 'warm',
+                20: 'chiptune'    // Final level - classic
+            }
         },
 
         // Sound Effect Definitions

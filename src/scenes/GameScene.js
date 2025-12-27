@@ -38,8 +38,8 @@ export default class GameScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
-        // Initialize Sound Manager
-        this.soundManager = new SoundManager(this);
+        // Initialize Sound Manager with level-specific sound palette
+        this.soundManager = new SoundManager(this, this.currentLevel);
         
         // Apply saved mute state
         const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
