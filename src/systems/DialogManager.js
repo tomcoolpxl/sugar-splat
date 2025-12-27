@@ -160,11 +160,11 @@ export default class DialogManager {
         const overlay = this.createOverlay();
         const container = this.createContainer();
 
-        const panelHeight = awardedPowerups.length > 0 ? 440 : 360;
+        const panelHeight = awardedPowerups.length > 0 ? 480 : 400;
         this.createPanel(container, 360, panelHeight, 25);
 
         // Title
-        const title = this.scene.add.text(0, -panelHeight / 2 + 35, 'Level Complete!', {
+        const title = this.scene.add.text(0, -panelHeight / 2 + 40, 'Level Complete!', {
             fontFamily: 'Arial Black, Arial, sans-serif',
             fontSize: '36px',
             color: '#4ade80'
@@ -173,7 +173,7 @@ export default class DialogManager {
 
         // Stars
         for (let i = 0; i < 3; i++) {
-            const star = this.scene.add.image(-60 + i * 60, -panelHeight / 2 + 100, i < stars ? 'star_filled' : 'star_empty');
+            const star = this.scene.add.image(-60 + i * 60, -panelHeight / 2 + 105, i < stars ? 'star_filled' : 'star_empty');
             star.setScale(0);
             container.add(star);
             this.scene.tweens.add({
@@ -187,7 +187,7 @@ export default class DialogManager {
         }
 
         // Score
-        const scoreText = this.scene.add.text(0, -panelHeight / 2 + 155, `Score: ${score}`, {
+        const scoreText = this.scene.add.text(0, -panelHeight / 2 + 160, `Score: ${score}`, {
             fontFamily: 'Arial, sans-serif',
             fontSize: '28px',
             color: '#333333'
@@ -199,7 +199,7 @@ export default class DialogManager {
 
         // Powerup rewards
         if (awardedPowerups.length > 0) {
-            const rewardLabel = this.scene.add.text(0, -panelHeight / 2 + 190, 'Rewards:', {
+            const rewardLabel = this.scene.add.text(0, -panelHeight / 2 + 200, 'Rewards:', {
                 fontFamily: 'Arial, sans-serif',
                 fontSize: '18px',
                 color: '#666666'
@@ -213,7 +213,7 @@ export default class DialogManager {
                 const powerupConfig = GameConfig.POWERUPS[type];
                 const iconX = startX + index * spacing;
 
-                const rewardIcon = this.scene.add.text(iconX, -panelHeight / 2 + 225, powerupConfig.icon, {
+                const rewardIcon = this.scene.add.text(iconX, -panelHeight / 2 + 235, powerupConfig.icon, {
                     fontSize: '36px'
                 }).setOrigin(0.5).setScale(0);
                 container.add(rewardIcon);
@@ -230,7 +230,7 @@ export default class DialogManager {
                     }
                 });
 
-                const plusOne = this.scene.add.text(iconX + 22, -panelHeight / 2 + 205, '+1', {
+                const plusOne = this.scene.add.text(iconX + 22, -panelHeight / 2 + 215, '+1', {
                     fontFamily: 'Arial Black',
                     fontSize: '14px',
                     color: '#4ade80',
@@ -247,13 +247,13 @@ export default class DialogManager {
                     ease: 'Power2'
                 });
             });
-            buttonStartY = -panelHeight / 2 + 280;
+            buttonStartY = -panelHeight / 2 + 295;
         } else {
-            buttonStartY = -panelHeight / 2 + 200;
+            buttonStartY = -panelHeight / 2 + 210;
         }
 
-        // Buttons
-        const buttonSpacing = 50;
+        // Buttons (65px spacing for comfortable touch targets)
+        const buttonSpacing = 65;
 
         if (currentLevel < 20) {
             this.createButton(container, 0, buttonStartY, 'Next Level', onNext);

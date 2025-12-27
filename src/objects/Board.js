@@ -839,7 +839,7 @@ export default class Board {
 
     calculateScore(tiles, cascade) { return Math.floor(10 * tiles * Math.pow(1.5, cascade - 1)); }
 
-    async showSpecialActivation(candy) {
+    async showSpecialActivation(candy, targetCells = null) {
         const { x, y } = this.gridToWorld(candy.row, candy.col);
         const graphics = this.scene.add.graphics();
         if (candy.specialType === 'line_h') {
@@ -850,22 +850,153 @@ export default class Board {
             graphics.setPosition(x, y);
             graphics.fillStyle(0xffff00, 0.6).fillCircle(0, 0, this.cellSize * 1.5);
             return new Promise(res => {
-                this.scene.tweens.add({ 
-                    targets: graphics, 
-                    alpha: 0, 
-                    scaleX: 2, 
-                    scaleY: 2, 
-                    duration: 300, 
-                    onComplete: () => { graphics.destroy(); res(); } 
+                this.scene.tweens.add({
+                    targets: graphics,
+                    alpha: 0,
+                    scaleX: 2,
+                    scaleY: 2,
+                    duration: 300,
+                    onComplete: () => { graphics.destroy(); res(); }
                 });
             });
         } else if (candy.specialType === 'color_bomb') {
-            graphics.setPosition(x, y);
-            graphics.lineStyle(4, 0xffffff, 1).strokeCircle(0, 0, this.cellSize * 2);
-            this.scene.tweens.add({ targets: graphics, alpha: 0, scaleX: 1.5, scaleY: 1.5, duration: 300, onComplete: () => { graphics.destroy(); } });
-            return new Promise(res => setTimeout(res, 300));
+            graphics.destroy(); // Don't need the default graphics
+            return this.showColorBombLasers(candy, targetCells);
         }
         return new Promise(res => this.scene.tweens.add({ targets: graphics, alpha: 0, duration: 300, onComplete: () => { graphics.destroy(); res(); } }));
+    }
+
+    async showColorBombLasers(candy, targetCells) {
+        const pos = this.gridToWorld(candy.row, candy.col);
+        const beams = [];
+
+        // Filter out the color bomb itself from targets
+        const targets = (targetCells || []).filter(c => !(c.row === candy.row && c.col === candy.col));
+
+        if (targets.length === 0) {
+            // No targets - just show a simple effect
+            const ring = this.scene.add.graphics({ x: pos.x, y: pos.y });
+            ring.lineStyle(4, 0xffffff, 1).strokeCircle(0, 0, this.cellSize * 2);
+            return new Promise(res => {
+                this.scene.tweens.add({
+                    targets: ring,
+                    alpha: 0,
+                    scaleX: 1.5,
+                    scaleY: 1.5,
+                    duration: 300,
+                    onComplete: () => { ring.destroy(); res(); }
+                });
+            });
+        }
+
+        // Get candy color for beam tint
+        const targetCandy = this.candies[targets[0].row][targets[0].col];
+        const beamColor = targetCandy ? this.getCandyColor(targetCandy.candyType) : 0xffffff;
+
+        // Create pulsing glow around color bomb
+        const glow = this.scene.add.graphics({ x: pos.x, y: pos.y }).setDepth(9);
+        glow.fillStyle(beamColor, 0.4);
+        glow.fillCircle(0, 0, this.cellSize * 0.8);
+        this.scene.tweens.add({
+            targets: glow,
+            scaleX: 1.3,
+            scaleY: 1.3,
+            alpha: 0.6,
+            duration: 150,
+            yoyo: true,
+            repeat: -1
+        });
+
+        // Create laser beams one by one
+        for (let i = 0; i < targets.length; i++) {
+            const cell = targets[i];
+            const targetPos = this.gridToWorld(cell.row, cell.col);
+
+            // Create beam graphic
+            const beam = this.scene.add.graphics().setDepth(10);
+
+            // Draw laser beam with glow effect
+            beam.lineStyle(6, beamColor, 0.3);
+            beam.beginPath();
+            beam.moveTo(pos.x, pos.y);
+            beam.lineTo(targetPos.x, targetPos.y);
+            beam.strokePath();
+
+            beam.lineStyle(3, 0xffffff, 0.9);
+            beam.beginPath();
+            beam.moveTo(pos.x, pos.y);
+            beam.lineTo(targetPos.x, targetPos.y);
+            beam.strokePath();
+
+            beams.push(beam);
+
+            // Add impact spark at target
+            const spark = this.scene.add.graphics({ x: targetPos.x, y: targetPos.y }).setDepth(11);
+            spark.fillStyle(0xffffff, 1);
+            spark.fillCircle(0, 0, 8);
+            beams.push(spark);
+
+            // Flash the target candy
+            const targetCandySprite = this.candies[cell.row][cell.col];
+            if (targetCandySprite && targetCandySprite.active) {
+                this.scene.tweens.add({
+                    targets: targetCandySprite,
+                    alpha: 0.5,
+                    duration: 30,
+                    yoyo: true
+                });
+            }
+
+            // Quick delay between beams
+            await new Promise(r => setTimeout(r, 25));
+        }
+
+        // All beams visible - brief dramatic pause
+        await new Promise(r => setTimeout(r, 150));
+
+        // Stop glow pulsing
+        this.scene.tweens.killTweensOf(glow);
+
+        // Color bomb explosion effect
+        const explosion = this.scene.add.graphics({ x: pos.x, y: pos.y }).setDepth(12);
+        explosion.fillStyle(beamColor, 0.8);
+        explosion.fillCircle(0, 0, this.cellSize);
+
+        // Expand and fade explosion + beams + glow
+        await new Promise(res => {
+            this.scene.tweens.add({
+                targets: explosion,
+                scaleX: 2,
+                scaleY: 2,
+                alpha: 0,
+                duration: 200,
+                ease: 'Quad.easeOut'
+            });
+
+            this.scene.tweens.add({
+                targets: [...beams, glow],
+                alpha: 0,
+                duration: 200,
+                onComplete: () => {
+                    beams.forEach(b => b.destroy());
+                    glow.destroy();
+                    explosion.destroy();
+                    res();
+                }
+            });
+        });
+    }
+
+    getCandyColor(candyType) {
+        const colors = [
+            0xff4757, // Red
+            0x3742fa, // Blue
+            0x2ed573, // Green
+            0xffa502, // Orange
+            0xa55eea, // Purple
+            0xffeb3b  // Yellow
+        ];
+        return colors[candyType] || 0xffffff;
     }
 
     async showCrossEffect(row, col) {

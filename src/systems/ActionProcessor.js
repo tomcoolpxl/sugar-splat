@@ -32,7 +32,7 @@ export default class ActionProcessor {
                     const cellsToClear = new Map();
                     const specialsToCreate = [];
                     const adjacentToUnlock = new Set();
-                    const specialsToAnimate = new Set();
+                    const specialsToAnimate = new Map(); // candy -> cells
 
                     for (const match of matches) {
                         if (match.specialToCreate && match.specialPosition) {
@@ -65,8 +65,8 @@ export default class ActionProcessor {
                         });
 
                         if (candy && candy.isSpecial) {
-                            specialsToAnimate.add(candy);
                             const affectedCells = await this.getSpecialActivationCells(candy);
+                            specialsToAnimate.set(candy, affectedCells);
                             for (const cell of affectedCells) {
                                 processingQueue.push({ type: 'special_hit', row: cell.row, col: cell.col });
                             }
@@ -74,8 +74,8 @@ export default class ActionProcessor {
                         }
                     }
 
-                    const animatePromises = Array.from(specialsToAnimate).map(s =>
-                        this.safeAwait(this.board.showSpecialActivation(s))
+                    const animatePromises = Array.from(specialsToAnimate.entries()).map(([s, cells]) =>
+                        this.safeAwait(this.board.showSpecialActivation(s, cells))
                     );
                     if (animatePromises.length > 0) await Promise.all(animatePromises);
 
@@ -156,7 +156,7 @@ export default class ActionProcessor {
         try {
             const cells = await this.getSpecialActivationCells(candy, targetCandy);
             this.scene.events.emit('specialActivated', candy.specialType, candy.row, candy.col);
-            await this.safeAwait(this.board.showSpecialActivation(candy));
+            await this.safeAwait(this.board.showSpecialActivation(candy, cells));
 
             const adjacentCells = new Set();
             const specialsToActivate = [];
