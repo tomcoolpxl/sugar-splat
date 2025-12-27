@@ -130,13 +130,16 @@ export default class Board {
                         // Execute the swap
                         this.deselectCandy();
                         this.trySwap(this.dragStartCandy, targetCandy);
-
-                        // Clear drag state to prevent multiple swaps
-                        this.dragStartCandy = null;
-                        this.dragStartPoint = null;
-                        this.isDragging = false;
                     }
+                } else {
+                    // Invalid swipe target (edge of board) - treat as tap instead
+                    this.onCandyClick(this.dragStartCandy);
                 }
+
+                // Clear drag state to prevent multiple swaps (always clear after threshold reached)
+                this.dragStartCandy = null;
+                this.dragStartPoint = null;
+                this.isDragging = false;
             }
         });
     }
@@ -437,7 +440,7 @@ export default class Board {
                 if (line.specialType === 'line_h') {
                     for (let r = bomb.row - 1; r <= bomb.row + 1; r++) if (r >= 0 && r < this.rows) for (let c = 0; c < this.cols; c++) if (this.candies[r][c]) cells.push({ row: r, col: c });
                 } else {
-                    for (let c = bomb.col - 1; c <= bomb.col + 1; c++) if (c >= 0 && c < this.cols) for (let r = 0; r < this.rows; r++) if (this.candies[r][col]) cells.push({ row: r, col: c });
+                    for (let c = bomb.col - 1; c <= bomb.col + 1; c++) if (c >= 0 && c < this.cols) for (let r = 0; r < this.rows; r++) if (this.candies[r][c]) cells.push({ row: r, col: c });
                 }
                 await this.showBigExplosion(bomb.row, bomb.col);
             }

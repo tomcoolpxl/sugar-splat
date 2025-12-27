@@ -13,6 +13,7 @@ export default class GameScene extends Phaser.Scene {
         this.score = 0;
         this.movesRemaining = 0;
         this.isGameOver = false;
+        this.isPaused = false;
 
         // Multi-objective state
         this.objectives = {
@@ -228,8 +229,22 @@ export default class GameScene extends Phaser.Scene {
             strokeThickness: 2
         });
 
-        // Moves counter
-        this.movesText = this.add.text(width - 40, 35, `Moves: ${this.movesRemaining}`, {
+        // Pause button (top right corner)
+        const pauseBtn = this.add.text(width - 35, 35, '⏸️', {
+            fontSize: '28px'
+        }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+
+        pauseBtn.on('pointerover', () => pauseBtn.setScale(1.2));
+        pauseBtn.on('pointerout', () => pauseBtn.setScale(1));
+        pauseBtn.on('pointerup', () => {
+            if (!this.isGameOver && !this.board.inputLocked) {
+                this.isPaused = true;
+                this.showPauseMenu();
+            }
+        });
+
+        // Moves counter (next to pause button)
+        this.movesText = this.add.text(width - 70, 35, `Moves: ${this.movesRemaining}`, {
             fontFamily: 'Arial, sans-serif',
             fontSize: '24px',
             color: '#ffffff',
@@ -1048,21 +1063,21 @@ export default class GameScene extends Phaser.Scene {
 
         // Display powerup rewards
         if (awardedPowerups.length > 0) {
-            const rewardLabel = this.add.text(0, 35, 'Rewards:', {
-                fontFamily: 'Arial, sans-serif', fontSize: '20px', color: '#666666'
+            const rewardLabel = this.add.text(0, 25, 'Rewards:', {
+                fontFamily: 'Arial, sans-serif', fontSize: '18px', color: '#666666'
             }).setOrigin(0.5);
             container.add(rewardLabel);
 
-            // Wider spacing to prevent overlap (icons are ~50px with scale)
-            const spacing = 80;
+            // Spacing for icons
+            const spacing = 55;
             const startX = -((awardedPowerups.length - 1) * spacing) / 2;
 
             awardedPowerups.forEach((type, index) => {
                 const config = GameConfig.POWERUPS[type];
                 const iconX = startX + index * spacing;
 
-                const rewardIcon = this.add.text(iconX, 75, config.icon, {
-                    fontSize: '40px'
+                const rewardIcon = this.add.text(iconX, 55, config.icon, {
+                    fontSize: '32px'
                 }).setOrigin(0.5).setScale(0);
                 container.add(rewardIcon);
 
@@ -1080,12 +1095,12 @@ export default class GameScene extends Phaser.Scene {
                 });
 
                 // "+1" badge (top-right of icon)
-                const plusOne = this.add.text(iconX + 25, 55, '+1', {
+                const plusOne = this.add.text(iconX + 18, 40, '+1', {
                     fontFamily: 'Arial Black',
-                    fontSize: '14px',
+                    fontSize: '12px',
                     color: '#4ade80',
                     stroke: '#ffffff',
-                    strokeThickness: 3
+                    strokeThickness: 2
                 }).setOrigin(0.5).setAlpha(0);
                 container.add(plusOne);
 
@@ -1100,7 +1115,7 @@ export default class GameScene extends Phaser.Scene {
         }
 
         // Adjust button positions based on whether we have rewards
-        const buttonStartY = awardedPowerups.length > 0 ? 115 : 60;
+        const buttonStartY = awardedPowerups.length > 0 ? 95 : 60;
         const buttonSpacing = 70;
 
         if (this.currentLevel < 20) {
