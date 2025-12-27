@@ -160,11 +160,11 @@ export default class DialogManager {
         const overlay = this.createOverlay();
         const container = this.createContainer();
 
-        const panelHeight = awardedPowerups.length > 0 ? 560 : 460;
+        const panelHeight = awardedPowerups.length > 0 ? 440 : 360;
         this.createPanel(container, 360, panelHeight, 25);
 
         // Title
-        const title = this.scene.add.text(0, -170, 'Level Complete!', {
+        const title = this.scene.add.text(0, -panelHeight / 2 + 35, 'Level Complete!', {
             fontFamily: 'Arial Black, Arial, sans-serif',
             fontSize: '36px',
             color: '#4ade80'
@@ -173,7 +173,7 @@ export default class DialogManager {
 
         // Stars
         for (let i = 0; i < 3; i++) {
-            const star = this.scene.add.image(-60 + i * 60, -90, i < stars ? 'star_filled' : 'star_empty');
+            const star = this.scene.add.image(-60 + i * 60, -panelHeight / 2 + 100, i < stars ? 'star_filled' : 'star_empty');
             star.setScale(0);
             container.add(star);
             this.scene.tweens.add({
@@ -187,16 +187,19 @@ export default class DialogManager {
         }
 
         // Score
-        const scoreText = this.scene.add.text(0, -10, `Score: ${score}`, {
+        const scoreText = this.scene.add.text(0, -panelHeight / 2 + 155, `Score: ${score}`, {
             fontFamily: 'Arial, sans-serif',
             fontSize: '28px',
             color: '#333333'
         }).setOrigin(0.5);
         container.add(scoreText);
 
+        // Calculate button area start
+        let buttonStartY;
+
         // Powerup rewards
         if (awardedPowerups.length > 0) {
-            const rewardLabel = this.scene.add.text(0, 30, 'Rewards:', {
+            const rewardLabel = this.scene.add.text(0, -panelHeight / 2 + 190, 'Rewards:', {
                 fontFamily: 'Arial, sans-serif',
                 fontSize: '18px',
                 color: '#666666'
@@ -210,7 +213,7 @@ export default class DialogManager {
                 const powerupConfig = GameConfig.POWERUPS[type];
                 const iconX = startX + index * spacing;
 
-                const rewardIcon = this.scene.add.text(iconX, 70, powerupConfig.icon, {
+                const rewardIcon = this.scene.add.text(iconX, -panelHeight / 2 + 225, powerupConfig.icon, {
                     fontSize: '36px'
                 }).setOrigin(0.5).setScale(0);
                 container.add(rewardIcon);
@@ -227,7 +230,7 @@ export default class DialogManager {
                     }
                 });
 
-                const plusOne = this.scene.add.text(iconX + 22, 50, '+1', {
+                const plusOne = this.scene.add.text(iconX + 22, -panelHeight / 2 + 205, '+1', {
                     fontFamily: 'Arial Black',
                     fontSize: '14px',
                     color: '#4ade80',
@@ -244,11 +247,13 @@ export default class DialogManager {
                     ease: 'Power2'
                 });
             });
+            buttonStartY = -panelHeight / 2 + 280;
+        } else {
+            buttonStartY = -panelHeight / 2 + 200;
         }
 
         // Buttons
-        const buttonStartY = awardedPowerups.length > 0 ? 125 : 60;
-        const buttonSpacing = 70;
+        const buttonSpacing = 50;
 
         if (currentLevel < 20) {
             this.createButton(container, 0, buttonStartY, 'Next Level', onNext);
@@ -268,10 +273,10 @@ export default class DialogManager {
         const overlay = this.createOverlay();
         const container = this.createContainer();
 
-        this.createPanel(container, 300, 400, 20);
+        this.createPanel(container, 300, 440, 20);
 
         // Title
-        const title = this.scene.add.text(0, -140, 'PAUSED', {
+        const title = this.scene.add.text(0, -160, 'PAUSED', {
             fontFamily: 'Arial Black, Arial, sans-serif',
             fontSize: '36px',
             color: '#ff6b9d'
@@ -279,20 +284,20 @@ export default class DialogManager {
         container.add(title);
 
         // Buttons
-        this.createButton(container, 0, -60, 'Resume', () => {
+        this.createButton(container, 0, -80, 'Resume', () => {
             this.close();
             onResume();
         });
 
-        this.createButton(container, 0, 10, 'Restart', onRestart);
-        this.createButton(container, 0, 80, 'Quit', onQuit);
+        this.createButton(container, 0, -10, 'Restart', onRestart);
+        this.createButton(container, 0, 60, 'Quit', onQuit);
 
-        // Music toggle
+        // Music toggle - consistent checkbox style
         const musicOn = localStorage.getItem('sugarSplash_music') !== 'false';
-        const musicText = this.scene.add.text(0, 155, musicOn ? '🎵 Music On' : '🚫 Music Off', {
+        const musicText = this.scene.add.text(0, 135, musicOn ? '☑ Music' : '☐ Music', {
             fontFamily: 'Arial, sans-serif',
-            fontSize: '20px',
-            color: '#666666'
+            fontSize: '22px',
+            color: musicOn ? '#4ade80' : '#999999'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         container.add(musicText);
 
@@ -300,7 +305,8 @@ export default class DialogManager {
             const currentState = localStorage.getItem('sugarSplash_music') !== 'false';
             const newState = !currentState;
             localStorage.setItem('sugarSplash_music', newState.toString());
-            musicText.setText(newState ? '🎵 Music On' : '🚫 Music Off');
+            musicText.setText(newState ? '☑ Music' : '☐ Music');
+            musicText.setColor(newState ? '#4ade80' : '#999999');
             if (newState) {
                 soundManager?.startMusic();
             } else {
@@ -308,12 +314,12 @@ export default class DialogManager {
             }
         });
 
-        // Sound toggle
+        // Sound toggle - consistent checkbox style
         const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
-        const soundText = this.scene.add.text(0, 190, soundOn ? '🔊 Sound On' : '🔇 Sound Off', {
+        const soundText = this.scene.add.text(0, 175, soundOn ? '☑ Sound' : '☐ Sound', {
             fontFamily: 'Arial, sans-serif',
-            fontSize: '20px',
-            color: '#666666'
+            fontSize: '22px',
+            color: soundOn ? '#4ade80' : '#999999'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         container.add(soundText);
 
@@ -321,7 +327,8 @@ export default class DialogManager {
             const currentState = localStorage.getItem('sugarSplash_sound') !== 'false';
             const newState = !currentState;
             localStorage.setItem('sugarSplash_sound', newState.toString());
-            soundText.setText(newState ? '🔊 Sound On' : '🔇 Sound Off');
+            soundText.setText(newState ? '☑ Sound' : '☐ Sound');
+            soundText.setColor(newState ? '#4ade80' : '#999999');
             this.scene.sound.mute = !newState;
         });
 

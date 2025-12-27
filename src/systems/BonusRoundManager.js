@@ -45,11 +45,11 @@ export default class BonusRoundManager {
         this.scene.tweens.add({
             targets: bonusCounter,
             alpha: 1,
-            duration: 300,
-            delay: 300
+            duration: 200,
+            delay: 200
         });
 
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 500));
 
         // --- PHASE 1: Convert moves to specials ---
         const specialWeights = { line_h: 30, line_v: 30, bomb: 35, color_bomb: 5 };
@@ -94,10 +94,10 @@ export default class BonusRoundManager {
             currentMoves--;
             if (onMovesUpdate) onMovesUpdate(currentMoves);
 
-            await new Promise(r => setTimeout(r, 220));
+            await new Promise(r => setTimeout(r, 120));
         }
 
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 200));
         bonusText.destroy();
 
         // --- PHASE 2: Activate specials one by one until none remain ---
@@ -118,11 +118,11 @@ export default class BonusRoundManager {
                 this.scene.tweens.add({
                     targets: special,
                     alpha: 0.3,
-                    duration: 60,
+                    duration: 40,
                     yoyo: true,
                     repeat: 1
                 });
-                await new Promise(r => setTimeout(r, 150));
+                await new Promise(r => setTimeout(r, 80));
 
                 // Play activation sound
                 if (this.soundManager) {
@@ -143,12 +143,12 @@ export default class BonusRoundManager {
                         targets: bonusCounter,
                         scaleX: 1.15,
                         scaleY: 1.15,
-                        duration: 100,
+                        duration: 80,
                         yoyo: true
                     });
                 }
 
-                await new Promise(r => setTimeout(r, 180));
+                await new Promise(r => setTimeout(r, 100));
             }
         }
 
@@ -170,7 +170,7 @@ export default class BonusRoundManager {
         // Confetti burst!
         await this.showConfetti();
 
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 500));
         if (bonusCounter?.scene) bonusCounter.destroy();
 
         return currentMoves;
@@ -216,9 +216,9 @@ export default class BonusRoundManager {
         const height = this.scene.cameras.main.height;
         const colors = [0xff4757, 0x3742fa, 0x2ed573, 0xffa502, 0xa55eea, 0xff7f50, 0xffeb3b];
 
-        // Create multiple confetti bursts
-        for (let burst = 0; burst < 3; burst++) {
-            for (let i = 0; i < 20; i++) {
+        // Create multiple confetti bursts (faster, fewer pieces)
+        for (let burst = 0; burst < 2; burst++) {
+            for (let i = 0; i < 15; i++) {
                 const x = Math.random() * width;
                 const color = colors[Math.floor(Math.random() * colors.length)];
 
@@ -232,9 +232,9 @@ export default class BonusRoundManager {
                     y: height + 50,
                     x: x + (Math.random() - 0.5) * 200,
                     rotation: Math.random() * 10,
-                    duration: 1500 + Math.random() * 1000,
+                    duration: 1000 + Math.random() * 500,
                     ease: 'Quad.easeIn',
-                    delay: burst * 200 + Math.random() * 100,
+                    delay: burst * 100 + Math.random() * 50,
                     onComplete: () => confetti.destroy()
                 });
             }
@@ -243,9 +243,9 @@ export default class BonusRoundManager {
         }
 
         // Camera shake for impact
-        this.scene.cameras.main.shake(300, 0.01);
+        this.scene.cameras.main.shake(200, 0.01);
 
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise(r => setTimeout(r, 600));
     }
 
     destroy() {

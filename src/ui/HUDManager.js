@@ -76,19 +76,37 @@ export default class HUDManager {
             strokeThickness: 2
         });
 
-        // Pause button (top right corner)
-        const pauseBtn = this.scene.add.text(width - 35, 35, '⏸️', {
-            fontSize: '28px'
-        }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+        // Pause button (top right corner, with margin from edge)
+        const pauseBtnBg = this.scene.add.graphics();
+        pauseBtnBg.fillStyle(0xffffff, 0.3);
+        pauseBtnBg.fillRoundedRect(width - 85, 28, 50, 40, 10);
 
-        pauseBtn.on('pointerover', () => pauseBtn.setScale(1.2));
-        pauseBtn.on('pointerout', () => pauseBtn.setScale(1));
+        const pauseBtn = this.scene.add.text(width - 60, 48, '| |', {
+            fontFamily: 'Arial Black',
+            fontSize: '20px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        pauseBtn.on('pointerover', () => {
+            pauseBtn.setScale(1.1);
+            pauseBtnBg.clear();
+            pauseBtnBg.fillStyle(0xffffff, 0.5);
+            pauseBtnBg.fillRoundedRect(width - 85, 28, 50, 40, 10);
+        });
+        pauseBtn.on('pointerout', () => {
+            pauseBtn.setScale(1);
+            pauseBtnBg.clear();
+            pauseBtnBg.fillStyle(0xffffff, 0.3);
+            pauseBtnBg.fillRoundedRect(width - 85, 28, 50, 40, 10);
+        });
         pauseBtn.on('pointerup', () => {
             if (this.onPause) this.onPause();
         });
 
-        // Moves counter (next to pause button)
-        this.movesText = this.scene.add.text(width - 70, 35, `Moves: ${movesRemaining}`, {
+        // Moves counter (with spacing from pause button)
+        this.movesText = this.scene.add.text(width - 100, 35, `Moves: ${movesRemaining}`, {
             fontFamily: 'Arial, sans-serif',
             fontSize: '24px',
             color: '#ffffff',

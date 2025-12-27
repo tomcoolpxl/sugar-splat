@@ -1,3 +1,5 @@
+import { GameConfig } from '../Config.js';
+
 export default class LevelSelectScene extends Phaser.Scene {
     constructor() {
         super('LevelSelectScene');
@@ -23,6 +25,9 @@ export default class LevelSelectScene extends Phaser.Scene {
 
         // Sound controls
         this.createSoundControls(width, height);
+
+        // Powerups display at bottom
+        this.createPowerupsDisplay(width, height);
     }
 
     createBackground(width, height) {
@@ -218,55 +223,125 @@ export default class LevelSelectScene extends Phaser.Scene {
     }
 
     createSoundControls(width, height) {
-        // Music toggle (top right) - crossed-out emoji style when off
-        const musicOn = localStorage.getItem('sugarSplash_music') !== 'false';
-        const musicBtn = this.add.text(width - 70, 40, musicOn ? '🎵' : '🚫', {
+        // Settings button (gear icon) - opens settings dialog
+        const settingsBtnBg = this.add.graphics();
+        settingsBtnBg.fillStyle(0x000000, 0.3);
+        settingsBtnBg.fillRoundedRect(width - 70, 25, 50, 50, 12);
+
+        const settingsBtn = this.add.text(width - 45, 50, '⚙️', {
             fontSize: '28px'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-        const musicLabel = this.add.text(width - 70, 68, 'Music', {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '11px',
-            color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
-
-        musicBtn.on('pointerover', () => musicBtn.setScale(1.2));
-        musicBtn.on('pointerout', () => musicBtn.setScale(1));
-        musicBtn.on('pointerup', () => {
-            const currentState = localStorage.getItem('sugarSplash_music') !== 'false';
-            const newState = !currentState;
-            localStorage.setItem('sugarSplash_music', newState.toString());
-            musicBtn.setText(newState ? '🎵' : '🚫');
+        settingsBtn.on('pointerover', () => {
+            settingsBtn.setScale(1.1);
+            settingsBtnBg.clear();
+            settingsBtnBg.fillStyle(0x000000, 0.5);
+            settingsBtnBg.fillRoundedRect(width - 70, 25, 50, 50, 12);
         });
-
-        // Sound effects toggle - crossed-out emoji style when off
-        const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
-        const soundBtn = this.add.text(width - 30, 40, soundOn ? '🔊' : '🔇', {
-            fontSize: '28px'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-        const soundLabel = this.add.text(width - 30, 68, 'Sound', {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '11px',
-            color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
-
-        soundBtn.on('pointerover', () => soundBtn.setScale(1.2));
-        soundBtn.on('pointerout', () => soundBtn.setScale(1));
-        soundBtn.on('pointerup', () => {
-            const currentState = localStorage.getItem('sugarSplash_sound') !== 'false';
-            const newState = !currentState;
-            localStorage.setItem('sugarSplash_sound', newState.toString());
-            soundBtn.setText(newState ? '🔊' : '🔇');
-            this.sound.mute = !newState;
+        settingsBtn.on('pointerout', () => {
+            settingsBtn.setScale(1);
+            settingsBtnBg.clear();
+            settingsBtnBg.fillStyle(0x000000, 0.3);
+            settingsBtnBg.fillRoundedRect(width - 70, 25, 50, 50, 12);
+        });
+        settingsBtn.on('pointerup', () => {
+            this.showSettingsDialog(width, height);
         });
 
         // Apply current mute state
+        const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
         this.sound.mute = !soundOn;
+    }
+
+    showSettingsDialog(width, height) {
+        // Overlay
+        const overlay = this.add.graphics();
+        overlay.fillStyle(0x000000, 0.7);
+        overlay.fillRect(0, 0, width, height);
+        overlay.setDepth(500);
+        overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, width, height), Phaser.Geom.Rectangle.Contains);
+
+        // Container
+        const container = this.add.container(width / 2, height / 2);
+        container.setDepth(501);
+
+        // Panel
+        const panel = this.add.graphics();
+        panel.fillStyle(0xffffff, 0.95);
+        panel.fillRoundedRect(-150, -140, 300, 280, 20);
+        container.add(panel);
+
+        // Title
+        const title = this.add.text(0, -100, 'Settings', {
+            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontSize: '32px',
+            color: '#ff6b9d'
+        }).setOrigin(0.5);
+        container.add(title);
+
+        // Music toggle
+        const musicOn = localStorage.getItem('sugarSplash_music') !== 'false';
+        const musicText = this.add.text(0, -30, musicOn ? '☑ Music' : '☐ Music', {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '28px',
+            color: musicOn ? '#4ade80' : '#666666'
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        container.add(musicText);
+
+        musicText.on('pointerup', () => {
+            const currentState = localStorage.getItem('sugarSplash_music') !== 'false';
+            const newState = !currentState;
+            localStorage.setItem('sugarSplash_music', newState.toString());
+            musicText.setText(newState ? '☑ Music' : '☐ Music');
+            musicText.setColor(newState ? '#4ade80' : '#666666');
+        });
+
+        // Sound toggle
+        const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
+        const soundText = this.add.text(0, 30, soundOn ? '☑ Sound' : '☐ Sound', {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '28px',
+            color: soundOn ? '#4ade80' : '#666666'
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        container.add(soundText);
+
+        soundText.on('pointerup', () => {
+            const currentState = localStorage.getItem('sugarSplash_sound') !== 'false';
+            const newState = !currentState;
+            localStorage.setItem('sugarSplash_sound', newState.toString());
+            soundText.setText(newState ? '☑ Sound' : '☐ Sound');
+            soundText.setColor(newState ? '#4ade80' : '#666666');
+            this.sound.mute = !newState;
+        });
+
+        // Close button
+        const closeBtn = this.add.image(0, 100, 'button').setScale(0.9).setInteractive({ useHandCursor: true });
+        const closeBtnText = this.add.text(0, 100, 'Close', {
+            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontSize: '22px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
+        container.add(closeBtn);
+        container.add(closeBtnText);
+
+        closeBtn.on('pointerover', () => closeBtn.setScale(1));
+        closeBtn.on('pointerout', () => closeBtn.setScale(0.9));
+        closeBtn.on('pointerup', () => {
+            overlay.destroy();
+            container.destroy();
+        });
+
+        // Animate in
+        container.setScale(0.5);
+        container.setAlpha(0);
+        this.tweens.add({
+            targets: container,
+            scaleX: 1,
+            scaleY: 1,
+            alpha: 1,
+            duration: 300,
+            ease: 'Back.easeOut'
+        });
     }
 
     getSaveData() {
@@ -290,5 +365,57 @@ export default class LevelSelectScene extends Phaser.Scene {
             total += saveData.levels[level].stars || 0;
         }
         return total;
+    }
+
+    getPowerups() {
+        try {
+            const saved = localStorage.getItem('sugarSplash_powerups');
+            return saved ? JSON.parse(saved) : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    createPowerupsDisplay(width, height) {
+        const powerups = this.getPowerups();
+        const powerupTypes = ['hammer', 'bomb', 'rowcol', 'colorblast'];
+
+        // Bottom bar background
+        const bottomBar = this.add.graphics();
+        bottomBar.fillStyle(0x000000, 0.4);
+        bottomBar.fillRoundedRect(20, height - 85, width - 40, 70, 15);
+
+        // Label
+        this.add.text(40, height - 70, 'Powerups:', {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '16px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        });
+
+        // Powerup icons with counts
+        const startX = 150;
+        const spacing = 80;
+
+        powerupTypes.forEach((type, index) => {
+            const config = GameConfig.POWERUPS[type];
+            const count = powerups[type] || 0;
+            const x = startX + index * spacing;
+
+            // Icon
+            this.add.text(x, height - 55, config.icon, {
+                fontSize: '28px'
+            }).setOrigin(0.5);
+
+            // Count
+            this.add.text(x + 18, height - 65, `×${count}`, {
+                fontFamily: 'Arial Black',
+                fontSize: '14px',
+                color: count > 0 ? '#4ade80' : '#999999',
+                stroke: '#000000',
+                strokeThickness: 2
+            }).setOrigin(0, 0.5);
+        });
     }
 }
