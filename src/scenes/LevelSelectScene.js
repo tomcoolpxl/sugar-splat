@@ -218,11 +218,11 @@ export default class LevelSelectScene extends Phaser.Scene {
     }
 
     createSoundControls(width, height) {
-        // Music toggle (top right)
+        // Music toggle (top right) - crossed-out emoji style when off
         const musicOn = localStorage.getItem('sugarSplash_music') !== 'false';
-        const musicBtn = this.add.text(width - 70, 40, musicOn ? '🎵' : '🎵', {
+        const musicBtn = this.add.text(width - 70, 40, musicOn ? '🎵' : '🚫', {
             fontSize: '28px'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setAlpha(musicOn ? 1 : 0.4);
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         const musicLabel = this.add.text(width - 70, 68, 'Music', {
             fontFamily: 'Arial, sans-serif',
@@ -238,10 +238,10 @@ export default class LevelSelectScene extends Phaser.Scene {
             const currentState = localStorage.getItem('sugarSplash_music') !== 'false';
             const newState = !currentState;
             localStorage.setItem('sugarSplash_music', newState.toString());
-            musicBtn.setAlpha(newState ? 1 : 0.4);
+            musicBtn.setText(newState ? '🎵' : '🚫');
         });
 
-        // Sound effects toggle
+        // Sound effects toggle - crossed-out emoji style when off
         const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
         const soundBtn = this.add.text(width - 30, 40, soundOn ? '🔊' : '🔇', {
             fontSize: '28px'

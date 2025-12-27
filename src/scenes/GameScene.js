@@ -1038,7 +1038,7 @@ export default class GameScene extends Phaser.Scene {
         container.setDepth(501);
 
         // Adjust panel size if we have powerup rewards
-        const panelHeight = awardedPowerups.length > 0 ? 530 : 460;
+        const panelHeight = awardedPowerups.length > 0 ? 560 : 460;
         const panel = this.add.graphics();
         panel.fillStyle(0xffffff, 0.95);
         panel.fillRoundedRect(-180, -220, 360, panelHeight, 25);
@@ -1063,7 +1063,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Display powerup rewards
         if (awardedPowerups.length > 0) {
-            const rewardLabel = this.add.text(0, 25, 'Rewards:', {
+            const rewardLabel = this.add.text(0, 30, 'Rewards:', {
                 fontFamily: 'Arial, sans-serif', fontSize: '18px', color: '#666666'
             }).setOrigin(0.5);
             container.add(rewardLabel);
@@ -1076,8 +1076,8 @@ export default class GameScene extends Phaser.Scene {
                 const config = GameConfig.POWERUPS[type];
                 const iconX = startX + index * spacing;
 
-                const rewardIcon = this.add.text(iconX, 55, config.icon, {
-                    fontSize: '32px'
+                const rewardIcon = this.add.text(iconX, 70, config.icon, {
+                    fontSize: '36px'
                 }).setOrigin(0.5).setScale(0);
                 container.add(rewardIcon);
 
@@ -1095,9 +1095,9 @@ export default class GameScene extends Phaser.Scene {
                 });
 
                 // "+1" badge (top-right of icon)
-                const plusOne = this.add.text(iconX + 18, 40, '+1', {
+                const plusOne = this.add.text(iconX + 22, 50, '+1', {
                     fontFamily: 'Arial Black',
-                    fontSize: '12px',
+                    fontSize: '14px',
                     color: '#4ade80',
                     stroke: '#ffffff',
                     strokeThickness: 2
@@ -1115,7 +1115,7 @@ export default class GameScene extends Phaser.Scene {
         }
 
         // Adjust button positions based on whether we have rewards
-        const buttonStartY = awardedPowerups.length > 0 ? 95 : 60;
+        const buttonStartY = awardedPowerups.length > 0 ? 125 : 60;
         const buttonSpacing = 70;
 
         if (this.currentLevel < 20) {
@@ -1248,12 +1248,12 @@ export default class GameScene extends Phaser.Scene {
             this.showQuitConfirmation(overlay, menuContainer);
         });
 
-        // Music toggle
+        // Music toggle (crossed-out emoji style when off)
         const musicOn = localStorage.getItem('sugarSplash_music') !== 'false';
-        const musicText = this.add.text(0, 155, musicOn ? '🎵 Music On' : '🎵 Music Off', {
+        const musicText = this.add.text(0, 155, musicOn ? '🎵 Music On' : '🚫 Music Off', {
             fontFamily: 'Arial, sans-serif',
             fontSize: '20px',
-            color: musicOn ? '#666666' : '#999999'
+            color: '#666666'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         menuContainer.add(musicText);
 
@@ -1261,8 +1261,7 @@ export default class GameScene extends Phaser.Scene {
             const currentState = localStorage.getItem('sugarSplash_music') !== 'false';
             const newState = !currentState;
             localStorage.setItem('sugarSplash_music', newState.toString());
-            musicText.setText(newState ? '🎵 Music On' : '🎵 Music Off');
-            musicText.setColor(newState ? '#666666' : '#999999');
+            musicText.setText(newState ? '🎵 Music On' : '🚫 Music Off');
             if (newState) {
                 this.soundManager?.startMusic();
             } else {
@@ -1270,12 +1269,12 @@ export default class GameScene extends Phaser.Scene {
             }
         });
 
-        // Sound effects toggle
+        // Sound effects toggle (crossed-out emoji style when off)
         const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
         const soundText = this.add.text(0, 190, soundOn ? '🔊 Sound On' : '🔇 Sound Off', {
             fontFamily: 'Arial, sans-serif',
             fontSize: '20px',
-            color: soundOn ? '#666666' : '#999999'
+            color: '#666666'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         menuContainer.add(soundText);
 
@@ -1284,7 +1283,6 @@ export default class GameScene extends Phaser.Scene {
             const newState = !currentState;
             localStorage.setItem('sugarSplash_sound', newState.toString());
             soundText.setText(newState ? '🔊 Sound On' : '🔇 Sound Off');
-            soundText.setColor(newState ? '#666666' : '#999999');
             this.sound.mute = !newState;
         });
     }
