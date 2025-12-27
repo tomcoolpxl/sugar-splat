@@ -830,12 +830,16 @@ export default class GameScene extends Phaser.Scene {
     }
 
     update(time, delta) {
-        // Watchdog for input lock
-        if (this.board.inputLocked) {
+        // Watchdog for input lock - last resort safety net
+        // ActionProcessor now handles errors properly, so this should rarely trigger
+        if (this.board && this.board.inputLocked && !this.isGameOver) {
             this.lockTimer = (this.lockTimer || 0) + delta;
-            if (this.lockTimer > 5000) { // 5 seconds max lock time
-                console.warn('Input lock watchdog triggered - forcing unlock');
+            if (this.lockTimer > 10000) { // 10 seconds - extended timeout as backup only
+                console.warn('Input lock watchdog triggered after 10s - forcing unlock (this indicates a bug)');
                 this.board.inputLocked = false;
+                if (this.board.actionProcessor) {
+                    this.board.actionProcessor.isProcessing = false;
+                }
                 this.lockTimer = 0;
             }
         } else {

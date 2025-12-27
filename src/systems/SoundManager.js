@@ -1,9 +1,11 @@
+import { GameConfig } from '../Config.js';
+
 export default class SoundManager {
     constructor(scene) {
         this.scene = scene;
         this.context = scene.sound.context; // Web Audio Context
-        this.masterVolume = 0.3; // Global synth volume
-        
+        this.masterVolume = GameConfig.AUDIO.MASTER_VOLUME;
+
         // Music state
         this.musicGain = null;
         this.musicOsc = null;
@@ -11,104 +13,38 @@ export default class SoundManager {
         this.currentNoteIndex = 0;
         this.musicTimer = null;
 
-        // Define sound types and their synth parameters
-        this.soundDefs = {
-            // UI / Interaction
-            'select': { 
-                type: 'sine', 
-                freqStart: 880, 
-                freqEnd: 1200, 
-                duration: 0.05, 
-                attack: 0.01,
-                decay: 0.04 
-            },
-            'click': { 
-                type: 'square', 
-                freqStart: 400, 
-                freqEnd: 600, 
-                duration: 0.05, 
-                vol: 0.1 
-            },
-            
-            // Gameplay - Basic
-            'swap': { 
-                type: 'triangle', 
-                freqStart: 300, 
-                freqEnd: 600, 
-                duration: 0.15,
-                slide: true
-            },
-            'invalid': { 
-                type: 'sawtooth', 
-                freqStart: 150, 
-                freqEnd: 80, 
-                duration: 0.2, 
-                vol: 0.15 
-            },
-            'match': { 
-                type: 'sine', 
-                freqStart: 523.25, // C5
-                freqEnd: 1046.50, // C6
-                duration: 0.15, 
-                vol: 0.25 
-            },
-            'cascade': { 
-                type: 'sine', 
-                freqStart: 1046.50, // C6
-                freqEnd: 2093.00, // C7
-                duration: 0.2, 
-                vol: 0.25 
-            },
+        // Sound definitions from config
+        this.soundDefs = GameConfig.AUDIO.SOUNDS;
 
-            // Gameplay - Specials
-            'bomb': { 
-                type: 'noise', 
-                duration: 0.4, 
-                vol: 0.4 
-            },
-            'line': { 
-                type: 'sawtooth', 
-                freqStart: 800, 
-                freqEnd: 200, 
-                duration: 0.3, 
-                vol: 0.15,
-                slide: true
-            },
-
-            // Jingles (Sequences)
-            'win': {
-                type: 'sequence',
-                instrument: 'triangle',
-                notes: [
-                    { freq: 523.25, dur: 0.1, time: 0 },    // C5
-                    { freq: 659.25, dur: 0.1, time: 0.1 },  // E5
-                    { freq: 783.99, dur: 0.1, time: 0.2 },  // G5
-                    { freq: 1046.50, dur: 0.4, time: 0.3 }  // C6
-                ],
-                vol: 0.2
-            },
-            'levelFail': {
-                type: 'sequence',
-                instrument: 'sawtooth',
-                notes: [
-                    { freq: 392.00, dur: 0.2, time: 0 },    // G4
-                    { freq: 311.13, dur: 0.2, time: 0.2 },  // Eb4
-                    { freq: 261.63, dur: 0.6, time: 0.4 }   // C4
-                ],
-                vol: 0.15
-            }
-        };
+        // Music config from centralized settings
+        this.musicConfig = GameConfig.AUDIO.MUSIC;
+        this.drumConfig = GameConfig.AUDIO.DRUMS;
     }
 
     play(key) {
         if (this.scene.sound.mute) return;
+        if (!this.ensureContextRunning()) return;
 
-        // Fallback to synth
         this.playSynth(key);
     }
 
+    // Ensure AudioContext is running (handles browser autoplay policies)
+    ensureContextRunning() {
+        if (!this.context) return false;
+
+        if (this.context.state === 'suspended') {
+            this.context.resume().catch(err => {
+                console.warn('SoundManager: Failed to resume AudioContext:', err);
+            });
+            // Return false on first attempt when suspended - sound will play on next interaction
+            return false;
+        }
+
+        return this.context.state === 'running';
+    }
+
     playSynth(key) {
-        if (!this.context) return; 
+        if (!this.context || this.context.state !== 'running') return;
 
         const def = this.soundDefs[key];
         if (!def) {
@@ -131,6 +67,8 @@ export default class SoundManager {
     }
 
     playTone(def) {
+        if (!this.context || this.context.state !== 'running') return;
+
         const t = this.context.currentTime;
         const osc = this.context.createOscillator();
         const gain = this.context.createGain();
@@ -164,6 +102,8 @@ export default class SoundManager {
     }
 
     playSequence(def) {
+        if (!this.context || this.context.state !== 'running') return;
+
         const t = this.context.currentTime;
         const instrument = def.instrument || 'sine';
         const volume = (def.vol || 0.2) * this.masterVolume;
@@ -191,6 +131,8 @@ export default class SoundManager {
     }
 
     playNoise(def) {
+        if (!this.context || this.context.state !== 'running') return;
+
         const duration = def.duration;
         const bufferSize = this.context.sampleRate * duration;
         const buffer = this.context.createBuffer(1, bufferSize, this.context.sampleRate);
@@ -214,27 +156,32 @@ export default class SoundManager {
     }
 
     startMusic() {
-        if (this.isMusicPlaying || !this.context) return;
+        if (this.isMusicPlaying) return;
+        if (!this.ensureContextRunning()) {
+            // Retry after a short delay when context resumes
+            setTimeout(() => this.startMusic(), 100);
+            return;
+        }
+
         this.isMusicPlaying = true;
         this.nextNoteTime = this.context.currentTime + 0.1;
         this.stepIndex = 0;
-        this.tempo = 110;
+        this.tempo = this.musicConfig.TEMPO;
         this.secondsPerStep = 60 / this.tempo / 4; // 16th notes
 
-        // Song Structure: Cm - Ab - Eb - Bb (i - VI - III - VII)
-        // 16 steps per chord
-        this.chordProgression = [
-            { root: 130.81, name: 'Cm' }, // C3
-            { root: 103.83, name: 'Ab' }, // Ab2
-            { root: 155.56, name: 'Eb' }, // Eb3
-            { root: 116.54, name: 'Bb' }  // Bb2
-        ];
+        // Song Structure from config
+        this.chordProgression = this.musicConfig.CHORD_PROGRESSION;
 
         this.scheduleNextStep();
     }
 
     scheduleNextStep() {
         if (!this.isMusicPlaying) return;
+        if (!this.context || this.context.state !== 'running') {
+            // Context suspended mid-playback, stop music
+            this.stopMusic();
+            return;
+        }
 
         // Schedule ahead
         while (this.nextNoteTime < this.context.currentTime + 0.1) {
@@ -248,6 +195,7 @@ export default class SoundManager {
 
     playStep(time) {
         if (this.scene.sound.mute) return;
+        if (!this.context || this.context.state !== 'running') return;
 
         const measure = Math.floor(this.stepIndex / 16);
         const step = this.stepIndex % 16;
@@ -255,43 +203,38 @@ export default class SoundManager {
         const root = currentChord.root;
 
         // --- Bass (16th notes, pumping) ---
-        // Play on off-beats or driving 8ths
         if (step % 2 === 0) {
             this.playSynthNote(root, 0.1, 'sawtooth', 0.1, time);
         } else {
-            this.playSynthNote(root, 0.1, 'square', 0.05, time); // quieter off-beat
+            this.playSynthNote(root, 0.1, 'square', 0.05, time);
         }
 
         // --- Melody (Pentatonic riff) ---
-        // C Minor Pentatonic: C, Eb, F, G, Bb
-        // Relative to root
-        const scale = [1, 1.2, 1.33, 1.5, 1.78]; // Approx intervals
-        
-        // Simple melody pattern
+        const scale = this.musicConfig.PENTATONIC_SCALE;
+
         if (step === 0 || step === 6 || step === 12) {
             const noteIdx = (measure + step) % scale.length;
-            const freq = root * 2 * scale[noteIdx]; // Octave up
+            const freq = root * 2 * scale[noteIdx];
             this.playSynthNote(freq, 0.1, 'sine', 0.08, time);
         }
 
         // --- Drums ---
-        // Kick on 1, 5, 9, 13 (4/4 feel)
         if (step % 4 === 0) {
             this.playDrum('kick', time);
         }
-        
-        // Snare on 5, 13 (Backbeat)
+
         if (step % 8 === 4) {
             this.playDrum('snare', time);
         }
 
-        // Hi-hats on off-beats
         if (step % 2 !== 0) {
             this.playDrum('hat', time);
         }
     }
 
     playSynthNote(freq, duration, type, vol, time) {
+        if (!this.context || this.context.state !== 'running') return;
+
         const osc = this.context.createOscillator();
         const gain = this.context.createGain();
 
@@ -299,7 +242,7 @@ export default class SoundManager {
         osc.frequency.setValueAtTime(freq, time);
 
         gain.gain.setValueAtTime(0, time);
-        gain.gain.linearRampToValueAtTime(vol * this.masterVolume * 0.4, time + 0.01);
+        gain.gain.linearRampToValueAtTime(vol * this.masterVolume * GameConfig.AUDIO.MUSIC_VOLUME_MULTIPLIER, time + 0.01);
         gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
 
         osc.connect(gain);
@@ -310,45 +253,48 @@ export default class SoundManager {
     }
 
     playDrum(type, time) {
+        if (!this.context || this.context.state !== 'running') return;
+
+        const drums = this.drumConfig;
+
         if (type === 'kick') {
             const osc = this.context.createOscillator();
             const gain = this.context.createGain();
-            osc.frequency.setValueAtTime(150, time);
-            osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.15);
-            gain.gain.setValueAtTime(0.4 * this.masterVolume, time);
-            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+            osc.frequency.setValueAtTime(drums.KICK_FREQ_START, time);
+            osc.frequency.exponentialRampToValueAtTime(0.01, time + drums.KICK_DURATION);
+            gain.gain.setValueAtTime(drums.KICK_VOLUME * this.masterVolume, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + drums.KICK_DURATION);
             osc.connect(gain);
             gain.connect(this.context.destination);
             osc.start(time);
-            osc.stop(time + 0.15);
+            osc.stop(time + drums.KICK_DURATION);
         } else if (type === 'snare') {
             const noise = this.context.createBufferSource();
-            const buffer = this.context.createBuffer(1, this.context.sampleRate * 0.1, this.context.sampleRate);
+            const buffer = this.context.createBuffer(1, this.context.sampleRate * drums.SNARE_DURATION, this.context.sampleRate);
             const data = buffer.getChannelData(0);
             for (let i = 0; i < buffer.length; i++) data[i] = Math.random() * 2 - 1;
             noise.buffer = buffer;
             const gain = this.context.createGain();
-            gain.gain.setValueAtTime(0.2 * this.masterVolume, time);
-            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+            gain.gain.setValueAtTime(drums.SNARE_VOLUME * this.masterVolume, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + drums.SNARE_DURATION);
             noise.connect(gain);
             gain.connect(this.context.destination);
             noise.start(time);
         } else if (type === 'hat') {
             const noise = this.context.createBufferSource();
-            const buffer = this.context.createBuffer(1, this.context.sampleRate * 0.05, this.context.sampleRate);
+            const buffer = this.context.createBuffer(1, this.context.sampleRate * drums.HAT_DURATION, this.context.sampleRate);
             const data = buffer.getChannelData(0);
             for (let i = 0; i < buffer.length; i++) data[i] = Math.random() * 2 - 1;
             noise.buffer = buffer;
-            
-            // High pass filter for hat
+
             const filter = this.context.createBiquadFilter();
             filter.type = 'highpass';
-            filter.frequency.value = 5000;
+            filter.frequency.value = drums.HAT_HIGHPASS_FREQ;
 
             const gain = this.context.createGain();
-            gain.gain.setValueAtTime(0.1 * this.masterVolume, time);
-            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
-            
+            gain.gain.setValueAtTime(drums.HAT_VOLUME * this.masterVolume, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + drums.HAT_DURATION);
+
             noise.connect(filter);
             filter.connect(gain);
             gain.connect(this.context.destination);
