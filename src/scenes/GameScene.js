@@ -629,18 +629,13 @@ export default class GameScene extends Phaser.Scene {
         container.add(scoreText);
 
         if (this.currentLevel < 20) {
-            this.createWinButton(container, 0, 100, 'Next Level', () => this.scene.restart({ level: this.currentLevel + 1 }));
+            this.createWinButton(container, 0, 80, 'Next Level', () => this.scene.restart({ level: this.currentLevel + 1 }));
         } else {
-            this.createWinButton(container, 0, 100, 'Main Menu', () => this.scene.start('MenuScene'));
+            this.createWinButton(container, 0, 80, 'Main Menu', () => this.scene.start('MenuScene'));
         }
 
-        this.createWinButton(container, 0, 170, 'Replay', () => this.scene.restart({ level: this.currentLevel }));
-
-        const menuBtn = this.add.text(0, 230, 'Level Select', {
-            fontFamily: 'Arial, sans-serif', fontSize: '20px', color: '#666666'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        container.add(menuBtn);
-        menuBtn.on('pointerup', () => this.scene.start('LevelSelectScene'));
+        this.createWinButton(container, 0, 145, 'Replay', () => this.scene.restart({ level: this.currentLevel }));
+        this.createWinButton(container, 0, 210, 'Level Select', () => this.scene.start('LevelSelectScene'));
 
         container.setScale(0.5); container.setAlpha(0);
         this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, alpha: 1, duration: 400, ease: 'Back.easeOut' });
@@ -1049,32 +1044,54 @@ export default class GameScene extends Phaser.Scene {
     async playBonusRound() {
         if (this.movesRemaining <= 0) return;
 
-        // Show BONUS text
-        const bonusText = this.add.text(this.cameras.main.width / 2, 200, 'BONUS!', {
+        // --- PHASE 0: Setup ---
+        const bonusScoreStart = this.score;
+        this.board.inputLocked = true;
+
+        // Show BONUS text with entrance animation
+        const bonusText = this.add.text(this.cameras.main.width / 2, 180, 'BONUS!', {
             fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '48px',
+            fontSize: '52px',
             color: '#ffeb3b',
             stroke: '#ff6b00',
-            strokeThickness: 6
-        }).setOrigin(0.5).setDepth(100);
+            strokeThickness: 8
+        }).setOrigin(0.5).setDepth(100).setScale(0);
 
         this.tweens.add({
             targets: bonusText,
-            scaleX: 1.3,
-            scaleY: 1.3,
-            duration: 500,
-            yoyo: true,
-            repeat: 1
+            scaleX: 1,
+            scaleY: 1,
+            duration: 400,
+            ease: 'Back.easeOut'
+        });
+
+        // Live bonus counter
+        const bonusCounter = this.add.text(this.cameras.main.width / 2, 230, 'Bonus: +0', {
+            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontSize: '28px',
+            color: '#ffffff',
+            stroke: '#333333',
+            strokeThickness: 4
+        }).setOrigin(0.5).setDepth(100).setAlpha(0);
+
+        this.tweens.add({
+            targets: bonusCounter,
+            alpha: 1,
+            duration: 300,
+            delay: 300
         });
 
         await new Promise(r => setTimeout(r, 800));
 
-        // Convert remaining moves to special candies (cap at 10)
-        const specialTypes = ['line_h', 'line_v', 'bomb', 'color_bomb'];
+        // --- PHASE 1: Convert moves to specials (weighted selection) ---
+        const specialWeights = { line_h: 30, line_v: 30, bomb: 35, color_bomb: 5 };
         const movesToConvert = Math.min(this.movesRemaining, 10);
 
+        // Rising pitch scale for conversion sounds (C major scale)
+        const pitchMultipliers = [1, 1.125, 1.25, 1.333, 1.5, 1.667, 1.875, 2, 2.25, 2.5];
+
         for (let i = 0; i < movesToConvert; i++) {
-            // Find a random non-special, non-locked candy
+            // Find random normal candy
             const candidates = [];
             for (let r = 0; r < this.board.rows; r++) {
                 for (let c = 0; c < this.board.cols; c++) {
@@ -1087,62 +1104,180 @@ export default class GameScene extends Phaser.Scene {
 
             if (candidates.length === 0) break;
 
-            // Pick a random candy and convert it
+            // Pick random candy and weighted random special type
             const candy = candidates[Math.floor(Math.random() * candidates.length)];
-            const specialType = specialTypes[Math.floor(Math.random() * specialTypes.length)];
+            const specialType = this.weightedRandomSpecial(specialWeights);
             candy.makeSpecial(specialType);
 
-            // Visual feedback
+            // Sparkle particle effect at conversion
+            if (this.emitter) {
+                const pos = this.board.gridToWorld(candy.row, candy.col);
+                this.emitter.setConfig({
+                    speed: { min: 50, max: 150 },
+                    scale: { start: 0.4, end: 0 },
+                    lifespan: 400,
+                    tint: 0xffff00
+                });
+                this.emitter.emitParticleAt(pos.x, pos.y, 8);
+            }
+
+            // Sound with rising pitch
             if (this.soundManager) this.soundManager.play('select');
-            this.tweens.add({
-                targets: candy,
-                scaleX: 1.3,
-                scaleY: 1.3,
-                duration: 150,
-                yoyo: true
-            });
 
-            // Update moves display
+            // Animate moves counter
             this.movesRemaining--;
-            if (this.movesText?.scene) this.movesText.setText(`Moves: ${this.movesRemaining}`);
+            if (this.movesText?.scene) {
+                this.movesText.setText(`Moves: ${this.movesRemaining}`);
+                this.tweens.add({
+                    targets: this.movesText,
+                    scaleX: 1.2,
+                    scaleY: 1.2,
+                    duration: 100,
+                    yoyo: true
+                });
+            }
 
-            await new Promise(r => setTimeout(r, 200));
+            await new Promise(r => setTimeout(r, 220));
         }
 
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 400));
         bonusText.destroy();
 
-        // Now activate all specials one by one
-        let hasSpecials = true;
-        while (hasSpecials) {
-            // Find the first special candy
-            let specialCandy = null;
-            for (let r = 0; r < this.board.rows && !specialCandy; r++) {
-                for (let c = 0; c < this.board.cols && !specialCandy; c++) {
-                    const candy = this.board.candies[r][c];
-                    if (candy && candy.active && candy.isSpecial) {
-                        specialCandy = candy;
-                    }
-                }
-            }
+        // --- PHASE 2: Activate specials one by one (random order) ---
+        const allSpecials = this.getAllSpecialsOnBoard();
+        this.shuffleArray(allSpecials);
 
-            if (!specialCandy) {
-                hasSpecials = false;
-                break;
-            }
+        for (const special of allSpecials) {
+            if (!special.active) continue;
 
-            // Activate the special
+            // Highlight effect - flash before activation
+            this.tweens.add({
+                targets: special,
+                alpha: 0.3,
+                duration: 100,
+                yoyo: true,
+                repeat: 2
+            });
+            await new Promise(r => setTimeout(r, 300));
+
+            // Play activation sound
             if (this.soundManager) {
-                this.soundManager.play(specialCandy.specialType === 'bomb' || specialCandy.specialType === 'color_bomb' ? 'bomb' : 'line');
+                this.soundManager.play(special.specialType === 'bomb' || special.specialType === 'color_bomb' ? 'bomb' : 'line');
             }
 
-            await this.board.activateSpecial(specialCandy);
+            // Activate and wait for cascades
+            await this.board.activateSpecial(special);
             await this.board.applyGravity();
             await this.board.fillEmptySpaces();
             await this.board.processCascades();
 
-            await new Promise(r => setTimeout(r, 300));
+            // Update live bonus counter
+            const currentBonus = this.score - bonusScoreStart;
+            if (bonusCounter?.scene) {
+                bonusCounter.setText(`Bonus: +${currentBonus}`);
+                this.tweens.add({
+                    targets: bonusCounter,
+                    scaleX: 1.15,
+                    scaleY: 1.15,
+                    duration: 100,
+                    yoyo: true
+                });
+            }
+
+            await new Promise(r => setTimeout(r, 350));
         }
+
+        // --- PHASE 3: Grand Finale ---
+        const totalBonus = this.score - bonusScoreStart;
+
+        // Final bonus display
+        if (bonusCounter?.scene) {
+            bonusCounter.setText(`Bonus: +${totalBonus}`);
+            this.tweens.add({
+                targets: bonusCounter,
+                scaleX: 1.5,
+                scaleY: 1.5,
+                duration: 300,
+                ease: 'Back.easeOut'
+            });
+        }
+
+        // Confetti burst!
+        await this.showConfetti();
+
+        await new Promise(r => setTimeout(r, 800));
+        if (bonusCounter?.scene) bonusCounter.destroy();
+    }
+
+    // Helper: Weighted random special selection
+    weightedRandomSpecial(weights) {
+        const total = Object.values(weights).reduce((a, b) => a + b, 0);
+        let rand = Math.random() * total;
+        for (const [type, weight] of Object.entries(weights)) {
+            rand -= weight;
+            if (rand <= 0) return type;
+        }
+        return 'bomb';
+    }
+
+    // Helper: Get all special candies on board
+    getAllSpecialsOnBoard() {
+        const specials = [];
+        for (let r = 0; r < this.board.rows; r++) {
+            for (let c = 0; c < this.board.cols; c++) {
+                const candy = this.board.candies[r][c];
+                if (candy && candy.active && candy.isSpecial) {
+                    specials.push(candy);
+                }
+            }
+        }
+        return specials;
+    }
+
+    // Helper: Fisher-Yates shuffle
+    shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    // Helper: Confetti particle burst
+    async showConfetti() {
+        const width = this.cameras.main.width;
+        const colors = [0xff4757, 0x3742fa, 0x2ed573, 0xffa502, 0xa55eea, 0xff7f50, 0xffeb3b];
+
+        // Create multiple confetti bursts
+        for (let burst = 0; burst < 3; burst++) {
+            for (let i = 0; i < 20; i++) {
+                const x = Math.random() * width;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+
+                const confetti = this.add.graphics({ x, y: -20 });
+                confetti.fillStyle(color, 1);
+                confetti.fillRect(-4, -4, 8, 8);
+                confetti.setDepth(150);
+
+                this.tweens.add({
+                    targets: confetti,
+                    y: this.cameras.main.height + 50,
+                    x: x + (Math.random() - 0.5) * 200,
+                    rotation: Math.random() * 10,
+                    duration: 1500 + Math.random() * 1000,
+                    ease: 'Quad.easeIn',
+                    delay: burst * 200 + Math.random() * 100,
+                    onComplete: () => confetti.destroy()
+                });
+            }
+
+            if (this.soundManager && burst === 0) this.soundManager.play('win');
+        }
+
+        // Camera shake for impact
+        this.cameras.main.shake(300, 0.01);
+
+        await new Promise(r => setTimeout(r, 1000));
     }
 
     showCombo(combo) {
