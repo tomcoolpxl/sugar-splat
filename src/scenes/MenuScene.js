@@ -216,5 +216,17 @@ export default class MenuScene extends Phaser.Scene {
                 repeat: -1
             });
         });
+
+        // Register shutdown handler
+        this.events.on('shutdown', this.shutdown, this);
+    }
+
+    shutdown() {
+        // Stop music and destroy sound manager when leaving this scene
+        if (this.soundManager) {
+            this.soundManager.destroy();
+            this.soundManager = null;
+        }
+        this.events.off('shutdown');
     }
 }

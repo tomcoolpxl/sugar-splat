@@ -266,11 +266,11 @@ export default class GameScene extends Phaser.Scene {
     createObjectivesDisplay(width) {
         // Simple display for multiple objectives
         const objectives = [];
-        
+
         if (this.objectives.jelly > 0) {
             objectives.push(`🍮 ${this.objectives.jelly - this.status.jelly}`);
         }
-        
+
         if (this.objectives.drop > 0) {
             objectives.push(`🍒 ${this.objectives.drop - this.status.drop}`);
         }
@@ -286,8 +286,9 @@ export default class GameScene extends Phaser.Scene {
         }
 
         const text = objectives.join('   ');
-        
-        if (this.objectiveText) {
+
+        // Check if text object exists AND is still valid (has scene reference)
+        if (this.objectiveText && this.objectiveText.scene) {
             this.objectiveText.setText(text);
         } else {
             this.objectiveText = this.add.text(width / 2, 80, text, {
@@ -366,10 +367,10 @@ export default class GameScene extends Phaser.Scene {
         // Score update from board
         this.events.on('scoreUpdate', (points, cascadeLevel) => {
             this.score += points;
-            this.scoreText.setText(`Score: ${this.score}`);
-            
+            if (this.scoreText?.scene) this.scoreText.setText(`Score: ${this.score}`);
+
             // Play sound
-            this.soundManager.play(cascadeLevel > 1 ? 'cascade' : 'match');
+            if (this.soundManager) this.soundManager.play(cascadeLevel > 1 ? 'cascade' : 'match');
 
             this.createObjectivesDisplay(this.cameras.main.width);
             this.updateProgressBar();
@@ -385,7 +386,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Special activated event
         this.events.on('specialActivated', (type, row, col) => {
-            this.soundManager.play(type === 'bomb' || type === 'color_bomb' ? 'bomb' : 'line');
+            if (this.soundManager) this.soundManager.play(type === 'bomb' || type === 'color_bomb' ? 'bomb' : 'line');
             
             // Screen shake based on type
             if (type === 'bomb' || type === 'color_bomb') {
@@ -401,43 +402,45 @@ export default class GameScene extends Phaser.Scene {
         // Jelly cleared event
         this.events.on('jellyCleared', (row, col) => {
             this.status.jelly++;
-            this.soundManager.play('line');
+            if (this.soundManager) this.soundManager.play('line');
             this.createObjectivesDisplay(this.cameras.main.width);
             this.updateProgressBar();
 
             // Animate objective text
-            this.tweens.add({
-                targets: this.objectiveText,
-                scaleX: 1.2,
-                scaleY: 1.2,
-                duration: 100,
-                yoyo: true
-            });
+            if (this.objectiveText?.scene) {
+                this.tweens.add({
+                    targets: this.objectiveText,
+                    scaleX: 1.2,
+                    scaleY: 1.2,
+                    duration: 100,
+                    yoyo: true
+                });
+            }
         });
 
         // Jelly hit (double->single) event
         this.events.on('jellyHit', (row, col) => {
             this.status.jelly++;
-            this.soundManager.play('click');
+            if (this.soundManager) this.soundManager.play('click');
             this.createObjectivesDisplay(this.cameras.main.width);
             this.updateProgressBar();
         });
 
         // Lock broken event
         this.events.on('lockBroken', (row, col) => {
-            this.soundManager.play('line');
+            if (this.soundManager) this.soundManager.play('line');
             // Visual feedback - screen flash
             this.cameras.main.flash(100, 135, 206, 235, false);
         });
 
         // Valid swap - decrement moves
         this.events.on('validSwap', () => {
-            this.soundManager.play('swap');
+            if (this.soundManager) this.soundManager.play('swap');
             this.movesRemaining--;
-            this.movesText.setText(`Moves: ${this.movesRemaining}`);
+            if (this.movesText?.scene) this.movesText.setText(`Moves: ${this.movesRemaining}`);
 
             // Animate moves text when low
-            if (this.movesRemaining <= 5) {
+            if (this.movesRemaining <= 5 && this.movesText?.scene) {
                 this.tweens.add({
                     targets: this.movesText,
                     scaleX: 1.2,
@@ -469,7 +472,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Invalid swap feedback
         this.events.on('invalidSwap', () => {
-            this.soundManager.play('invalid');
+            if (this.soundManager) this.soundManager.play('invalid');
             this.resetHintTimer();
         });
 
@@ -487,7 +490,7 @@ export default class GameScene extends Phaser.Scene {
             // Check for ingredient collect (type >= 100)
             if (type >= 100) {
                 this.status.drop++;
-                this.soundManager.play('win'); // special sound for ingredient
+                if (this.soundManager) this.soundManager.play('win'); // special sound for ingredient
                 this.createObjectivesDisplay(this.cameras.main.width);
                 this.updateProgressBar();
             }
@@ -516,7 +519,7 @@ export default class GameScene extends Phaser.Scene {
 
     showLoseScreen() {
         this.isGameOver = true;
-        this.soundManager.play('levelFail');
+        if (this.soundManager) this.soundManager.play('levelFail');
         this.board.inputLocked = true;
         this.clearHint();
 
@@ -580,7 +583,7 @@ export default class GameScene extends Phaser.Scene {
             await this.playBonusRound();
         }
 
-        this.soundManager.play('win');
+        if (this.soundManager) this.soundManager.play('win');
 
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
@@ -1005,19 +1008,19 @@ export default class GameScene extends Phaser.Scene {
         if (this.movesRemaining > 0) {
             const bonusScore = this.movesRemaining * 1000;
             const step = Math.floor(bonusScore / 10);
-            
-            for(let i=0; i<10; i++) {
+
+            for (let i = 0; i < 10; i++) {
                 this.score += step;
-                this.scoreText.setText(`Score: ${this.score}`);
-                this.soundManager.play('match');
+                if (this.scoreText?.scene) this.scoreText.setText(`Score: ${this.score}`);
+                if (this.soundManager) this.soundManager.play('match');
                 await new Promise(r => setTimeout(r, 100));
             }
         }
     }
 
     showCombo(combo) {
-        if (!this.comboText) return;
-        
+        if (!this.comboText?.scene) return;
+
         this.comboText.setText(`${combo}x COMBO!`);
         this.comboText.setAlpha(1);
         this.comboText.setScale(0.5);
@@ -1035,6 +1038,12 @@ export default class GameScene extends Phaser.Scene {
     }
 
     shutdown() {
+        // Stop music first and destroy sound manager
+        if (this.soundManager) {
+            this.soundManager.destroy();
+            this.soundManager = null;
+        }
+
         // Clean up event listeners to prevent memory leaks
         this.events.off('scoreUpdate');
         this.events.off('jellyCleared');
@@ -1044,6 +1053,7 @@ export default class GameScene extends Phaser.Scene {
         this.events.off('cascadeComplete');
         this.events.off('invalidSwap');
         this.events.off('candyCleared');
+        this.events.off('specialActivated');
         this.events.off('shutdown');
 
         // Clean up hint timer
@@ -1064,6 +1074,16 @@ export default class GameScene extends Phaser.Scene {
         // Clean up board
         if (this.board) {
             this.board.destroy();
+            this.board = null;
         }
+
+        // Null out all UI references to prevent stale object errors on restart
+        this.objectiveText = null;
+        this.movesText = null;
+        this.scoreText = null;
+        this.comboText = null;
+        this.progressBar = null;
+        this.progressBarBg = null;
+        this.emitter = null;
     }
 }

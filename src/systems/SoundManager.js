@@ -1,9 +1,25 @@
 import { GameConfig } from '../Config.js';
 
+// Shared AudioContext across all SoundManager instances to avoid conflicts with Phaser
+let sharedAudioContext = null;
+
+function getSharedAudioContext() {
+    if (!sharedAudioContext) {
+        try {
+            sharedAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+            console.warn('SoundManager: Failed to create AudioContext:', e);
+            return null;
+        }
+    }
+    return sharedAudioContext;
+}
+
 export default class SoundManager {
     constructor(scene) {
         this.scene = scene;
-        this.context = scene.sound.context; // Web Audio Context
+        // Use our own AudioContext instead of Phaser's to avoid "cut" errors
+        this.context = getSharedAudioContext();
         this.masterVolume = GameConfig.AUDIO.MASTER_VOLUME;
 
         // Music state
@@ -12,6 +28,9 @@ export default class SoundManager {
         this.isMusicPlaying = false;
         this.currentNoteIndex = 0;
         this.musicTimer = null;
+        this.chordProgression = null;
+        this.stepIndex = 0;
+        this.nextNoteTime = 0;
 
         // Sound definitions from config
         this.soundDefs = GameConfig.AUDIO.SOUNDS;
@@ -22,6 +41,7 @@ export default class SoundManager {
     }
 
     play(key) {
+        if (!this.scene?.sound) return;
         if (this.scene.sound.mute) return;
         if (!this.ensureContextRunning()) return;
 
@@ -30,7 +50,10 @@ export default class SoundManager {
 
     // Ensure AudioContext is running (handles browser autoplay policies)
     ensureContextRunning() {
-        if (!this.context) return false;
+        if (!this.context) {
+            this.context = getSharedAudioContext();
+            if (!this.context) return false;
+        }
 
         if (this.context.state === 'suspended') {
             this.context.resume().catch(err => {
@@ -157,6 +180,7 @@ export default class SoundManager {
 
     startMusic() {
         if (this.isMusicPlaying) return;
+        if (!this.context || !this.musicConfig) return;
         if (!this.ensureContextRunning()) {
             // Retry after a short delay when context resumes
             setTimeout(() => this.startMusic(), 100);
@@ -170,7 +194,7 @@ export default class SoundManager {
         this.secondsPerStep = 60 / this.tempo / 4; // 16th notes
 
         // Song Structure from config
-        this.chordProgression = this.musicConfig.CHORD_PROGRESSION;
+        this.chordProgression = [...this.musicConfig.CHORD_PROGRESSION];
 
         this.scheduleNextStep();
     }
@@ -194,41 +218,31 @@ export default class SoundManager {
     }
 
     playStep(time) {
-        if (this.scene.sound.mute) return;
+        if (!this.scene || this.scene.sound.mute) return;
         if (!this.context || this.context.state !== 'running') return;
+        if (!this.chordProgression || this.chordProgression.length === 0) return;
 
         const measure = Math.floor(this.stepIndex / 16);
         const step = this.stepIndex % 16;
         const currentChord = this.chordProgression[measure % this.chordProgression.length];
+        if (!currentChord) return;
         const root = currentChord.root;
 
-        // --- Bass (16th notes, pumping) ---
-        if (step % 2 === 0) {
-            this.playSynthNote(root, 0.1, 'sawtooth', 0.1, time);
-        } else {
-            this.playSynthNote(root, 0.1, 'square', 0.05, time);
-        }
-
-        // --- Melody (Pentatonic riff) ---
+        // --- Simple Melody Only (Pentatonic) ---
         const scale = this.musicConfig.PENTATONIC_SCALE;
 
-        if (step === 0 || step === 6 || step === 12) {
-            const noteIdx = (measure + step) % scale.length;
+        // Main melody notes on beats
+        if (step === 0 || step === 4 || step === 8 || step === 12) {
+            const noteIdx = (measure + Math.floor(step / 4)) % scale.length;
             const freq = root * 2 * scale[noteIdx];
-            this.playSynthNote(freq, 0.1, 'sine', 0.08, time);
+            this.playSynthNote(freq, 0.3, 'sine', 0.12, time);
         }
 
-        // --- Drums ---
-        if (step % 4 === 0) {
-            this.playDrum('kick', time);
-        }
-
-        if (step % 8 === 4) {
-            this.playDrum('snare', time);
-        }
-
-        if (step % 2 !== 0) {
-            this.playDrum('hat', time);
+        // Soft harmony on off-beats
+        if (step === 2 || step === 10) {
+            const noteIdx = (measure + 2) % scale.length;
+            const freq = root * 2 * scale[noteIdx];
+            this.playSynthNote(freq, 0.15, 'triangle', 0.06, time);
         }
     }
 
@@ -308,5 +322,20 @@ export default class SoundManager {
             clearTimeout(this.musicTimer);
             this.musicTimer = null;
         }
+        // Clear references to prevent stale context access
+        this.chordProgression = null;
+        this.stepIndex = 0;
+        this.nextNoteTime = 0;
+    }
+
+    // Clean up when scene is destroyed
+    destroy() {
+        this.stopMusic();
+        // Don't null the shared context, just clear our reference
+        this.context = null;
+        this.scene = null;
+        this.soundDefs = null;
+        this.musicConfig = null;
+        this.drumConfig = null;
     }
 }
