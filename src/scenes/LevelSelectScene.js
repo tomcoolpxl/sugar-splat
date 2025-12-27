@@ -218,17 +218,38 @@ export default class LevelSelectScene extends Phaser.Scene {
     }
 
     createSoundControls(width, height) {
-        const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
+        // Music toggle (top right)
+        const musicOn = localStorage.getItem('sugarSplash_music') !== 'false';
+        const musicBtn = this.add.text(width - 70, 40, musicOn ? '🎵' : '🎵', {
+            fontSize: '28px'
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setAlpha(musicOn ? 1 : 0.4);
 
-        // Sound toggle button (top right)
-        const soundBtn = this.add.text(width - 40, 40, soundOn ? '🔊' : '🔇', {
-            fontSize: '32px'
+        const musicLabel = this.add.text(width - 70, 68, 'Music', {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '11px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+
+        musicBtn.on('pointerover', () => musicBtn.setScale(1.2));
+        musicBtn.on('pointerout', () => musicBtn.setScale(1));
+        musicBtn.on('pointerup', () => {
+            const currentState = localStorage.getItem('sugarSplash_music') !== 'false';
+            const newState = !currentState;
+            localStorage.setItem('sugarSplash_music', newState.toString());
+            musicBtn.setAlpha(newState ? 1 : 0.4);
+        });
+
+        // Sound effects toggle
+        const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
+        const soundBtn = this.add.text(width - 30, 40, soundOn ? '🔊' : '🔇', {
+            fontSize: '28px'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-        // Label below
-        const soundLabel = this.add.text(width - 40, 70, 'Sound', {
+        const soundLabel = this.add.text(width - 30, 68, 'Sound', {
             fontFamily: 'Arial, sans-serif',
-            fontSize: '12px',
+            fontSize: '11px',
             color: '#ffffff',
             stroke: '#000000',
             strokeThickness: 2

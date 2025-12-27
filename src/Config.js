@@ -198,28 +198,28 @@ export const GameConfig = {
                 }
             },
 
-            // Level to palette mapping (cycles through for variety)
+            // Level to palette mapping - each level sounds distinct
             LEVEL_PALETTES: {
                 1: 'gentle',      // Easy intro - soft sounds
-                2: 'gentle',
+                2: 'crystal',     // Bright progression
                 3: 'chiptune',    // Classic game feel
-                4: 'chiptune',
+                4: 'dreamy',      // Soft variety
                 5: 'warm',        // Richer as difficulty increases
-                6: 'dreamy',      // Jelly intro - ethereal
-                7: 'dreamy',
-                8: 'chiptune',
-                9: 'crystal',     // Bright and clear
-                10: 'warm',
-                11: 'punchy',     // New mechanics - energetic
-                12: 'crystal',
-                13: 'chiptune',
-                14: 'warm',
-                15: 'punchy',
-                16: 'crystal',    // Challenge levels
-                17: 'dreamy',
-                18: 'punchy',
-                19: 'warm',
-                20: 'chiptune'    // Final level - classic
+                6: 'gentle',      // Jelly intro - calm
+                7: 'crystal',     // Clear and bright
+                8: 'punchy',      // Energetic middle
+                9: 'dreamy',      // Ethereal
+                10: 'chiptune',   // Classic milestone
+                11: 'warm',       // New mechanics - rich
+                12: 'punchy',     // Energetic
+                13: 'crystal',    // Bright
+                14: 'gentle',     // Calm before storm
+                15: 'chiptune',   // Classic
+                16: 'punchy',     // Challenge levels - intense
+                17: 'dreamy',     // Contrast
+                18: 'warm',       // Rich
+                19: 'crystal',    // Penultimate - bright
+                20: 'punchy'      // Final level - intense
             }
         },
 
