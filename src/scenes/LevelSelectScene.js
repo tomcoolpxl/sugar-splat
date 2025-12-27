@@ -20,6 +20,9 @@ export default class LevelSelectScene extends Phaser.Scene {
 
         // Back button
         this.createBackButton(width, height);
+
+        // Sound controls
+        this.createSoundControls(width, height);
     }
 
     createBackground(width, height) {
@@ -212,6 +215,37 @@ export default class LevelSelectScene extends Phaser.Scene {
         backBtn.on('pointerover', () => backBtn.setScale(1.2));
         backBtn.on('pointerout', () => backBtn.setScale(1));
         backBtn.on('pointerup', () => this.scene.start('MenuScene'));
+    }
+
+    createSoundControls(width, height) {
+        const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
+
+        // Sound toggle button (top right)
+        const soundBtn = this.add.text(width - 40, 40, soundOn ? '🔊' : '🔇', {
+            fontSize: '32px'
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        // Label below
+        const soundLabel = this.add.text(width - 40, 70, 'Sound', {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '12px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+
+        soundBtn.on('pointerover', () => soundBtn.setScale(1.2));
+        soundBtn.on('pointerout', () => soundBtn.setScale(1));
+        soundBtn.on('pointerup', () => {
+            const currentState = localStorage.getItem('sugarSplash_sound') !== 'false';
+            const newState = !currentState;
+            localStorage.setItem('sugarSplash_sound', newState.toString());
+            soundBtn.setText(newState ? '🔊' : '🔇');
+            this.sound.mute = !newState;
+        });
+
+        // Apply current mute state
+        this.sound.mute = !soundOn;
     }
 
     getSaveData() {

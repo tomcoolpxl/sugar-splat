@@ -33,6 +33,12 @@ export default class Board {
         this.lastClickTime = 0;
         this.lastClickCandy = null;
 
+        // Drag/swipe state for mobile
+        this.dragStartCandy = null;
+        this.dragStartPoint = null;
+        this.isDragging = false;
+        this.swipeThreshold = this.cellSize * 0.3; // Swipe distance needed
+
         // Lock input during animations
         this.inputLocked = false;
 
@@ -72,6 +78,67 @@ export default class Board {
         this.drawJellyLayer();
         this.fillBoard();
         this.drawLockOverlays();
+        this.setupSwipeInput();
+    }
+
+    setupSwipeInput() {
+        // Scene-level input handlers for swipe/drag detection
+        this.scene.input.on('pointerup', (pointer) => {
+            if (this.isDragging && this.dragStartCandy) {
+                // Check if we should do a tap (no significant movement)
+                const dx = pointer.x - this.dragStartPoint.x;
+                const dy = pointer.y - this.dragStartPoint.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < this.swipeThreshold) {
+                    // It was a tap, not a swipe - handle as click
+                    this.onCandyClick(this.dragStartCandy);
+                }
+                // If it was a swipe, it was already handled in pointermove
+            }
+            this.dragStartCandy = null;
+            this.dragStartPoint = null;
+            this.isDragging = false;
+        });
+
+        this.scene.input.on('pointermove', (pointer) => {
+            if (!this.isDragging || !this.dragStartCandy || this.inputLocked) return;
+            if (!pointer.isDown) return;
+
+            const dx = pointer.x - this.dragStartPoint.x;
+            const dy = pointer.y - this.dragStartPoint.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // Check if we've moved enough to trigger a swipe
+            if (distance >= this.swipeThreshold) {
+                // Determine swipe direction (cardinal only)
+                let targetRow = this.dragStartCandy.row;
+                let targetCol = this.dragStartCandy.col;
+
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    // Horizontal swipe
+                    targetCol += (dx > 0) ? 1 : -1;
+                } else {
+                    // Vertical swipe
+                    targetRow += (dy > 0) ? 1 : -1;
+                }
+
+                // Check if target is valid and has a candy
+                if (this.isValidCell(targetRow, targetCol)) {
+                    const targetCandy = this.candies[targetRow][targetCol];
+                    if (targetCandy && targetCandy.active) {
+                        // Execute the swap
+                        this.deselectCandy();
+                        this.trySwap(this.dragStartCandy, targetCandy);
+
+                        // Clear drag state to prevent multiple swaps
+                        this.dragStartCandy = null;
+                        this.dragStartPoint = null;
+                        this.isDragging = false;
+                    }
+                }
+            }
+        });
     }
 
     applyLevelBlockers() {
@@ -516,7 +583,10 @@ export default class Board {
         const { x, y } = this.gridToWorld(row, col);
         const candy = new Candy(this.scene, x, y, type, row, col);
         candy.setDisplaySize(this.cellSize - 12, this.cellSize - 12).setDepth(1);
-        candy.on('pointerdown', () => this.onCandyClick(candy));
+
+        // Use pointerdown to start drag tracking (mobile swipe support)
+        candy.on('pointerdown', (pointer) => this.onCandyPointerDown(candy, pointer));
+
         this.grid[row][col] = type;
         this.candies[row][col] = candy;
         if (animated) {
@@ -524,6 +594,15 @@ export default class Board {
             this.scene.tweens.add({ targets: candy, y: y, alpha: 1, duration: 200 + row * 50, ease: 'Bounce.easeOut' });
         }
         return candy;
+    }
+
+    onCandyPointerDown(candy, pointer) {
+        if (this.inputLocked) return;
+
+        // Start drag tracking
+        this.dragStartCandy = candy;
+        this.dragStartPoint = { x: pointer.x, y: pointer.y };
+        this.isDragging = true;
     }
 
     // --- Action Methods ---
@@ -617,7 +696,8 @@ export default class Board {
 
                     const { x, y } = this.gridToWorld(r, c);
                     const candy = new Candy(this.scene, x, this.y - this.cellSize * (emptyCount - r), type, r, c);
-                    candy.setDisplaySize(this.cellSize - 12, this.cellSize - 12).setDepth(1).on('pointerdown', () => this.onCandyClick(candy));
+                    candy.setDisplaySize(this.cellSize - 12, this.cellSize - 12).setDepth(1);
+                    candy.on('pointerdown', (pointer) => this.onCandyPointerDown(candy, pointer));
                     this.grid[r][c] = type;
                     this.candies[r][c] = candy;
                     tweens.push({ 
@@ -891,6 +971,10 @@ export default class Board {
     }
 
     destroy() {
+        // Clean up input handlers
+        this.scene.input.off('pointerup');
+        this.scene.input.off('pointermove');
+
         for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) {
             if (this.candies[r][c]) this.candies[r][c].destroy();
             if (this.jellySprites[r][c]) this.jellySprites[r][c].destroy();

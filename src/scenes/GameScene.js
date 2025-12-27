@@ -249,18 +249,26 @@ export default class GameScene extends Phaser.Scene {
         this.currentProgress = 0; // Track current visual progress for animation
         this.updateProgressBar();
 
-        // Score display at bottom
+        // Bottom bar - taller to fit powerups and score
         const bottomBar = this.add.graphics();
         bottomBar.fillStyle(0x000000, 0.3);
-        bottomBar.fillRoundedRect(20, height - 80, width - 40, 60, 15);
+        bottomBar.fillRoundedRect(20, height - 90, width - 40, 75, 15);
 
-        this.scoreText = this.add.text(width / 2, height - 50, `Score: ${this.score}`, {
+        // Score display - positioned on the right side to leave room for powerups
+        this.scoreText = this.add.text(width - 40, height - 52, `${this.score}`, {
             fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '28px',
+            fontSize: '26px',
             color: '#ffffff',
             stroke: '#000000',
             strokeThickness: 2
-        }).setOrigin(0.5);
+        }).setOrigin(1, 0.5);
+
+        // Score label
+        this.add.text(width - 40, height - 75, 'Score', {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '14px',
+            color: '#cccccc'
+        }).setOrigin(1, 0.5);
 
         // Combo text (hidden by default) - positioned above the board
         this.comboText = this.add.text(width / 2, 155, '', {
@@ -340,11 +348,10 @@ export default class GameScene extends Phaser.Scene {
 
     createPowerupBar(width, height) {
         const powerupTypes = ['hammer', 'bomb', 'rowcol', 'colorblast'];
-        const barY = height - 70;
-        const buttonSize = 50;
-        const spacing = 15;
-        const totalWidth = powerupTypes.length * (buttonSize + spacing) - spacing;
-        const startX = 40;
+        const barY = height - 52; // Centered in bottom bar
+        const buttonSize = 48;
+        const spacing = 10;
+        const startX = 35;
 
         // Create powerup buttons
         powerupTypes.forEach((type, index) => {
@@ -354,21 +361,21 @@ export default class GameScene extends Phaser.Scene {
             // Button background
             const bg = this.add.graphics({ x, y: barY });
             bg.fillStyle(this.powerups[type] > 0 ? 0x4a4a6a : 0x2a2a3a, 0.9);
-            bg.fillRoundedRect(-buttonSize / 2, -buttonSize / 2, buttonSize, buttonSize, 10);
+            bg.fillRoundedRect(-buttonSize / 2, -buttonSize / 2, buttonSize, buttonSize, 8);
             bg.setInteractive(
                 new Phaser.Geom.Rectangle(-buttonSize / 2, -buttonSize / 2, buttonSize, buttonSize),
                 Phaser.Geom.Rectangle.Contains
             );
 
             // Icon
-            const icon = this.add.text(x, barY - 5, config.icon, {
-                fontSize: '28px'
+            const icon = this.add.text(x, barY - 4, config.icon, {
+                fontSize: '24px'
             }).setOrigin(0.5);
 
-            // Count badge
-            const count = this.add.text(x + 15, barY + 15, `${this.powerups[type]}`, {
+            // Count badge (bottom right corner)
+            const count = this.add.text(x + 14, barY + 14, `${this.powerups[type]}`, {
                 fontFamily: 'Arial Black',
-                fontSize: '14px',
+                fontSize: '12px',
                 color: this.powerups[type] > 0 ? '#ffffff' : '#666666',
                 stroke: '#000000',
                 strokeThickness: 2
@@ -487,10 +494,10 @@ export default class GameScene extends Phaser.Scene {
         btn.count.setText(`${this.powerups[type]}`);
         btn.count.setColor(this.powerups[type] > 0 ? '#ffffff' : '#666666');
 
-        // Update background
+        // Update background (48x48 buttons)
         btn.bg.clear();
         btn.bg.fillStyle(this.powerups[type] > 0 ? 0x4a4a6a : 0x2a2a3a, 0.9);
-        btn.bg.fillRoundedRect(-25, -25, 50, 50, 10);
+        btn.bg.fillRoundedRect(-24, -24, 48, 48, 8);
     }
 
     async activatePowerup(type, row, col, candy) {
@@ -770,7 +777,7 @@ export default class GameScene extends Phaser.Scene {
         // Score update from board
         this.events.on('scoreUpdate', (points, cascadeLevel) => {
             this.score += points;
-            if (this.scoreText?.scene) this.scoreText.setText(`Score: ${this.score}`);
+            if (this.scoreText?.scene) this.scoreText.setText(`${this.score}`);
 
             // Play sound
             if (this.soundManager) this.soundManager.play(cascadeLevel > 1 ? 'cascade' : 'match');
@@ -1358,22 +1365,26 @@ export default class GameScene extends Phaser.Scene {
     createBoard(width, height) {
         const cols = GameConfig.BOARD.COLS;
         const rows = GameConfig.BOARD.ROWS;
-        
+
+        // Layout constants
+        const topBarHeight = 140;
+        const bottomBarHeight = 95; // Taller bottom bar for powerups + score
+
         // Calculate cell size to fit the board within the screen with some padding
         const availableWidth = width * 0.95;
-        const availableHeight = height * 0.75; 
-        
+        const availableHeight = height - topBarHeight - bottomBarHeight - 20; // 20px padding
+
         const sizeByWidth = availableWidth / cols;
         const sizeByHeight = availableHeight / rows;
-        
+
         const cellSize = Math.floor(Math.min(sizeByWidth, sizeByHeight));
-        
+
         // Center the board
         const boardWidth = cols * cellSize;
         const boardHeight = rows * cellSize;
-        
+
         const x = (width - boardWidth) / 2;
-        const y = 140 + (height - 140 - 80 - boardHeight) / 2;
+        const y = topBarHeight + (height - topBarHeight - bottomBarHeight - boardHeight) / 2;
 
         this.board = new Board(this, {
             rows: rows,
@@ -1650,48 +1661,57 @@ export default class GameScene extends Phaser.Scene {
         await new Promise(r => setTimeout(r, 400));
         bonusText.destroy();
 
-        // --- PHASE 2: Activate specials one by one (random order) ---
-        const allSpecials = this.getAllSpecialsOnBoard();
-        this.shuffleArray(allSpecials);
+        // --- PHASE 2: Activate specials one by one until none remain ---
+        // Keep looping because activating specials can create new ones
+        let safetyCounter = 0;
+        const maxIterations = 50; // Prevent infinite loops
 
-        for (const special of allSpecials) {
-            if (!special.active) continue;
+        while (safetyCounter < maxIterations) {
+            const allSpecials = this.getAllSpecialsOnBoard();
+            if (allSpecials.length === 0) break;
 
-            // Highlight effect - flash before activation
-            this.tweens.add({
-                targets: special,
-                alpha: 0.3,
-                duration: 100,
-                yoyo: true,
-                repeat: 2
-            });
-            await new Promise(r => setTimeout(r, 300));
+            this.shuffleArray(allSpecials);
+            safetyCounter++;
 
-            // Play activation sound
-            if (this.soundManager) {
-                this.soundManager.play(special.specialType === 'bomb' || special.specialType === 'color_bomb' ? 'bomb' : 'line');
-            }
+            for (const special of allSpecials) {
+                if (!special.active) continue;
 
-            // Activate and wait for cascades
-            await this.board.activateSpecial(special);
-            await this.board.applyGravity();
-            await this.board.fillEmptySpaces();
-            await this.board.processCascades();
-
-            // Update live bonus counter
-            const currentBonus = this.score - bonusScoreStart;
-            if (bonusCounter?.scene) {
-                bonusCounter.setText(`Bonus: +${currentBonus}`);
+                // Highlight effect - flash before activation
                 this.tweens.add({
-                    targets: bonusCounter,
-                    scaleX: 1.15,
-                    scaleY: 1.15,
+                    targets: special,
+                    alpha: 0.3,
                     duration: 100,
-                    yoyo: true
+                    yoyo: true,
+                    repeat: 2
                 });
-            }
+                await new Promise(r => setTimeout(r, 300));
 
-            await new Promise(r => setTimeout(r, 350));
+                // Play activation sound
+                if (this.soundManager) {
+                    this.soundManager.play(special.specialType === 'bomb' || special.specialType === 'color_bomb' ? 'bomb' : 'line');
+                }
+
+                // Activate and wait for cascades
+                await this.board.activateSpecial(special);
+                await this.board.applyGravity();
+                await this.board.fillEmptySpaces();
+                await this.board.processCascades();
+
+                // Update live bonus counter
+                const currentBonus = this.score - bonusScoreStart;
+                if (bonusCounter?.scene) {
+                    bonusCounter.setText(`Bonus: +${currentBonus}`);
+                    this.tweens.add({
+                        targets: bonusCounter,
+                        scaleX: 1.15,
+                        scaleY: 1.15,
+                        duration: 100,
+                        yoyo: true
+                    });
+                }
+
+                await new Promise(r => setTimeout(r, 250));
+            }
         }
 
         // --- PHASE 3: Grand Finale ---
