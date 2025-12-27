@@ -12,7 +12,7 @@ export default class MatchLogic {
             let col = 0;
             while (col < cols) {
                 const type = grid[row][col];
-                if (type === -1 || locked[row][col]) {
+                if (type === -1 || locked[row][col] || type >= 100) {
                     col++;
                     continue;
                 }
@@ -46,7 +46,7 @@ export default class MatchLogic {
             let row = 0;
             while (row < rows) {
                 const type = grid[row][col];
-                if (type === -1 || locked[row][col]) {
+                if (type === -1 || locked[row][col] || type >= 100) {
                     row++;
                     continue;
                 }

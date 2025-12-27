@@ -1,11 +1,15 @@
 export default class Candy extends Phaser.GameObjects.Image {
     constructor(scene, x, y, type, row, col) {
-        super(scene, x, y, `candy_${type}`);
+        const texture = type >= 100 ? `ingredient_${type - 100}` : `candy_${type}`;
+        super(scene, x, y, texture);
 
         this.scene = scene;
         this.candyType = type;
         this.row = row;
         this.col = col;
+
+        // Ingredient properties (cannot be matched)
+        this.isIngredient = type >= 100;
 
         // Special tile properties
         this.isSpecial = false;
@@ -30,42 +34,51 @@ export default class Candy extends Phaser.GameObjects.Image {
 
         this.isSelected = true;
 
-        // Create pulsing selection effect
+        // Squash and Stretch selection effect
         this.scene.tweens.add({
             targets: this,
-            scaleX: 1.15,
-            scaleY: 1.15,
+            scaleX: 1.1,
+            scaleY: 0.9,
             duration: 100,
-            ease: 'Back.easeOut'
+            yoyo: true,
+            repeat: 0,
+            onComplete: () => {
+                if (this.isSelected) {
+                    this.scene.tweens.add({
+                        targets: this,
+                        scaleX: 1.05,
+                        scaleY: 1.05,
+                        duration: 400,
+                        yoyo: true,
+                        repeat: -1,
+                        ease: 'Sine.easeInOut'
+                    });
+                }
+            }
         });
 
         // Add glow effect
         if (!this.selectionIndicator) {
-            this.selectionIndicator = this.scene.add.graphics();
-            this.selectionIndicator.setDepth(1.5); // Above jelly (0.5) but below locks (2)
+            this.selectionIndicator = this.scene.add.image(this.x, this.y, 'glow');
+            this.selectionIndicator.setDepth(0.5); // Below candy
+            this.selectionIndicator.setTint(0xffffff);
         }
 
-        this.updateSelectionGlow();
+        this.selectionIndicator.setVisible(true);
+        this.selectionIndicator.setScale(1);
+        this.selectionIndicator.setAlpha(0.6);
 
         // Pulse animation for glow
         this.glowTween = this.scene.tweens.add({
-            targets: { alpha: 0.8 },
-            alpha: 0.4,
-            duration: 500,
+            targets: this.selectionIndicator,
+            scaleX: 1.3,
+            scaleY: 1.3,
+            alpha: 0.3,
+            duration: 600,
             yoyo: true,
             repeat: -1,
-            onUpdate: (tween) => {
-                this.updateSelectionGlow(tween.getValue());
-            }
+            ease: 'Sine.easeInOut'
         });
-    }
-
-    updateSelectionGlow(alpha = 0.8) {
-        if (!this.selectionIndicator) return;
-
-        this.selectionIndicator.clear();
-        this.selectionIndicator.lineStyle(4, 0xffffff, alpha);
-        this.selectionIndicator.strokeCircle(this.x, this.y, this.displayWidth / 2 + 4);
     }
 
     deselect() {
@@ -73,13 +86,16 @@ export default class Candy extends Phaser.GameObjects.Image {
 
         this.isSelected = false;
 
-        // Reset scale
+        // Stop pulsing
+        this.scene.tweens.killTweensOf(this);
+
+        // Reset scale with a small bounce
         this.scene.tweens.add({
             targets: this,
             scaleX: 1,
             scaleY: 1,
-            duration: 100,
-            ease: 'Power2'
+            duration: 200,
+            ease: 'Back.easeOut'
         });
 
         // Remove glow
@@ -89,7 +105,7 @@ export default class Candy extends Phaser.GameObjects.Image {
         }
 
         if (this.selectionIndicator) {
-            this.selectionIndicator.clear();
+            this.selectionIndicator.setVisible(false);
         }
     }
 
@@ -121,6 +137,16 @@ export default class Candy extends Phaser.GameObjects.Image {
             duration: 150,
             yoyo: true,
             ease: 'Back.easeOut'
+        });
+
+        // Continuous special pulse/sparkle
+        this.specialPulse = this.scene.tweens.add({
+            targets: this,
+            alpha: 0.8,
+            duration: 800,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
         });
     }
 

@@ -1,5 +1,7 @@
 import Board from '../objects/Board.js';
 import SoundManager from '../systems/SoundManager.js';
+import { LevelData } from '../data/LevelData.js';
+import { GameConfig } from '../Config.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -10,11 +12,21 @@ export default class GameScene extends Phaser.Scene {
         this.currentLevel = data.level || 1;
         this.score = 0;
         this.movesRemaining = 0;
-        this.targetScore = 0;
-        this.objective = 'score'; // 'score' or 'clearJelly'
-        this.jellyTarget = 0;
-        this.jellyCleared = 0;
         this.isGameOver = false;
+
+        // Multi-objective state
+        this.objectives = {
+            score: 0,
+            jelly: 0,
+            collect: {}, // { type: count }
+            drop: 0
+        };
+
+        this.status = {
+            jelly: 0,
+            collect: {},
+            drop: 0
+        };
     }
 
     create() {
@@ -59,25 +71,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     showTutorialIfNeeded() {
-        const tutorials = {
-            6: {
-                title: 'New: Jelly Tiles!',
-                text: 'Clear the pink jelly by\nmatching candies on top of it.',
-                icon: '🍮'
-            },
-            8: {
-                title: 'New: Locked Tiles!',
-                text: 'Locked candies can\'t move.\nMatch next to them to break the lock.',
-                icon: '🔒'
-            },
-            11: {
-                title: 'Double Jelly!',
-                text: 'Dark jelly needs TWO matches\nto clear completely.',
-                icon: '🍮🍮'
-            }
-        };
-
-        const tutorial = tutorials[this.currentLevel];
+        const tutorial = this.levelConfig.tutorial;
         if (!tutorial) return;
 
         // Check if user has seen this tutorial
@@ -162,269 +156,33 @@ export default class GameScene extends Phaser.Scene {
     }
 
     loadLevel(levelNum) {
-        // Level definitions (will move to JSON later)
-        const levels = {
-            // Levels 1-5: Basic score objectives (relaxed targets)
-            1: { moves: 30, objective: 'score', targetScore: 500, rows: 8, cols: 8, candyTypes: 5 },
-            2: { moves: 30, objective: 'score', targetScore: 800, rows: 8, cols: 8, candyTypes: 5 },
-            3: { moves: 30, objective: 'score', targetScore: 1000, rows: 8, cols: 8, candyTypes: 5 },
-            4: { moves: 30, objective: 'score', targetScore: 1200, rows: 8, cols: 8, candyTypes: 6 },
-            5: { moves: 30, objective: 'score', targetScore: 1500, rows: 8, cols: 8, candyTypes: 6 },
-
-            // Level 6: Introduce jelly (single layer, small pattern)
-            6: {
-                moves: 30,
-                objective: 'clearJelly',
-                targetScore: 0,
-                rows: 8, cols: 8, candyTypes: 6,
-                jelly: [
-                    { row: 3, col: 3 }, { row: 3, col: 4 },
-                    { row: 4, col: 3 }, { row: 4, col: 4 }
-                ]
-            },
-
-            // Level 7: More jelly
-            7: {
-                moves: 30,
-                objective: 'clearJelly',
-                targetScore: 0,
-                rows: 8, cols: 8, candyTypes: 6,
-                jelly: [
-                    { row: 2, col: 3 }, { row: 2, col: 4 },
-                    { row: 3, col: 2 }, { row: 3, col: 5 },
-                    { row: 4, col: 2 }, { row: 4, col: 5 },
-                    { row: 5, col: 3 }, { row: 5, col: 4 }
-                ]
-            },
-
-            // Level 8: Introduce locked tiles with score objective
-            8: {
-                moves: 30,
-                objective: 'score',
-                targetScore: 1000,
-                rows: 8, cols: 8, candyTypes: 6,
-                locked: [
-                    { row: 3, col: 3 }, { row: 4, col: 4 }
-                ]
-            },
-
-            // Level 9: Locked tiles with more spread
-            9: {
-                moves: 30,
-                objective: 'score',
-                targetScore: 1200,
-                rows: 8, cols: 8, candyTypes: 6,
-                locked: [
-                    { row: 2, col: 2 }, { row: 2, col: 5 },
-                    { row: 5, col: 2 }, { row: 5, col: 5 }
-                ]
-            },
-
-            // Level 10: Jelly + locked combo
-            10: {
-                moves: 35,
-                objective: 'clearJelly',
-                targetScore: 0,
-                rows: 8, cols: 8, candyTypes: 6,
-                jelly: [
-                    { row: 2, col: 3 }, { row: 2, col: 4 },
-                    { row: 5, col: 3 }, { row: 5, col: 4 }
-                ],
-                locked: [
-                    { row: 3, col: 3 }, { row: 4, col: 4 }
-                ]
-            },
-
-            // Level 11: Introduce double jelly (small)
-            11: {
-                moves: 35,
-                objective: 'clearJelly',
-                targetScore: 0,
-                rows: 8, cols: 8, candyTypes: 6,
-                jelly: [
-                    { row: 3, col: 3, layers: 2 }, { row: 3, col: 4, layers: 2 },
-                    { row: 4, col: 3, layers: 2 }, { row: 4, col: 4, layers: 2 }
-                ]
-            },
-
-            // Level 12: Double jelly with singles
-            12: {
-                moves: 35,
-                objective: 'clearJelly',
-                targetScore: 0,
-                rows: 8, cols: 8, candyTypes: 6,
-                jelly: [
-                    { row: 3, col: 3, layers: 2 }, { row: 3, col: 4, layers: 2 },
-                    { row: 4, col: 3, layers: 2 }, { row: 4, col: 4, layers: 2 },
-                    { row: 2, col: 3 }, { row: 2, col: 4 },
-                    { row: 5, col: 3 }, { row: 5, col: 4 }
-                ]
-            },
-
-            // Level 13: Mixed challenge
-            13: {
-                moves: 35,
-                objective: 'clearJelly',
-                targetScore: 0,
-                rows: 8, cols: 8, candyTypes: 6,
-                jelly: [
-                    { row: 2, col: 2 }, { row: 2, col: 5 },
-                    { row: 5, col: 2 }, { row: 5, col: 5 },
-                    { row: 3, col: 3, layers: 2 }, { row: 4, col: 4, layers: 2 }
-                ],
-                locked: [
-                    { row: 3, col: 4 }, { row: 4, col: 3 }
-                ]
-            },
-
-            // Level 14: Score with blockers
-            14: {
-                moves: 30,
-                objective: 'score',
-                targetScore: 1500,
-                rows: 8, cols: 8, candyTypes: 6,
-                locked: [
-                    { row: 2, col: 2 }, { row: 2, col: 5 },
-                    { row: 5, col: 2 }, { row: 5, col: 5 }
-                ]
-            },
-
-            // Level 15: Larger jelly area
-            15: {
-                moves: 40,
-                objective: 'clearJelly',
-                targetScore: 0,
-                rows: 8, cols: 8, candyTypes: 6,
-                jelly: [
-                    { row: 2, col: 2 }, { row: 2, col: 3 }, { row: 2, col: 4 }, { row: 2, col: 5 },
-                    { row: 3, col: 2 }, { row: 3, col: 5 },
-                    { row: 4, col: 2 }, { row: 4, col: 5 },
-                    { row: 5, col: 2 }, { row: 5, col: 3 }, { row: 5, col: 4 }, { row: 5, col: 5 }
-                ]
-            },
-
-            // Level 16: Lock fortress
-            16: {
-                moves: 35,
-                objective: 'score',
-                targetScore: 1800,
-                rows: 8, cols: 8, candyTypes: 6,
-                locked: [
-                    { row: 2, col: 3 }, { row: 2, col: 4 },
-                    { row: 3, col: 2 }, { row: 3, col: 5 },
-                    { row: 4, col: 2 }, { row: 4, col: 5 },
-                    { row: 5, col: 3 }, { row: 5, col: 4 }
-                ]
-            },
-
-            // Level 17: Dense jelly
-            17: {
-                moves: 45,
-                objective: 'clearJelly',
-                targetScore: 0,
-                rows: 8, cols: 8, candyTypes: 6,
-                jelly: [
-                    { row: 1, col: 2 }, { row: 1, col: 3 }, { row: 1, col: 4 }, { row: 1, col: 5 },
-                    { row: 2, col: 1 }, { row: 2, col: 2 }, { row: 2, col: 5 }, { row: 2, col: 6 },
-                    { row: 5, col: 1 }, { row: 5, col: 2 }, { row: 5, col: 5 }, { row: 5, col: 6 },
-                    { row: 6, col: 2 }, { row: 6, col: 3 }, { row: 6, col: 4 }, { row: 6, col: 5 }
-                ]
-            },
-
-            // Level 18: Hard mixed
-            18: {
-                moves: 40,
-                objective: 'clearJelly',
-                targetScore: 0,
-                rows: 8, cols: 8, candyTypes: 6,
-                jelly: [
-                    { row: 2, col: 2, layers: 2 }, { row: 2, col: 5, layers: 2 },
-                    { row: 5, col: 2, layers: 2 }, { row: 5, col: 5, layers: 2 },
-                    { row: 3, col: 3 }, { row: 3, col: 4 },
-                    { row: 4, col: 3 }, { row: 4, col: 4 }
-                ],
-                locked: [
-                    { row: 3, col: 2 }, { row: 4, col: 5 }
-                ]
-            },
-
-            // Level 19: Corner challenge
-            19: {
-                moves: 45,
-                objective: 'clearJelly',
-                targetScore: 0,
-                rows: 8, cols: 8, candyTypes: 6,
-                jelly: [
-                    { row: 0, col: 0, layers: 2 }, { row: 0, col: 1 }, { row: 1, col: 0 },
-                    { row: 0, col: 7, layers: 2 }, { row: 0, col: 6 }, { row: 1, col: 7 },
-                    { row: 7, col: 0, layers: 2 }, { row: 7, col: 1 }, { row: 6, col: 0 },
-                    { row: 7, col: 7, layers: 2 }, { row: 7, col: 6 }, { row: 6, col: 7 }
-                ]
-            },
-
-            // Level 20: Ultimate challenge
-            20: {
-                moves: 50,
-                objective: 'clearJelly',
-                targetScore: 0,
-                rows: 8, cols: 8, candyTypes: 6,
-                jelly: [
-                    { row: 1, col: 1, layers: 2 }, { row: 1, col: 6, layers: 2 },
-                    { row: 6, col: 1, layers: 2 }, { row: 6, col: 6, layers: 2 },
-                    { row: 2, col: 2 }, { row: 2, col: 5 },
-                    { row: 5, col: 2 }, { row: 5, col: 5 },
-                    { row: 3, col: 3 }, { row: 3, col: 4 },
-                    { row: 4, col: 3 }, { row: 4, col: 4 }
-                ],
-                locked: [
-                    { row: 0, col: 3 }, { row: 0, col: 4 },
-                    { row: 7, col: 3 }, { row: 7, col: 4 }
-                ]
-            }
+        const level = LevelData[levelNum] || LevelData[1];
+        this.levelConfig = level;
+        this.movesRemaining = level.moves;
+        
+        // Reset objectives
+        this.objectives = {
+            score: level.targetScore || 0,
+            jelly: 0,
+            collect: level.collect || {},
+            drop: level.drop || 0
         };
 
-        const level = levels[levelNum] || levels[1];
-        this.movesRemaining = level.moves;
-        this.targetScore = level.targetScore || 0;
-        this.objective = level.objective || 'score';
-        this.levelConfig = level;
+        this.status = {
+            jelly: 0,
+            collect: {},
+            drop: 0
+        };
 
-        // Calculate jelly target for clearJelly objective
-        if (this.objective === 'clearJelly' && level.jelly) {
-            this.jellyTarget = level.jelly.reduce((sum, cell) => sum + (cell.layers || 1), 0);
+        // Initialize collect status
+        for (const type in this.objectives.collect) {
+            this.status.collect[type] = 0;
         }
-    }
 
-    // Helper to generate full board single jelly
-    generateFullBoardJelly(rows, cols) {
-        const jelly = [];
-        for (let row = 0; row < rows; row++) {
-            for (let col = 0; col < cols; col++) {
-                jelly.push({ row, col });
-            }
+        // Calculate jelly target
+        if (level.jelly) {
+            this.objectives.jelly = level.jelly.reduce((sum, cell) => sum + (cell.layers || 1), 0);
         }
-        return jelly;
-    }
-
-    // Helper to generate challenge jelly pattern
-    generateChallengeJelly() {
-        const jelly = [];
-        // Outer ring double jelly
-        for (let i = 0; i < 8; i++) {
-            jelly.push({ row: 0, col: i, layers: 2 });
-            jelly.push({ row: 7, col: i, layers: 2 });
-            if (i > 0 && i < 7) {
-                jelly.push({ row: i, col: 0, layers: 2 });
-                jelly.push({ row: i, col: 7, layers: 2 });
-            }
-        }
-        // Inner single jelly
-        for (let row = 2; row <= 5; row++) {
-            for (let col = 2; col <= 5; col++) {
-                jelly.push({ row, col });
-            }
-        }
-        return jelly;
     }
 
     createBackground(width, height) {
@@ -440,29 +198,6 @@ export default class GameScene extends Phaser.Scene {
             graphics.fillStyle(Phaser.Display.Color.GetColor(color.r, color.g, color.b), 1);
             graphics.fillRect(0, (height / steps) * i, width, height / steps + 1);
         }
-    }
-
-    createBoard(width, height) {
-        const boardSize = Math.min(width - 40, height - 320);
-        const cellSize = boardSize / 8;
-        const boardX = (width - boardSize) / 2;
-        const boardY = 160;
-
-        // Board background
-        const boardBg = this.add.graphics();
-        boardBg.fillStyle(0x000000, 0.2);
-        boardBg.fillRoundedRect(boardX - 15, boardY - 15, boardSize + 30, boardSize + 30, 20);
-
-        // Create the board
-        this.board = new Board(this, {
-            rows: this.levelConfig.rows,
-            cols: this.levelConfig.cols,
-            x: boardX,
-            y: boardY,
-            cellSize: cellSize,
-            candyTypes: this.levelConfig.candyTypes,
-            levelConfig: this.levelConfig
-        });
     }
 
     createHUD(width, height) {
@@ -489,25 +224,8 @@ export default class GameScene extends Phaser.Scene {
             strokeThickness: 2
         }).setOrigin(1, 0);
 
-        // Objective display
-        if (this.objective === 'clearJelly') {
-            const remaining = this.jellyTarget - this.jellyCleared;
-            this.objectiveText = this.add.text(width / 2, 80, `🍮 Jelly: ${remaining}`, {
-                fontFamily: 'Arial, sans-serif',
-                fontSize: '26px',
-                color: '#ff69b4',
-                stroke: '#000000',
-                strokeThickness: 3
-            }).setOrigin(0.5);
-        } else {
-            this.objectiveText = this.add.text(width / 2, 80, `🎯 ${this.score} / ${this.targetScore}`, {
-                fontFamily: 'Arial, sans-serif',
-                fontSize: '26px',
-                color: '#ffeb3b',
-                stroke: '#000000',
-                strokeThickness: 3
-            }).setOrigin(0.5);
-        }
+        // Multi-objective display
+        this.createObjectivesDisplay(width);
 
         // Progress bar
         const progressBarWidth = width - 100;
@@ -545,21 +263,77 @@ export default class GameScene extends Phaser.Scene {
         }).setOrigin(0.5).setAlpha(0).setDepth(50);
     }
 
+    createObjectivesDisplay(width) {
+        // Simple display for multiple objectives
+        const objectives = [];
+        
+        if (this.objectives.jelly > 0) {
+            objectives.push(`🍮 ${this.objectives.jelly - this.status.jelly}`);
+        }
+        
+        if (this.objectives.drop > 0) {
+            objectives.push(`🍒 ${this.objectives.drop - this.status.drop}`);
+        }
+
+        for (const type in this.objectives.collect) {
+            const icons = ['🔴', '🔵', '🟢', '🟡', '🟣', '🟠'];
+            objectives.push(`${icons[type] || '🍬'} ${this.objectives.collect[type] - this.status.collect[type]}`);
+        }
+
+        // If no specific objectives, show score target
+        if (objectives.length === 0 && this.objectives.score > 0) {
+            objectives.push(`🎯 ${this.score} / ${this.objectives.score}`);
+        }
+
+        const text = objectives.join('   ');
+        
+        if (this.objectiveText) {
+            this.objectiveText.setText(text);
+        } else {
+            this.objectiveText = this.add.text(width / 2, 80, text, {
+                fontFamily: 'Arial, sans-serif',
+                fontSize: '26px',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 3
+            }).setOrigin(0.5);
+        }
+    }
+
     updateProgressBar() {
         const width = this.cameras.main.width;
         const progressBarWidth = width - 100;
         const progressBarX = 50;
         const progressBarY = 115;
 
-        let targetProgress;
-        let color;
+        let targetProgress = 0;
+        let color = 0x4ade80; // Default green
 
-        if (this.objective === 'clearJelly') {
-            targetProgress = this.jellyTarget > 0 ? Math.min(this.jellyCleared / this.jellyTarget, 1) : 0;
-            color = 0xff69b4; // Pink for jelly
-        } else {
-            targetProgress = this.targetScore > 0 ? Math.min(this.score / this.targetScore, 1) : 0;
-            color = 0x4ade80; // Green for score
+        // Calculate aggregate progress of all objectives
+        let totalGoals = 0;
+        let totalCurrent = 0;
+
+        if (this.objectives.jelly > 0) {
+            totalGoals += this.objectives.jelly;
+            totalCurrent += this.status.jelly;
+            color = 0xff69b4;
+        }
+        
+        if (this.objectives.drop > 0) {
+            totalGoals += this.objectives.drop;
+            totalCurrent += this.status.drop;
+            color = 0xd63031;
+        }
+
+        for (const type in this.objectives.collect) {
+            totalGoals += this.objectives.collect[type];
+            totalCurrent += this.status.collect[type];
+        }
+
+        if (totalGoals > 0) {
+            targetProgress = Math.min(totalCurrent / totalGoals, 1);
+        } else if (this.objectives.score > 0) {
+            targetProgress = Math.min(this.score / this.objectives.score, 1);
         }
 
         // Kill any existing progress tween
@@ -567,10 +341,8 @@ export default class GameScene extends Phaser.Scene {
             this.progressTween.stop();
         }
 
-        // Store color for redraw
         this.progressBarColor = color;
 
-        // Animate progress smoothly
         this.progressTween = this.tweens.add({
             targets: this,
             currentProgress: targetProgress,
@@ -599,10 +371,7 @@ export default class GameScene extends Phaser.Scene {
             // Play sound
             this.soundManager.play(cascadeLevel > 1 ? 'cascade' : 'match');
 
-            // Update objective display based on type
-            if (this.objective === 'score') {
-                this.objectiveText.setText(`🎯 ${this.score} / ${this.targetScore}`);
-            }
+            this.createObjectivesDisplay(this.cameras.main.width);
             this.updateProgressBar();
 
             // Show combo text for cascades
@@ -615,16 +384,25 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // Special activated event
-        this.events.on('specialActivated', (type) => {
-            this.soundManager.play(type === 'bomb' ? 'bomb' : 'line');
+        this.events.on('specialActivated', (type, row, col) => {
+            this.soundManager.play(type === 'bomb' || type === 'color_bomb' ? 'bomb' : 'line');
+            
+            // Screen shake based on type
+            if (type === 'bomb' || type === 'color_bomb') {
+                this.cameras.main.shake(200, 0.015);
+            } else {
+                this.cameras.main.shake(100, 0.005);
+            }
+
+            // Emit some extra particles at the activation point
+            this.emitSpecialParticles(row, col, type);
         });
 
         // Jelly cleared event
         this.events.on('jellyCleared', (row, col) => {
-            this.jellyCleared++;
+            this.status.jelly++;
             this.soundManager.play('line');
-            const remaining = this.jellyTarget - this.jellyCleared;
-            this.objectiveText.setText(`🍮 Jelly: ${remaining}`);
+            this.createObjectivesDisplay(this.cameras.main.width);
             this.updateProgressBar();
 
             // Animate objective text
@@ -639,10 +417,9 @@ export default class GameScene extends Phaser.Scene {
 
         // Jelly hit (double->single) event
         this.events.on('jellyHit', (row, col) => {
-            this.jellyCleared++;
+            this.status.jelly++;
             this.soundManager.play('click');
-            const remaining = this.jellyTarget - this.jellyCleared;
-            this.objectiveText.setText(`🍮 Jelly: ${remaining}`);
+            this.createObjectivesDisplay(this.cameras.main.width);
             this.updateProgressBar();
         });
 
@@ -679,20 +456,12 @@ export default class GameScene extends Phaser.Scene {
         this.events.on('cascadeComplete', () => {
             if (this.isGameOver) return;
 
-            // Check win condition
-            let hasWon = false;
-            if (this.objective === 'score') {
-                hasWon = this.score >= this.targetScore;
-            } else if (this.objective === 'clearJelly') {
-                hasWon = this.jellyCleared >= this.jellyTarget;
-            }
-
-            if (hasWon) {
+            if (this.checkWinCondition()) {
                 this.showWinScreen();
                 return;
             }
 
-            // Check lose condition (only if out of moves and haven't won)
+            // Check lose condition
             if (this.movesRemaining <= 0) {
                 this.showLoseScreen();
             }
@@ -701,181 +470,104 @@ export default class GameScene extends Phaser.Scene {
         // Invalid swap feedback
         this.events.on('invalidSwap', () => {
             this.soundManager.play('invalid');
-            // Could add shake or sound effect here
             this.resetHintTimer();
         });
 
-        // Candy cleared - for particles
+        // Candy cleared
         this.events.on('candyCleared', (row, col, type) => {
             this.emitParticles(row, col, type);
-        });
-    }
-
-    showCombo(level) {
-        this.comboText.setText(`×${level} COMBO!`);
-        this.comboText.setAlpha(1);
-        this.comboText.setScale(0.5);
-
-        this.tweens.add({
-            targets: this.comboText,
-            scaleX: 1.2,
-            scaleY: 1.2,
-            alpha: 0,
-            duration: 800,
-            ease: 'Power2'
-        });
-    }
-
-    createParticles() {
-        // Create particle textures for each candy color (only if not already created)
-        const colors = [0xff4757, 0x3742fa, 0x2ed573, 0xffa502, 0xa55eea, 0xff7f50];
-
-        this.particleEmitters = [];
-
-        colors.forEach((color, index) => {
-            const textureKey = `particle_${index}`;
-
-            // Only create texture if it doesn't exist
-            if (!this.textures.exists(textureKey)) {
-                const graphics = this.add.graphics();
-                graphics.fillStyle(color, 1);
-                graphics.fillCircle(8, 8, 8);
-                graphics.generateTexture(textureKey, 16, 16);
-                graphics.destroy();
+            
+            // Check for collect objective
+            if (this.objectives.collect[type] !== undefined) {
+                this.status.collect[type]++;
+                this.createObjectivesDisplay(this.cameras.main.width);
+                this.updateProgressBar();
             }
 
-            // Create emitter
-            const emitter = this.add.particles(0, 0, textureKey, {
-                speed: { min: 100, max: 200 },
-                scale: { start: 0.6, end: 0 },
-                lifespan: 500,
-                gravityY: 300,
-                emitting: false
-            });
-
-            this.particleEmitters[index] = emitter;
-        });
-    }
-
-    emitParticles(row, col, candyType) {
-        const pos = this.board.gridToWorld(row, col);
-        const emitter = this.particleEmitters[candyType];
-
-        if (emitter) {
-            emitter.setPosition(pos.x, pos.y);
-            emitter.explode(8);
-        }
-    }
-
-    setupHintSystem() {
-        // Only show hints on certain tutorial levels
-        // 1, 2: Basic match-3 introduction
-        // 6: First jelly level
-        // 8: First locked tiles level
-        // 11: Double jelly introduction
-        const hintLevels = [1, 2, 6, 8, 11];
-        this.hintsEnabled = hintLevels.includes(this.currentLevel);
-
-        this.hintTimer = null;
-        this.hintCandies = [];
-
-        if (this.hintsEnabled) {
-            this.resetHintTimer();
-        }
-    }
-
-    resetHintTimer() {
-        // Clear existing hint
-        this.clearHint();
-
-        if (!this.hintsEnabled) return;
-
-        // Clear existing timer
-        if (this.hintTimer) {
-            this.hintTimer.remove();
-        }
-
-        // Set new timer
-        this.hintTimer = this.time.delayedCall(5000, () => this.showHint());
-    }
-
-    showHint() {
-        if (this.isGameOver || this.board.inputLocked) return;
-
-        const validMove = this.board.findValidMove();
-        if (!validMove) return;
-
-        // Visual Hint: Hand cursor moving between the two candies
-        const [cell1, cell2] = validMove;
-        const pos1 = this.board.gridToWorld(cell1.row, cell1.col);
-        const pos2 = this.board.gridToWorld(cell2.row, cell2.col);
-
-        if (!this.hintHand) {
-            this.hintHand = this.add.sprite(0, 0, 'hand').setDepth(100);
-        }
-        
-        this.hintHand.setPosition(pos1.x, pos1.y);
-        this.hintHand.setVisible(true);
-        this.hintHand.setAlpha(1);
-
-        this.hintHandTween = this.tweens.add({
-            targets: this.hintHand,
-            x: pos2.x,
-            y: pos2.y,
-            duration: 800,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
-
-        // Also highlight the candies slightly
-        validMove.forEach(cell => {
-            const candy = this.board.candies[cell.row][cell.col];
-            if (candy) {
-                this.hintCandies.push(candy);
-                this.tweens.add({
-                    targets: candy,
-                    scaleX: 1.1,
-                    scaleY: 1.1,
-                    duration: 400,
-                    yoyo: true,
-                    repeat: -1
-                });
+            // Check for ingredient collect (type >= 100)
+            if (type >= 100) {
+                this.status.drop++;
+                this.soundManager.play('win'); // special sound for ingredient
+                this.createObjectivesDisplay(this.cameras.main.width);
+                this.updateProgressBar();
             }
         });
-    }
-
-    clearHint() {
-        if (this.hintHand) {
-            this.hintHand.setVisible(false);
-            if (this.hintHandTween) {
-                this.hintHandTween.stop();
-                this.hintHandTween = null;
-            }
-        }
-
-        this.hintCandies.forEach(candy => {
-            if (candy && candy.active) {
-                this.tweens.killTweensOf(candy);
-                candy.setScale(1);
-            }
-        });
-        this.hintCandies = [];
     }
 
     checkWinCondition() {
-        if (this.isGameOver) return;
+        if (this.isGameOver) return false;
 
-        let hasWon = false;
-        if (this.objective === 'score') {
-            hasWon = this.score >= this.targetScore;
-        } else if (this.objective === 'clearJelly') {
-            hasWon = this.jellyCleared >= this.jellyTarget;
+        // Check score
+        if (this.objectives.score > 0 && this.score < this.objectives.score) return false;
+
+        // Check jelly
+        if (this.status.jelly < this.objectives.jelly) return false;
+
+        // Check drop items
+        if (this.status.drop < this.objectives.drop) return false;
+
+        // Check collect candies
+        for (const type in this.objectives.collect) {
+            if ((this.status.collect[type] || 0) < this.objectives.collect[type]) return false;
         }
 
-        if (hasWon) {
-            this.showWinScreen();
-        }
+        return true;
+    }
+
+    showLoseScreen() {
+        this.isGameOver = true;
+        this.soundManager.play('levelFail');
+        this.board.inputLocked = true;
+        this.clearHint();
+
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+
+        // Overlay
+        const overlay = this.add.graphics();
+        overlay.fillStyle(0x000000, 0.7);
+        overlay.fillRect(0, 0, width, height);
+        overlay.setDepth(500);
+
+        // Lose container
+        const container = this.add.container(width / 2, height / 2);
+        container.setDepth(501);
+
+        // Background panel
+        const panel = this.add.graphics();
+        panel.fillStyle(0xffffff, 0.95);
+        panel.fillRoundedRect(-180, -180, 360, 360, 25);
+        container.add(panel);
+
+        // Title
+        const title = this.add.text(0, -130, 'Out of Moves!', {
+            fontFamily: 'Arial Black, Arial, sans-serif', fontSize: '36px', color: '#ff4757'
+        }).setOrigin(0.5);
+        container.add(title);
+
+        // Status
+        const statusText = this.add.text(0, -40, 'Objective not met.', {
+            fontFamily: 'Arial, sans-serif', fontSize: '24px', color: '#333333'
+        }).setOrigin(0.5);
+        container.add(statusText);
+
+        // Try again button
+        this.createWinButton(container, 0, 60, 'Try Again', () => {
+            this.scene.restart({ level: this.currentLevel });
+        });
+
+        // Level select button
+        const menuBtn = this.add.text(0, 140, 'Level Select', {
+            fontFamily: 'Arial, sans-serif', fontSize: '20px', color: '#666666'
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        container.add(menuBtn);
+
+        menuBtn.on('pointerup', () => this.scene.start('LevelSelectScene'));
+
+        // Entrance animation
+        container.setScale(0.5);
+        container.setAlpha(0);
+        this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, alpha: 1, duration: 400, ease: 'Back.easeOut' });
     }
 
     async showWinScreen() {
@@ -893,249 +585,59 @@ export default class GameScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
-        // Calculate stars based on moves remaining (generous thresholds)
-        // Note: movesRemaining is now 0 after bonus round, so we use the stored initial moves
-        // actually we already burned them. We should track score efficiency instead.
-        // Or just give stars based on Final Score vs Target Score.
-        const scoreRatio = this.score / this.targetScore;
+        // Calculate stars (simple version)
         let stars = 1;
-        if (scoreRatio >= 1.2) stars = 2;
-        if (scoreRatio >= 1.5) stars = 3;
+        if (this.movesRemaining > 5) stars = 2;
+        if (this.movesRemaining > 10) stars = 3;
 
-        // Update score display
-        this.scoreText.setText(`Score: ${this.score}`);
-
-        // Save progress
         this.saveProgress(stars);
 
-        // Overlay - high depth to appear above game board
         const overlay = this.add.graphics();
         overlay.fillStyle(0x000000, 0.7);
         overlay.fillRect(0, 0, width, height);
         overlay.setDepth(500);
 
-        // Win container - even higher depth
         const container = this.add.container(width / 2, height / 2);
         container.setDepth(501);
 
-        // Background panel
         const panel = this.add.graphics();
         panel.fillStyle(0xffffff, 0.95);
         panel.fillRoundedRect(-180, -220, 360, 440, 25);
         container.add(panel);
 
-        // Title
         const title = this.add.text(0, -170, 'Level Complete!', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '36px',
-            color: '#4ade80'
+            fontFamily: 'Arial Black, Arial, sans-serif', fontSize: '36px', color: '#4ade80'
         }).setOrigin(0.5);
         container.add(title);
 
-        // Stars
         for (let i = 0; i < 3; i++) {
-            const starX = -60 + i * 60;
-            const star = this.add.image(starX, -90, i < stars ? 'star_filled' : 'star_empty');
+            const star = this.add.image(-60 + i * 60, -90, i < stars ? 'star_filled' : 'star_empty');
             star.setScale(0);
             container.add(star);
-
-            // Animate stars
-            this.tweens.add({
-                targets: star,
-                scaleX: 1.5,
-                scaleY: 1.5,
-                duration: 300,
-                delay: 200 + i * 200,
-                ease: 'Back.easeOut'
-            });
+            this.tweens.add({ targets: star, scaleX: 1.5, scaleY: 1.5, duration: 300, delay: 200 + i * 200, ease: 'Back.easeOut' });
         }
 
-        // Score
         const scoreText = this.add.text(0, -10, `Score: ${this.score}`, {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '28px',
-            color: '#333333'
+            fontFamily: 'Arial, sans-serif', fontSize: '28px', color: '#333333'
         }).setOrigin(0.5);
         container.add(scoreText);
 
-        // Next level button
         if (this.currentLevel < 20) {
-            this.createWinButton(container, 0, 100, 'Next Level', () => {
-                this.scene.restart({ level: this.currentLevel + 1 });
-            });
+            this.createWinButton(container, 0, 100, 'Next Level', () => this.scene.restart({ level: this.currentLevel + 1 }));
         } else {
-            this.createWinButton(container, 0, 100, 'Main Menu', () => {
-                this.scene.start('MenuScene');
-            });
+            this.createWinButton(container, 0, 100, 'Main Menu', () => this.scene.start('MenuScene'));
         }
 
-        // Replay button
-        this.createWinButton(container, 0, 170, 'Replay', () => {
-            this.scene.restart({ level: this.currentLevel });
-        });
+        this.createWinButton(container, 0, 170, 'Replay', () => this.scene.restart({ level: this.currentLevel }));
 
-        // Menu button
         const menuBtn = this.add.text(0, 230, 'Level Select', {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '20px',
-            color: '#666666'
+            fontFamily: 'Arial, sans-serif', fontSize: '20px', color: '#666666'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         container.add(menuBtn);
-
-        menuBtn.on('pointerover', () => menuBtn.setColor('#ff6b9d'));
-        menuBtn.on('pointerout', () => menuBtn.setColor('#666666'));
         menuBtn.on('pointerup', () => this.scene.start('LevelSelectScene'));
 
-        // Entrance animation
-        container.setScale(0.5);
-        container.setAlpha(0);
-        this.tweens.add({
-            targets: container,
-            scaleX: 1,
-            scaleY: 1,
-            alpha: 1,
-            duration: 400,
-            ease: 'Back.easeOut'
-        });
-    }
-
-    async playBonusRound() {
-        const title = this.add.text(this.cameras.main.width / 2, this.cameras.main.height / 2, 'SUGAR CRUSH!', {
-            fontFamily: 'Arial Black', fontSize: '64px', color: '#ffeb3b', stroke: '#ff0000', strokeThickness: 8
-        }).setOrigin(0.5).setDepth(1000).setScale(0);
-
-        this.tweens.add({
-            targets: title, scaleX: 1, scaleY: 1, duration: 500, ease: 'Back.out',
-            yoyo: true, hold: 1000, onComplete: () => title.destroy()
-        });
-
-        await new Promise(r => this.time.delayedCall(1500, r));
-
-        // Convert moves to specials
-        while (this.movesRemaining > 0) {
-            this.movesRemaining--;
-            this.movesText.setText(`Moves: ${this.movesRemaining}`);
-            this.soundManager.play('swap');
-
-            // Pick random non-special candy
-            const candidates = [];
-            for (let r = 0; r < this.board.rows; r++) {
-                for (let c = 0; c < this.board.cols; c++) {
-                    const candy = this.board.candies[r][c];
-                    if (candy && !candy.isSpecial) candidates.push(candy);
-                }
-            }
-
-            if (candidates.length > 0) {
-                const target = Phaser.Utils.Array.GetRandom(candidates);
-                const type = Math.random() > 0.7 ? 'bomb' : (Math.random() > 0.5 ? 'line_h' : 'line_v');
-                target.makeSpecial(type);
-                
-                // Add score
-                this.score += 2000;
-                this.scoreText.setText(`Score: ${this.score}`);
-                
-                // Visual delay
-                await new Promise(r => this.time.delayedCall(200, r));
-            }
-        }
-
-        // Explode everything
-        await this.board.detonateAllSpecials();
-    }
-
-    showLoseScreen() {
-        this.isGameOver = true;
-        this.soundManager.play('levelFail');
-        this.board.inputLocked = true;
-        this.clearHint();
-
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
-
-        // Overlay - high depth to appear above game board
-        const overlay = this.add.graphics();
-        overlay.fillStyle(0x000000, 0.7);
-        overlay.fillRect(0, 0, width, height);
-        overlay.setDepth(500);
-
-        // Lose container - even higher depth
-        const container = this.add.container(width / 2, height / 2);
-        container.setDepth(501);
-
-        // Background panel
-        const panel = this.add.graphics();
-        panel.fillStyle(0xffffff, 0.95);
-        panel.fillRoundedRect(-180, -180, 360, 360, 25);
-        container.add(panel);
-
-        // Title
-        const title = this.add.text(0, -130, 'Out of Moves!', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '36px',
-            color: '#ff4757'
-        }).setOrigin(0.5);
-        container.add(title);
-
-        // Objective status
-        let statusText, targetText;
-        if (this.objective === 'clearJelly') {
-            const remaining = this.jellyTarget - this.jellyCleared;
-            statusText = this.add.text(0, -60, `Jelly left: ${remaining}`, {
-                fontFamily: 'Arial, sans-serif',
-                fontSize: '28px',
-                color: '#ff69b4'
-            }).setOrigin(0.5);
-
-            targetText = this.add.text(0, -20, `Clear all jelly to win!`, {
-                fontFamily: 'Arial, sans-serif',
-                fontSize: '20px',
-                color: '#666666'
-            }).setOrigin(0.5);
-        } else {
-            statusText = this.add.text(0, -60, `Score: ${this.score}`, {
-                fontFamily: 'Arial, sans-serif',
-                fontSize: '28px',
-                color: '#333333'
-            }).setOrigin(0.5);
-
-            targetText = this.add.text(0, -20, `Target: ${this.targetScore}`, {
-                fontFamily: 'Arial, sans-serif',
-                fontSize: '20px',
-                color: '#666666'
-            }).setOrigin(0.5);
-        }
-        container.add(statusText);
-        container.add(targetText);
-
-        // Try again button
-        this.createWinButton(container, 0, 60, 'Try Again', () => {
-            this.scene.restart({ level: this.currentLevel });
-        });
-
-        // Level select button
-        const menuBtn = this.add.text(0, 140, 'Level Select', {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '20px',
-            color: '#666666'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        container.add(menuBtn);
-
-        menuBtn.on('pointerover', () => menuBtn.setColor('#ff6b9d'));
-        menuBtn.on('pointerout', () => menuBtn.setColor('#666666'));
-        menuBtn.on('pointerup', () => this.scene.start('LevelSelectScene'));
-
-        // Entrance animation
-        container.setScale(0.5);
-        container.setAlpha(0);
-        this.tweens.add({
-            targets: container,
-            scaleX: 1,
-            scaleY: 1,
-            alpha: 1,
-            duration: 400,
-            ease: 'Back.easeOut'
-        });
+        container.setScale(0.5); container.setAlpha(0);
+        this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, alpha: 1, duration: 400, ease: 'Back.easeOut' });
     }
 
     saveProgress(stars) {
@@ -1328,13 +830,6 @@ export default class GameScene extends Phaser.Scene {
     }
 
     update(time, delta) {
-        // Check for stuck board
-        if (!this.isGameOver && !this.board.inputLocked) {
-            if (!this.board.hasValidMoves()) {
-                this.board.shuffle();
-            }
-        }
-
         // Watchdog for input lock
         if (this.board.inputLocked) {
             this.lockTimer = (this.lockTimer || 0) + delta;
@@ -1346,6 +841,193 @@ export default class GameScene extends Phaser.Scene {
         } else {
             this.lockTimer = 0;
         }
+    }
+
+    createBoard(width, height) {
+        const cols = GameConfig.BOARD.COLS;
+        const rows = GameConfig.BOARD.ROWS;
+        
+        // Calculate cell size to fit the board within the screen with some padding
+        const availableWidth = width * 0.95;
+        const availableHeight = height * 0.75; 
+        
+        const sizeByWidth = availableWidth / cols;
+        const sizeByHeight = availableHeight / rows;
+        
+        const cellSize = Math.floor(Math.min(sizeByWidth, sizeByHeight));
+        
+        // Center the board
+        const boardWidth = cols * cellSize;
+        const boardHeight = rows * cellSize;
+        
+        const x = (width - boardWidth) / 2;
+        const y = 140 + (height - 140 - 80 - boardHeight) / 2;
+
+        this.board = new Board(this, {
+            rows: rows,
+            cols: cols,
+            x: x,
+            y: y,
+            cellSize: cellSize,
+            candyTypes: 6,
+            levelConfig: this.levelConfig
+        });
+    }
+
+    createParticles() {
+        this.emitter = this.add.particles(0, 0, 'star_filled', {
+            speed: { min: 50, max: 200 },
+            scale: { start: 0.5, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 600,
+            blendMode: 'ADD',
+            emitting: false
+        });
+        this.emitter.setDepth(100);
+    }
+
+    emitParticles(row, col, type) {
+        if (!this.board) return;
+        const pos = this.board.gridToWorld(row, col);
+        
+        const colors = GameConfig.COLORS;
+        const color = colors[type] || 0xffffff;
+        
+        this.emitter.setConfig({
+            tint: color,
+            speed: { min: 50, max: 200 },
+            scale: { start: 0.5, end: 0 }
+        });
+        
+        this.emitter.emitParticleAt(pos.x, pos.y, 10);
+    }
+
+    emitSpecialParticles(row, col, type) {
+        if (!this.board) return;
+        const pos = this.board.gridToWorld(row, col);
+        
+        this.emitter.setConfig({
+            tint: 0xffffff,
+            speed: 300,
+            scale: { start: 1, end: 0 }
+        });
+
+        this.emitter.emitParticleAt(pos.x, pos.y, 30);
+    }
+
+    setupHintSystem() {
+        this.hintTimer = this.time.addEvent({
+            delay: 5000,
+            callback: this.showHint,
+            callbackScope: this,
+            loop: true
+        });
+        
+        this.input.on('pointerdown', () => this.resetHintTimer());
+    }
+
+    resetHintTimer() {
+        if (this.hintTimer) {
+            this.hintTimer.reset({
+                delay: 5000,
+                callback: this.showHint,
+                callbackScope: this,
+                loop: true
+            });
+        }
+        this.clearHint();
+    }
+
+    clearHint() {
+        if (this.hintHand) {
+            this.hintHand.destroy();
+            this.hintHand = null;
+        }
+        if (this.hintGlow) {
+            this.hintGlow.destroy();
+            this.hintGlow = null;
+        }
+    }
+
+    showHint() {
+        if (this.isGameOver || this.board.inputLocked) return;
+        
+        const move = this.board.findValidMove();
+        if (move && move.length > 0) {
+            const targetCell = move[0];
+            const candy = this.board.candies[targetCell.row][targetCell.col];
+            if (!candy) return;
+            
+            this.clearHint();
+            
+            this.hintGlow = this.add.image(candy.x, candy.y, 'glow');
+            this.hintGlow.setDepth(10);
+            this.hintGlow.setAlpha(0.5);
+            this.tweens.add({
+                targets: this.hintGlow,
+                alpha: 1,
+                scaleX: 1.2,
+                scaleY: 1.2,
+                duration: 800,
+                yoyo: true,
+                repeat: -1
+            });
+            
+            // Also show the hand cursor indicating the swap direction
+            const destCell = move[1];
+            const destCandy = this.board.candies[destCell.row][destCell.col];
+            if (destCandy) {
+                this.hintHand = this.add.image(candy.x, candy.y, 'arrow'); // Using arrow instead of hand for now
+                this.hintHand.setDepth(11);
+                this.hintHand.setOrigin(0, 0.5);
+                
+                // Rotate arrow to point towards destination
+                const angle = Phaser.Math.Angle.Between(candy.x, candy.y, destCandy.x, destCandy.y);
+                this.hintHand.setRotation(angle);
+                
+                this.tweens.add({
+                    targets: this.hintHand,
+                    x: (candy.x + destCandy.x) / 2,
+                    y: (candy.y + destCandy.y) / 2,
+                    duration: 800,
+                    yoyo: true,
+                    repeat: -1
+                });
+            }
+        }
+    }
+
+    async playBonusRound() {
+        if (this.movesRemaining > 0) {
+            const bonusScore = this.movesRemaining * 1000;
+            const step = Math.floor(bonusScore / 10);
+            
+            for(let i=0; i<10; i++) {
+                this.score += step;
+                this.scoreText.setText(`Score: ${this.score}`);
+                this.soundManager.play('match');
+                await new Promise(r => setTimeout(r, 100));
+            }
+        }
+    }
+
+    showCombo(combo) {
+        if (!this.comboText) return;
+        
+        this.comboText.setText(`${combo}x COMBO!`);
+        this.comboText.setAlpha(1);
+        this.comboText.setScale(0.5);
+        this.comboText.y = 155;
+        
+        this.tweens.add({
+            targets: this.comboText,
+            scaleX: 1.2,
+            scaleY: 1.2,
+            alpha: 0,
+            y: 100,
+            duration: 1000,
+            ease: 'Power2'
+        });
     }
 
     shutdown() {

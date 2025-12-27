@@ -89,6 +89,12 @@ export default class BootScene extends Phaser.Scene {
             graphics.destroy();
         });
 
+        // Create Ingredient texture (Cherry) for Drop Items
+        const cherryGraphics = this.add.graphics();
+        this.drawCherry(cherryGraphics, candySize);
+        cherryGraphics.generateTexture('ingredient_0', candySize, candySize);
+        cherryGraphics.destroy();
+
         // Create special tile textures
         this.createSpecialTextures(candySize, colors);
 
@@ -228,6 +234,34 @@ export default class BootScene extends Phaser.Scene {
         // Highlight
         graphics.fillStyle(0xffffff, 0.4);
         graphics.fillCircle(center - 6, center - 8, 7);
+    }
+
+    drawCherry(graphics, size) {
+        const center = size / 2;
+        
+        // Shadow
+        graphics.fillStyle(0x000000, 0.3);
+        graphics.fillCircle(center + 2, center + 6, size / 3);
+
+        // Fruit
+        graphics.fillStyle(0xd63031, 1);
+        graphics.fillCircle(center, center + 4, size / 3);
+
+        // Highlight
+        graphics.fillStyle(0xffffff, 0.4);
+        graphics.fillCircle(center - 8, center, 8);
+
+        // Stem
+        graphics.lineStyle(4, 0x2d3436, 1);
+        
+        const path = new Phaser.Curves.Path(center, center - 10);
+        // quadraticBezierTo(controlX, controlY, endX, endY)
+        path.quadraticBezierTo(center, center - 25, center + 15, center - 20);
+        path.draw(graphics);
+
+        // Leaf
+        graphics.fillStyle(0x2ed573, 1);
+        graphics.fillEllipse(center + 15, center - 20, 10, 5);
     }
 
     createStarPoints(cx, cy, spikes, outerRadius, innerRadius) {
@@ -397,30 +431,28 @@ export default class BootScene extends Phaser.Scene {
         lockGraphics.generateTexture('lock', 64, 64);
         lockGraphics.destroy();
 
-        // Hand/Arrow Cursor
-        const handGraphics = this.add.graphics();
-        handGraphics.fillStyle(0xffffff, 1);
-        handGraphics.lineStyle(3, 0x000000, 1);
+        // Arrow Cursor (for hints) - pointing RIGHT
+        const arrowGraphics = this.add.graphics();
+        arrowGraphics.fillStyle(0xffffff, 1);
         
-        // Draw an arrow pointing up-left
+        // Simple triangle arrow pointing right
         const arrowPoly = new Phaser.Geom.Polygon([
-            32, 60, // Bottom right of stem
-            32, 32, // Top right of stem
-            50, 32, // Right wing
-            20, 0,  // Tip
-            -10, 32,// Left wing
-            8, 32,  // Top left of stem
-            8, 60   // Bottom left of stem
+            10, 20,  // Top Left
+            54, 32,  // Tip (Right)
+            10, 44   // Bottom Left
         ]);
         
-        // Translate to center
-        const points = arrowPoly.points.map(p => ({ x: p.x + 10, y: p.y }));
+        arrowGraphics.fillPoints(arrowPoly.points, true);
         
-        handGraphics.fillPoints(points, true);
-        handGraphics.strokePoints(points, true);
-        
-        handGraphics.generateTexture('hand', 64, 64);
-        handGraphics.destroy();
+        arrowGraphics.generateTexture('arrow', 64, 64);
+        arrowGraphics.destroy();
+
+        // Glow texture (soft radial gradient)
+        const glowGraphics = this.add.graphics();
+        glowGraphics.fillGradientStyle(0xffffff, 0xffffff, 0xffffff, 0xffffff, 0.8, 0.8, 0, 0);
+        glowGraphics.fillCircle(32, 32, 32);
+        glowGraphics.generateTexture('glow', 64, 64);
+        glowGraphics.destroy();
     }
 
     create() {

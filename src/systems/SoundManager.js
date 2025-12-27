@@ -216,44 +216,144 @@ export default class SoundManager {
     startMusic() {
         if (this.isMusicPlaying || !this.context) return;
         this.isMusicPlaying = true;
-        this.currentNoteIndex = 0;
+        this.nextNoteTime = this.context.currentTime + 0.1;
+        this.stepIndex = 0;
+        this.tempo = 110;
+        this.secondsPerStep = 60 / this.tempo / 4; // 16th notes
 
-        // Simple Pentatonic melody loop
-        const melody = [
-            261.63, 293.66, 329.63, 392.00, 440.00, // C4 D4 E4 G4 A4
-            493.88, 523.25, 440.00, 392.00, 329.63  // B4 C5 A4 G4 E4
+        // Song Structure: Cm - Ab - Eb - Bb (i - VI - III - VII)
+        // 16 steps per chord
+        this.chordProgression = [
+            { root: 130.81, name: 'Cm' }, // C3
+            { root: 103.83, name: 'Ab' }, // Ab2
+            { root: 155.56, name: 'Eb' }, // Eb3
+            { root: 116.54, name: 'Bb' }  // Bb2
         ];
-        
-        const playNextNote = () => {
-            if (!this.isMusicPlaying || this.scene.sound.mute) {
-                this.musicTimer = setTimeout(playNextNote, 500);
-                return;
-            }
 
-            const freq = melody[this.currentNoteIndex];
+        this.scheduleNextStep();
+    }
+
+    scheduleNextStep() {
+        if (!this.isMusicPlaying) return;
+
+        // Schedule ahead
+        while (this.nextNoteTime < this.context.currentTime + 0.1) {
+            this.playStep(this.nextNoteTime);
+            this.nextNoteTime += this.secondsPerStep;
+            this.stepIndex++;
+        }
+
+        this.musicTimer = setTimeout(() => this.scheduleNextStep(), 25);
+    }
+
+    playStep(time) {
+        if (this.scene.sound.mute) return;
+
+        const measure = Math.floor(this.stepIndex / 16);
+        const step = this.stepIndex % 16;
+        const currentChord = this.chordProgression[measure % this.chordProgression.length];
+        const root = currentChord.root;
+
+        // --- Bass (16th notes, pumping) ---
+        // Play on off-beats or driving 8ths
+        if (step % 2 === 0) {
+            this.playSynthNote(root, 0.1, 'sawtooth', 0.1, time);
+        } else {
+            this.playSynthNote(root, 0.1, 'square', 0.05, time); // quieter off-beat
+        }
+
+        // --- Melody (Pentatonic riff) ---
+        // C Minor Pentatonic: C, Eb, F, G, Bb
+        // Relative to root
+        const scale = [1, 1.2, 1.33, 1.5, 1.78]; // Approx intervals
+        
+        // Simple melody pattern
+        if (step === 0 || step === 6 || step === 12) {
+            const noteIdx = (measure + step) % scale.length;
+            const freq = root * 2 * scale[noteIdx]; // Octave up
+            this.playSynthNote(freq, 0.1, 'sine', 0.08, time);
+        }
+
+        // --- Drums ---
+        // Kick on 1, 5, 9, 13 (4/4 feel)
+        if (step % 4 === 0) {
+            this.playDrum('kick', time);
+        }
+        
+        // Snare on 5, 13 (Backbeat)
+        if (step % 8 === 4) {
+            this.playDrum('snare', time);
+        }
+
+        // Hi-hats on off-beats
+        if (step % 2 !== 0) {
+            this.playDrum('hat', time);
+        }
+    }
+
+    playSynthNote(freq, duration, type, vol, time) {
+        const osc = this.context.createOscillator();
+        const gain = this.context.createGain();
+
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, time);
+
+        gain.gain.setValueAtTime(0, time);
+        gain.gain.linearRampToValueAtTime(vol * this.masterVolume * 0.4, time + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+
+        osc.connect(gain);
+        gain.connect(this.context.destination);
+
+        osc.start(time);
+        osc.stop(time + duration + 0.1);
+    }
+
+    playDrum(type, time) {
+        if (type === 'kick') {
             const osc = this.context.createOscillator();
             const gain = this.context.createGain();
-
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, this.context.currentTime);
-
-            // Very soft background volume
-            const volume = 0.02 * this.masterVolume;
-            gain.gain.setValueAtTime(0, this.context.currentTime);
-            gain.gain.linearRampToValueAtTime(volume, this.context.currentTime + 0.1);
-            gain.gain.linearRampToValueAtTime(0, this.context.currentTime + 0.5);
-
+            osc.frequency.setValueAtTime(150, time);
+            osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.15);
+            gain.gain.setValueAtTime(0.4 * this.masterVolume, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
             osc.connect(gain);
             gain.connect(this.context.destination);
+            osc.start(time);
+            osc.stop(time + 0.15);
+        } else if (type === 'snare') {
+            const noise = this.context.createBufferSource();
+            const buffer = this.context.createBuffer(1, this.context.sampleRate * 0.1, this.context.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < buffer.length; i++) data[i] = Math.random() * 2 - 1;
+            noise.buffer = buffer;
+            const gain = this.context.createGain();
+            gain.gain.setValueAtTime(0.2 * this.masterVolume, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+            noise.connect(gain);
+            gain.connect(this.context.destination);
+            noise.start(time);
+        } else if (type === 'hat') {
+            const noise = this.context.createBufferSource();
+            const buffer = this.context.createBuffer(1, this.context.sampleRate * 0.05, this.context.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < buffer.length; i++) data[i] = Math.random() * 2 - 1;
+            noise.buffer = buffer;
+            
+            // High pass filter for hat
+            const filter = this.context.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.value = 5000;
 
-            osc.start();
-            osc.stop(this.context.currentTime + 0.5);
-
-            this.currentNoteIndex = (this.currentNoteIndex + 1) % melody.length;
-            this.musicTimer = setTimeout(playNextNote, 500);
-        };
-
-        playNextNote();
+            const gain = this.context.createGain();
+            gain.gain.setValueAtTime(0.1 * this.masterVolume, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+            
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.context.destination);
+            noise.start(time);
+        }
     }
 
     stopMusic() {

@@ -1,3 +1,5 @@
+import SoundManager from '../systems/SoundManager.js';
+
 export default class MenuScene extends Phaser.Scene {
     constructor() {
         super('MenuScene');
@@ -9,7 +11,15 @@ export default class MenuScene extends Phaser.Scene {
 
         // Initialize Sound Manager
         this.soundManager = new SoundManager(this);
-        this.soundManager.startMusic();
+        
+        // Wait for interaction to start audio context (browser policy)
+        if (this.sound.locked) {
+            this.input.once('pointerdown', () => {
+                this.soundManager.startMusic();
+            });
+        } else {
+            this.soundManager.startMusic();
+        }
 
         // Background gradient
         this.createBackground(width, height);

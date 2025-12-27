@@ -143,22 +143,12 @@ export default class Board {
 
     selectCandy(candy) {
         this.selectedCandy = candy;
-        this.selectedCandyTween = this.scene.tweens.add({
-            targets: candy,
-            alpha: 0.5,
-            duration: 300,
-            yoyo: true,
-            repeat: -1
-        });
+        candy.select();
     }
 
     deselectCandy() {
         if (this.selectedCandy) {
-            if (this.selectedCandyTween) {
-                this.selectedCandyTween.stop();
-                this.selectedCandyTween = null;
-            }
-            this.selectedCandy.setAlpha(1);
+            this.selectedCandy.deselect();
             this.selectedCandy = null;
         }
     }
@@ -363,12 +353,17 @@ export default class Board {
         const { x, y } = this.gridToWorld(row, col);
         const layers = this.jelly[row][col];
         if (this.jellySprites[row][col]) this.jellySprites[row][col].destroy();
-        const graphics = this.scene.add.graphics().setDepth(0.5);
+        
+        // Position graphics at the center of the cell
+        const graphics = this.scene.add.graphics({ x, y }).setDepth(0.5);
         graphics.fillStyle(layers === 2 ? 0xff1493 : 0xff69b4, layers === 2 ? 0.8 : 0.6);
-        graphics.fillRoundedRect(x - this.cellSize / 2 + 2, y - this.cellSize / 2 + 2, this.cellSize - 4, this.cellSize - 4, 12);
+        
+        // Draw relative to center (0,0)
+        graphics.fillRoundedRect(-this.cellSize / 2 + 2, -this.cellSize / 2 + 2, this.cellSize - 4, this.cellSize - 4, 12);
+        
         if (layers === 2) {
             graphics.lineStyle(4, 0xffffff, 0.8);
-            graphics.strokeRoundedRect(x - this.cellSize / 2 + 2, y - this.cellSize / 2 + 2, this.cellSize - 4, this.cellSize - 4, 12);
+            graphics.strokeRoundedRect(-this.cellSize / 2 + 2, -this.cellSize / 2 + 2, this.cellSize - 4, this.cellSize - 4, 12);
         }
         this.jellySprites[row][col] = graphics;
 
@@ -451,6 +446,25 @@ export default class Board {
 
     // --- Action Methods ---
 
+    async checkIngredientCollection() {
+        const bottomRow = this.rows - 1;
+        const toCollect = [];
+        
+        for (let col = 0; col < this.cols; col++) {
+            const type = this.grid[bottomRow][col];
+            if (type >= 100) {
+                toCollect.push({ row: bottomRow, col: col });
+            }
+        }
+
+        if (toCollect.length > 0) {
+            await this.clearCandies(toCollect);
+            await this.applyGravity();
+            await this.fillEmptySpaces();
+            await this.checkIngredientCollection(); // Recursive check if more fell down
+        }
+    }
+
     async applyGravity() {
         const tweens = [];
         for (let c = 0; c < this.cols; c++) {
@@ -465,35 +479,86 @@ export default class Board {
                         this.candies[r][c] = null;
                         candy.row = emptyRow;
                         const target = this.gridToWorld(emptyRow, c);
-                        tweens.push({ targets: candy, y: target.y, duration: 100 + (emptyRow - r) * 50, ease: 'Bounce.easeOut' });
+                        tweens.push({ 
+                            targets: candy, 
+                            y: target.y, 
+                            duration: 150 + (emptyRow - r) * 50, 
+                            ease: 'Bounce.easeOut',
+                            onComplete: () => {
+                                // Landing juice squash
+                                this.scene.tweens.add({
+                                    targets: candy,
+                                    scaleX: 1.1,
+                                    scaleY: 0.9,
+                                    duration: 100,
+                                    yoyo: true,
+                                    ease: 'Sine.easeOut'
+                                });
+                            }
+                        });
                     }
                     emptyRow--;
                 }
             }
         }
         if (tweens.length === 0) return;
-        await Promise.all(tweens.map(t => new Promise(res => this.scene.tweens.add({ ...t, onComplete: res }))));
+        await Promise.all(tweens.map(t => new Promise(res => this.scene.tweens.add({ ...t, onComplete: () => { if (t.onComplete) t.onComplete(); res(); } }))));
+    }
+
+    countIngredients() {
+        let count = 0;
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                if (this.grid[r][c] >= 100) count++;
+            }
+        }
+        return count;
     }
 
     async fillEmptySpaces() {
         const tweens = [];
+        const scene = this.scene;
+        const needsDrop = scene.objectives.drop > 0 && 
+                         (scene.status.drop + this.countIngredients()) < scene.objectives.drop;
+
         for (let c = 0; c < this.cols; c++) {
             let emptyCount = 0;
             for (let r = 0; r < this.rows; r++) if (this.grid[r][c] === -1) emptyCount++;
             for (let r = 0; r < this.rows; r++) {
                 if (this.grid[r][c] === -1) {
-                    const type = this.getValidCandyType(r, c);
+                    let type = this.getValidCandyType(r, c);
+                    
+                    // Small chance to spawn ingredient if needed
+                    if (needsDrop && Math.random() < 0.1 && this.countIngredients() < 2) {
+                        type = 100; // Cherry
+                    }
+
                     const { x, y } = this.gridToWorld(r, c);
                     const candy = new Candy(this.scene, x, this.y - this.cellSize * (emptyCount - r), type, r, c);
                     candy.setDisplaySize(this.cellSize - 12, this.cellSize - 12).setDepth(1).on('pointerdown', () => this.onCandyClick(candy));
                     this.grid[r][c] = type;
                     this.candies[r][c] = candy;
-                    tweens.push({ targets: candy, y: y, duration: 200 + r * 50, ease: 'Bounce.easeOut' });
+                    tweens.push({ 
+                        targets: candy, 
+                        y: y, 
+                        duration: 300 + r * 50, 
+                        ease: 'Bounce.easeOut',
+                        onComplete: () => {
+                            this.scene.tweens.add({
+                                targets: candy,
+                                scaleX: 1.1,
+                                scaleY: 0.9,
+                                duration: 100,
+                                yoyo: true,
+                                ease: 'Sine.easeOut'
+                            });
+                        }
+                    });
                 }
             }
         }
         if (tweens.length === 0) return;
-        await Promise.all(tweens.map(t => new Promise(res => this.scene.tweens.add({ ...t, onComplete: res }))));
+        await Promise.all(tweens.map(t => new Promise(res => this.scene.tweens.add({ ...t, onComplete: () => { if (t.onComplete) t.onComplete(); res(); } }))));
     }
 
     async clearCandiesWithSpecials(cells, specialsToCreate) {
@@ -622,21 +687,64 @@ export default class Board {
     }
 
     async shuffle() {
+        if (this.inputLocked) return;
         this.inputLocked = true;
+
+        // Show "NO MOVES" message
+        const text = this.scene.add.text(this.scene.cameras.main.width / 2, this.scene.cameras.main.height / 2, 'NO MOVES!', {
+            fontFamily: 'Arial Black', fontSize: '64px', color: '#ffffff', stroke: '#ff4757', strokeThickness: 8
+        }).setOrigin(0.5).setDepth(1000).setScale(0);
+
+        this.scene.soundManager.play('invalid');
+
+        await new Promise(res => {
+            this.scene.tweens.add({
+                targets: text, scaleX: 1, scaleY: 1, duration: 500, ease: 'Back.easeOut',
+                yoyo: true, hold: 500, onComplete: () => { text.destroy(); res(); }
+            });
+        });
+
+        // Collect all non-special, non-locked candies
         const all = [];
-        for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) if (this.grid[r][c] !== -1 && !this.candies[r][c].isSpecial && !this.locked[r][c]) all.push(this.grid[r][c]);
-        Phaser.Utils.Array.Shuffle(all);
-        let idx = 0;
-        for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) if (this.candies[r][c] && !this.candies[r][c].isSpecial && !this.locked[r][c]) {
-            const type = all[idx++];
-            this.grid[r][c] = type;
-            this.candies[r][c].candyType = type;
-            this.candies[r][c].setTexture(`candy_${type}`);
-            this.scene.tweens.add({ targets: this.candies[r][c], scaleX: 0, duration: 150, yoyo: true });
+        const targets = [];
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                if (this.grid[r][c] !== -1 && !this.candies[r][c].isSpecial && !this.locked[r][c]) {
+                    all.push(this.grid[r][c]);
+                    targets.push(this.candies[r][c]);
+                }
+            }
         }
-        await new Promise(r => this.scene.time.delayedCall(300, r));
-        if (!this.hasValidMoves()) await this.shuffle();
-        this.inputLocked = false;
+
+        // Animation: Scale down all candies
+        await Promise.all(targets.map(candy => new Promise(res => {
+            this.scene.tweens.add({ targets: candy, scaleX: 0, scaleY: 0, duration: 200, onComplete: res });
+        })));
+
+        Phaser.Utils.Array.Shuffle(all);
+        
+        // Reassign types and textures
+        targets.forEach((candy, idx) => {
+            const type = all[idx];
+            this.grid[candy.row][candy.col] = type;
+            candy.candyType = type;
+            candy.setTexture(`candy_${type}`);
+        });
+
+        // Animation: Scale back up
+        await Promise.all(targets.map(candy => new Promise(res => {
+            this.scene.tweens.add({ targets: candy, scaleX: 1, scaleY: 1, duration: 200, ease: 'Back.easeOut', onComplete: res });
+        })));
+
+        await new Promise(r => this.scene.time.delayedCall(200, r));
+
+        // If still no moves, shuffle again (recursive safety)
+        if (!this.hasValidMoves()) {
+            this.inputLocked = false; // Temporarily unlock to allow recursive call
+            await this.shuffle();
+        } else {
+            this.inputLocked = false;
+        }
     }
 
     getAdjacentCells(row, col) {

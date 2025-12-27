@@ -72,8 +72,14 @@ export default class ActionProcessor {
             await this.board.clearCandiesWithSpecials(Array.from(cellsToClear.values()), specialsToCreate);
             await this.board.applyGravity();
             await this.board.fillEmptySpaces();
+            await this.board.checkIngredientCollection();
 
             matches = this.board.matchLogic.findMatches();
+        }
+
+        // Final check: Is the board stuck?
+        if (!this.board.hasValidMoves()) {
+            await this.board.shuffle();
         }
     }
 
