@@ -1053,21 +1053,24 @@ export default class GameScene extends Phaser.Scene {
             }).setOrigin(0.5);
             container.add(rewardLabel);
 
-            const spacing = 60;
+            // Wider spacing to prevent overlap (icons are ~50px with scale)
+            const spacing = 80;
             const startX = -((awardedPowerups.length - 1) * spacing) / 2;
 
             awardedPowerups.forEach((type, index) => {
                 const config = GameConfig.POWERUPS[type];
-                const rewardIcon = this.add.text(startX + index * spacing, 70, config.icon, {
-                    fontSize: '36px'
+                const iconX = startX + index * spacing;
+
+                const rewardIcon = this.add.text(iconX, 75, config.icon, {
+                    fontSize: '40px'
                 }).setOrigin(0.5).setScale(0);
                 container.add(rewardIcon);
 
                 // Animated entrance with bounce
                 this.tweens.add({
                     targets: rewardIcon,
-                    scaleX: 1.2,
-                    scaleY: 1.2,
+                    scaleX: 1,
+                    scaleY: 1,
                     duration: 400,
                     delay: 800 + index * 200,
                     ease: 'Back.easeOut',
@@ -1076,22 +1079,21 @@ export default class GameScene extends Phaser.Scene {
                     }
                 });
 
-                // "+1" text
-                const plusOne = this.add.text(startX + index * spacing + 20, 50, '+1', {
+                // "+1" badge (top-right of icon)
+                const plusOne = this.add.text(iconX + 25, 55, '+1', {
                     fontFamily: 'Arial Black',
-                    fontSize: '16px',
+                    fontSize: '14px',
                     color: '#4ade80',
                     stroke: '#ffffff',
-                    strokeThickness: 2
+                    strokeThickness: 3
                 }).setOrigin(0.5).setAlpha(0);
                 container.add(plusOne);
 
                 this.tweens.add({
                     targets: plusOne,
                     alpha: 1,
-                    y: 40,
                     duration: 300,
-                    delay: 900 + index * 200,
+                    delay: 1000 + index * 200,
                     ease: 'Power2'
                 });
             });
