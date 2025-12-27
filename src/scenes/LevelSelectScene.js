@@ -269,7 +269,7 @@ export default class LevelSelectScene extends Phaser.Scene {
     createLevelGrid(width, height) {
         const saveData = this.getSaveData();
 
-        const startY = 180;
+        const startY = 210;
         const buttonSize = 100;
         const padding = 20;
         const gridWidth = this.columns * buttonSize + (this.columns - 1) * padding;
