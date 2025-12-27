@@ -48,7 +48,7 @@
 
 ### Polish
 - [ ] Improved music quality (less repetitive)
-- [ ] Score counter animation (counting up)
+- [x] Score counter animation (counting up)
 - [ ] More particle variety
 
 ### Low Priority

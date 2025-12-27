@@ -19,6 +19,11 @@ export default class HUDManager {
         this.progressBarColor = 0x4ade80;
         this.progressTween = null;
 
+        // Score animation state
+        this.displayedScore = 0;
+        this.targetScore = 0;
+        this.scoreTween = null;
+
         // Callbacks
         this.onPause = null;
     }
@@ -169,6 +174,10 @@ export default class HUDManager {
         bottomBar.fillStyle(0x000000, 0.3);
         bottomBar.fillRoundedRect(20, height - 90, width - 40, 75, 15);
 
+        // Initialize score tracking
+        this.displayedScore = score;
+        this.targetScore = score;
+
         // Score display - positioned on the right side to leave room for powerups
         this.scoreText = this.scene.add.text(width - 40, height - 52, `${score}`, {
             fontFamily: 'Arial Black, Arial, sans-serif',
@@ -223,7 +232,58 @@ export default class HUDManager {
     }
 
     setScore(score) {
-        if (this.scoreText?.scene) {
+        if (!this.scoreText?.scene) return;
+
+        const previousTarget = this.targetScore;
+        this.targetScore = score;
+
+        // If score increased, animate the counting
+        if (score > previousTarget) {
+            // Kill existing tween
+            if (this.scoreTween) {
+                this.scoreTween.stop();
+            }
+
+            // Calculate duration based on score difference (faster for small gains)
+            const diff = score - this.displayedScore;
+            const duration = Math.min(Math.max(diff * 2, 200), 800);
+
+            // Animate the displayed score counting up
+            this.scoreTween = this.scene.tweens.add({
+                targets: this,
+                displayedScore: score,
+                duration: duration,
+                ease: 'Power2',
+                onUpdate: () => {
+                    const displayValue = Math.floor(this.displayedScore);
+                    this.scoreText.setText(`${displayValue}`);
+                },
+                onComplete: () => {
+                    this.scoreText.setText(`${score}`);
+                    this.displayedScore = score;
+                }
+            });
+
+            // Pop effect on the score text
+            this.scene.tweens.add({
+                targets: this.scoreText,
+                scaleX: 1.3,
+                scaleY: 1.3,
+                duration: 100,
+                yoyo: true,
+                ease: 'Back.easeOut'
+            });
+
+            // Flash color effect (white -> yellow -> white)
+            this.scoreText.setColor('#ffeb3b');
+            this.scene.time.delayedCall(200, () => {
+                if (this.scoreText?.scene) {
+                    this.scoreText.setColor('#ffffff');
+                }
+            });
+        } else {
+            // Just set directly for same/lower score
+            this.displayedScore = score;
             this.scoreText.setText(`${score}`);
         }
     }
@@ -335,6 +395,11 @@ export default class HUDManager {
         if (this.progressTween) {
             this.progressTween.stop();
             this.progressTween = null;
+        }
+
+        if (this.scoreTween) {
+            this.scoreTween.stop();
+            this.scoreTween = null;
         }
 
         this.movesText = null;
