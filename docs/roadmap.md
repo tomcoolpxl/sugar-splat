@@ -2,42 +2,55 @@
 
 ## Completed
 
-### Core Systems ✅
-- [x] **Input Locking Reliability:** ActionProcessor hardened with try/catch/finally, re-entrancy protection
-- [x] **Config Centralization:** All magic numbers moved to `Config.js`
-- [x] **Audio Safety:** Shared AudioContext, browser autoplay handling
-- [x] **Grid/Sprite Sync:** clearingCells tracking, active checks prevent ghost candies
-- [x] **Scene Lifecycle:** Proper shutdown cleanup, null safety on UI elements
+### Core Gameplay
+- [x] Match-3 mechanics with swap validation
+- [x] Cascades with combo multipliers
+- [x] Special candies (Line, Bomb, Color Bomb)
+- [x] Special + Special combo effects
+- [x] Blockers (Jelly single/double, Locked tiles)
+- [x] Multiple objective types (Score, Jelly, Collect, Drop)
+- [x] 20 levels with progressive difficulty
 
-### Visual Polish ✅
-- [x] **Particle Effects:** Distinct particles for candy (colored), jelly (pink), bombs (orange), lines (cyan)
-- [x] **Animation Curves:** Back.easeOut for snappier swaps
-- [x] **Invalid Swap Feedback:** Pronounced shake + red tint flash
+### Systems
+- [x] ActionProcessor with error recovery
+- [x] Config centralization in Config.js
+- [x] Procedural WebAudio (music + SFX)
+- [x] Powerup system with rewards
+- [x] Bonus round (moves to specials)
+- [x] Hint system (5s idle)
+- [x] Tutorial overlays
 
-### Features ✅
-- [x] **Level Progression:** Unlocking system based on completing previous levels
-- [x] **Tutorials:** Overlay system for introducing new mechanics (Jelly, Locked tiles)
+### Architecture (Refactored Dec 2025)
+- [x] GameScene split into focused managers
+- [x] PowerupManager - powerup UI & activation
+- [x] DialogManager - win/lose/pause/tutorial dialogs
+- [x] BonusRoundManager - end-of-level bonus
+- [x] HUDManager - score, moves, progress
+- [x] HintManager - idle hint display
+- [x] ParticleManager - particle effects
 
----
-
-## In Progress
-
-### Audio
-- [ ] **Music Quality:** Replace current music with happy, unobtrusive chiptune melodies
+### Polish
+- [x] Particle effects (candy colors, jelly, specials)
+- [x] Invalid swap shake + red tint
+- [x] Mobile swipe controls
+- [x] Sound/music toggles
+- [x] Scene lifecycle cleanup
 
 ---
 
 ## Future Enhancements
 
 ### Features
-- [ ] **Mobile Optimization:** CSS/Canvas scaling for various mobile aspect ratios
-- [ ] **Persistent Settings:** Save volume levels (not just mute toggle) to localStorage
-- [ ] **High Score Leaderboards:** Local leaderboards per level
-- [ ] **Daily Rewards:** Simple system to reward returning players
+- [ ] More levels (21-40)
+- [ ] New blocker types (ice, chocolate spreader)
+- [ ] Daily challenges
+- [ ] High score leaderboards (local)
 
 ### Polish
-- [ ] **UI Feedback:** Score counter counting up animation, progress bar milestones
-- [ ] **Accessibility:** Colorblind patterns (partially implemented with candy shapes)
+- [ ] Improved music quality (less repetitive)
+- [ ] Score counter animation (counting up)
+- [ ] More particle variety
 
 ### Low Priority
-- [ ] **Level Data:** Externalize to JSON (current JS object is fine for now)
+- [ ] Level data externalization to JSON
+- [ ] Accessibility improvements (more colorblind patterns)

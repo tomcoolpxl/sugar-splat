@@ -1,89 +1,97 @@
-# Comprehensive Code Review
+# Code Architecture
 
-**Date:** December 27, 2025
-**Version:** 1.1 (Updated)
-**Reviewer:** Gemini Agent (initial), Claude (updates)
+**Last Updated:** December 2025
 
-## 1. Executive Summary
+## Overview
 
-The Sugar Splash codebase is a well-structured Phaser 3 project using modern ES6 modules. It demonstrates a clear separation of concerns between Scene management (`scenes/`), Game Objects (`objects/`), and Systems (`systems/`).
+Sugar Splash is a Phaser 3 match-3 game using ES6 modules. The codebase follows a manager pattern where GameScene orchestrates specialized manager classes.
 
-**Strengths:**
-* **Modular Architecture:** Logic is decentralized appropriately (e.g., `MatchLogic` is separate from `Board`).
-* **Procedural Assets:** Clever use of `Phaser.Graphics` for textures and `WebAudio` for sound reduces download size.
-* **Robust State Management:** The `ActionProcessor` effectively manages the complex async flow of match-3 cascades.
-
----
-
-## 2. Completed Fixes
-
-### 2.1 Config Centralization ✅
-All audio definitions, animation timings, and magic numbers have been moved to `src/Config.js`.
-
-### 2.2 Input Locking Reliability ✅
-- `ActionProcessor` now uses `try/catch/finally` blocks throughout
-- Added `isProcessing` flag to prevent re-entrant calls
-- Added `safeAwait()` helper for robust promise handling
-- Watchdog timer extended to 10s as backup only (should never trigger)
-
-### 2.3 Audio Safety ✅
-- Created shared `AudioContext` independent of Phaser to avoid "cut" errors
-- Added `ensureContextRunning()` method for browser autoplay policy handling
-- All audio methods check context state before playing
-
-### 2.4 Grid/Sprite Synchronization ✅
-- Added `clearingCells` Set to track cells being cleared
-- Added `candy.active` checks before animating/destroying sprites
-- Prevents double-clearing and ghost candy issues
-
-### 2.5 Scene Lifecycle Management ✅
-- All UI references nulled in `shutdown()` to prevent stale object errors
-- Added `?.scene` checks on all `setText()` and tween calls
-- SoundManager properly destroyed on scene exit
-
-### 2.6 Visual Polish ✅
-- Invalid swap now has pronounced shake + red tint flash
-- Distinct particle effects for jelly (pink), bombs (orange), lines (cyan)
-- Snappier animations with `Back.easeOut` easing
-
----
-
-## 3. Remaining Items
-
-### 3.1 Level Data Externalization
-**Status:** Low Priority
-Currently `LevelData.js` is a JS object. Could be externalized to JSON for easier editing, but current approach is fine for this project size.
-
-### 3.2 Music Quality
-**Status:** In Progress
-Current procedural music needs improvement - targeting happy, unobtrusive chiptune style.
-
----
-
-## 4. Architecture Notes
+## Architecture
 
 ### File Structure
+
 ```
 src/
-├── Config.js          # Centralized configuration
-├── main.js            # Phaser game initialization
+├── Config.js               # Centralized configuration (colors, audio, timings)
+├── main.js                 # Phaser game initialization
 ├── data/
-│   └── LevelData.js   # Level definitions (20 levels)
+│   └── LevelData.js        # Level definitions (20 levels)
 ├── objects/
-│   ├── Board.js       # Grid logic, input handling
-│   └── Candy.js       # Individual candy sprites
+│   ├── Board.js            # Grid state, rendering, input handling
+│   └── Candy.js            # Individual candy sprites with special types
 ├── scenes/
-│   ├── BootScene.js   # Asset generation
-│   ├── MenuScene.js   # Title screen
-│   ├── LevelSelectScene.js
-│   └── GameScene.js   # Main gameplay
-└── systems/
-    ├── ActionProcessor.js  # Cascade/match processing
-    ├── MatchLogic.js       # Match detection algorithms
-    └── SoundManager.js     # WebAudio procedural audio
+│   ├── BootScene.js        # Asset generation (procedural textures)
+│   ├── MenuScene.js        # Title screen
+│   ├── LevelSelectScene.js # Level grid with progress
+│   └── GameScene.js        # Main gameplay orchestration (~520 lines)
+├── systems/
+│   ├── ActionProcessor.js  # Async cascade sequencing with error recovery
+│   ├── MatchLogic.js       # BFS matching, intersection detection
+│   ├── SoundManager.js     # WebAudio procedural synth (music + SFX)
+│   ├── PowerupManager.js   # Powerup UI, activation, rewards
+│   ├── DialogManager.js    # Modal dialogs (win/lose/pause/tutorial)
+│   ├── BonusRoundManager.js# End-of-level bonus round
+│   ├── HintManager.js      # Idle hint system
+│   └── ParticleManager.js  # Particle effects
+└── ui/
+    └── HUDManager.js       # Score, moves, progress bar, objectives
+```
+
+### Manager Pattern
+
+Each manager follows a consistent pattern:
+
+```javascript
+export default class XxxManager {
+    constructor(scene, ...dependencies) {
+        this.scene = scene;
+        // Initialize state
+    }
+
+    create() { /* Build UI if needed */ }
+
+    // Public methods...
+
+    destroy() {
+        // Cleanup timers, tweens, references
+        this.scene = null;
+    }
+}
 ```
 
 ### Key Patterns
-- **Async/Await Cascades:** `ActionProcessor.processBoardState()` handles match-3 chain reactions
-- **Event-Driven Updates:** Score, objectives, and UI update via Phaser events
-- **Procedural Generation:** All textures and sounds generated at runtime (no external assets)
+
+1. **Async/Await Cascades** - ActionProcessor handles match-3 chain reactions with proper sequencing
+2. **Event-Driven Updates** - Score, objectives, UI update via Phaser events
+3. **Procedural Generation** - All textures and sounds generated at runtime (no external assets)
+4. **Composition** - GameScene composes managers rather than inheriting behavior
+
+### Data Flow
+
+```
+User Input → Board → ActionProcessor → Events → Managers → UI Updates
+                ↓
+           MatchLogic (match detection)
+                ↓
+           Candy sprites (visual state)
+```
+
+## Technical Decisions
+
+### Procedural Assets
+All textures created with Phaser Graphics API, sounds with WebAudio oscillators. Reduces load time and external dependencies.
+
+### Manager Extraction
+GameScene was refactored from ~1920 lines to ~520 lines by extracting:
+- PowerupManager (482 lines)
+- DialogManager (381 lines)
+- HUDManager (330 lines)
+- BonusRoundManager (256 lines)
+- ParticleManager (120 lines)
+- HintManager (109 lines)
+
+### Error Recovery
+ActionProcessor uses try/catch/finally with re-entrancy protection. 10-second watchdog timer as last resort backup.
+
+### Mobile Support
+Touch input with swipe detection. Threshold-based gesture recognition distinguishes taps from swipes.

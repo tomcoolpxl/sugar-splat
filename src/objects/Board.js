@@ -174,8 +174,8 @@ export default class Board {
         if (this.inputLocked) return;
 
         // Check if scene is in powerup mode
-        if (this.scene.powerupMode) {
-            this.scene.activatePowerup(this.scene.powerupMode, candy.row, candy.col, candy);
+        if (this.scene.powerupManager?.isInPowerupMode()) {
+            this.scene.powerupManager.activate(this.scene.powerupManager.getCurrentMode(), candy.row, candy.col, candy);
             return;
         }
 
