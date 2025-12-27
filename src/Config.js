@@ -58,16 +58,76 @@ export const GameConfig = {
         MASTER_VOLUME: 0.3,
         MUSIC_VOLUME_MULTIPLIER: 0.4,
 
-        // Music Settings
+        // Music Settings - Happy C Major Chiptune (no percussion)
+        // Structure: A-B-C-A with arpeggio variations
         MUSIC: {
-            TEMPO: 110,
-            CHORD_PROGRESSION: [
-                { root: 130.81, name: 'Cm' },  // C3
-                { root: 103.83, name: 'Ab' },  // Ab2
-                { root: 155.56, name: 'Eb' },  // Eb3
-                { root: 116.54, name: 'Bb' }   // Bb2
+            TEMPO: 80, // Gentle tempo for puzzle game
+
+            // C Major chord progression: I - vi - IV - V (happy, classic)
+            // Each chord has multiple arpeggio patterns for variation
+            CHORDS: [
+                {
+                    bass: 130.81,  // C2
+                    arp: [261.63, 329.63, 392.00],       // C-E-G (up)
+                    arp_alt: [392.00, 329.63, 261.63],   // G-E-C (down)
+                    arp_bounce: [261.63, 392.00, 329.63] // C-G-E (bounce)
+                },
+                {
+                    bass: 110.00,  // A2
+                    arp: [261.63, 329.63, 440.00],       // C-E-A (up)
+                    arp_alt: [440.00, 329.63, 261.63],   // A-E-C (down)
+                    arp_bounce: [261.63, 440.00, 329.63] // C-A-E (bounce)
+                },
+                {
+                    bass: 174.61,  // F2
+                    arp: [261.63, 349.23, 440.00],       // C-F-A (up)
+                    arp_alt: [440.00, 349.23, 261.63],   // A-F-C (down)
+                    arp_bounce: [261.63, 440.00, 349.23] // C-A-F (bounce)
+                },
+                {
+                    bass: 196.00,  // G2
+                    arp: [293.66, 392.00, 493.88],       // D-G-B (up)
+                    arp_alt: [493.88, 392.00, 293.66],   // B-G-D (down)
+                    arp_bounce: [293.66, 493.88, 392.00] // D-B-G (bounce)
+                }
             ],
-            PENTATONIC_SCALE: [1, 1.2, 1.33, 1.5, 1.78]
+
+            // Section A - Main melody (bright, ascending feel)
+            MELODY_A: [
+                523.25, 659.25, 783.99, 659.25,  // C5 E5 G5 E5
+                587.33, 783.99, 880.00, 783.99,  // D5 G5 A5 G5
+                523.25, 880.00, 783.99, 659.25,  // C5 A5 G5 E5
+                659.25, 587.33, 523.25, -1       // E5 D5 C5 rest
+            ],
+
+            // Section B - Variation (descending, call-and-response)
+            MELODY_B: [
+                783.99, 659.25, 523.25, -1,      // G5 E5 C5 rest
+                880.00, 783.99, 659.25, 587.33,  // A5 G5 E5 D5
+                523.25, 587.33, 659.25, 783.99,  // C5 D5 E5 G5 (ascending answer)
+                880.00, 783.99, 659.25, 523.25   // A5 G5 E5 C5 (resolve down)
+            ],
+
+            // Section C - New variation (playful, skippy rhythm)
+            MELODY_C: [
+                659.25, -1, 783.99, 659.25,      // E5 rest G5 E5
+                523.25, 659.25, 587.33, -1,      // C5 E5 D5 rest
+                783.99, 880.00, 783.99, 659.25,  // G5 A5 G5 E5
+                587.33, 523.25, -1, -1           // D5 C5 rest rest (breathing room)
+            ],
+
+            // Section D - Gentle resolution (calm, floaty)
+            // Note: Keep all melody notes in C5+ range to avoid clashing with arpeggios (C4-B4 range)
+            MELODY_D: [
+                523.25, -1, 659.25, -1,          // C5 rest E5 rest (spacious)
+                783.99, -1, 659.25, 523.25,      // G5 rest E5 C5
+                587.33, 659.25, 523.25, -1,      // D5 E5 C5 rest
+                783.99, 523.25, -1, -1           // G5 C5 rest rest (resolve with fifth)
+            ],
+
+            // Structure: A-B-C-A-D-A (theme, variation, playful, theme, calm, theme)
+            SECTIONS: ['A', 'B', 'C', 'A', 'D', 'A'],
+            MEASURES_PER_SECTION: 4  // Each section plays for 4 chord cycles
         },
 
         // Sound Effect Definitions
@@ -156,18 +216,6 @@ export const GameConfig = {
                 ],
                 vol: 0.15
             }
-        },
-
-        // Drum sounds timing
-        DRUMS: {
-            KICK_DURATION: 0.15,
-            KICK_FREQ_START: 150,
-            KICK_VOLUME: 0.4,
-            SNARE_DURATION: 0.1,
-            SNARE_VOLUME: 0.2,
-            HAT_DURATION: 0.05,
-            HAT_VOLUME: 0.1,
-            HAT_HIGHPASS_FREQ: 5000
         }
     }
 };

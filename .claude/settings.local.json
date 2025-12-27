@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Skill(brainstorming)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "WebSearch"
     ]
   }
 }

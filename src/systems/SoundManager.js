@@ -23,21 +23,22 @@ export default class SoundManager {
         this.masterVolume = GameConfig.AUDIO.MASTER_VOLUME;
 
         // Music state
-        this.musicGain = null;
-        this.musicOsc = null;
         this.isMusicPlaying = false;
-        this.currentNoteIndex = 0;
         this.musicTimer = null;
-        this.chordProgression = null;
         this.stepIndex = 0;
         this.nextNoteTime = 0;
+        this.chords = null;
+        this.melodies = {};  // Store all melody sections
+        this.sections = null;
+        this.sectionIndex = 0;
+        this.measureCount = 0;
+        this.measuresPerSection = 4;
 
         // Sound definitions from config
         this.soundDefs = GameConfig.AUDIO.SOUNDS;
 
         // Music config from centralized settings
         this.musicConfig = GameConfig.AUDIO.MUSIC;
-        this.drumConfig = GameConfig.AUDIO.DRUMS;
     }
 
     play(key) {
@@ -182,7 +183,6 @@ export default class SoundManager {
         if (this.isMusicPlaying) return;
         if (!this.context || !this.musicConfig) return;
         if (!this.ensureContextRunning()) {
-            // Retry after a short delay when context resumes
             setTimeout(() => this.startMusic(), 100);
             return;
         }
@@ -190,11 +190,21 @@ export default class SoundManager {
         this.isMusicPlaying = true;
         this.nextNoteTime = this.context.currentTime + 0.1;
         this.stepIndex = 0;
-        this.tempo = this.musicConfig.TEMPO;
+        this.tempo = this.musicConfig.TEMPO || 80;
         this.secondsPerStep = 60 / this.tempo / 4; // 16th notes
 
-        // Song Structure from config
-        this.chordProgression = [...this.musicConfig.CHORD_PROGRESSION];
+        // Load chords and melodies from config
+        this.chords = this.musicConfig.CHORDS || [];
+        this.melodies = {
+            A: this.musicConfig.MELODY_A || this.musicConfig.MELODY || [],
+            B: this.musicConfig.MELODY_B || this.musicConfig.MELODY_A || [],
+            C: this.musicConfig.MELODY_C || this.musicConfig.MELODY_A || [],
+            D: this.musicConfig.MELODY_D || this.musicConfig.MELODY_A || []
+        };
+        this.sections = this.musicConfig.SECTIONS || ['A'];
+        this.measuresPerSection = this.musicConfig.MEASURES_PER_SECTION || 4;
+        this.sectionIndex = 0;
+        this.measureCount = 0;
 
         this.scheduleNextStep();
     }
@@ -202,12 +212,10 @@ export default class SoundManager {
     scheduleNextStep() {
         if (!this.isMusicPlaying) return;
         if (!this.context || this.context.state !== 'running') {
-            // Context suspended mid-playback, stop music
             this.stopMusic();
             return;
         }
 
-        // Schedule ahead
         while (this.nextNoteTime < this.context.currentTime + 0.1) {
             this.playStep(this.nextNoteTime);
             this.nextNoteTime += this.secondsPerStep;
@@ -220,30 +228,85 @@ export default class SoundManager {
     playStep(time) {
         if (!this.scene || this.scene.sound.mute) return;
         if (!this.context || this.context.state !== 'running') return;
-        if (!this.chordProgression || this.chordProgression.length === 0) return;
+        if (!this.chords || this.chords.length === 0) return;
 
-        const measure = Math.floor(this.stepIndex / 16);
-        const step = this.stepIndex % 16;
-        const currentChord = this.chordProgression[measure % this.chordProgression.length];
-        if (!currentChord) return;
-        const root = currentChord.root;
+        const beatsPerChord = 16; // One chord per measure (16 sixteenth notes)
+        const beatsPerMeasure = beatsPerChord * this.chords.length; // Full chord progression
+        const chordIndex = Math.floor(this.stepIndex / beatsPerChord) % this.chords.length;
+        const step = this.stepIndex % beatsPerChord;
+        const chord = this.chords[chordIndex];
 
-        // --- Simple Melody Only (Pentatonic) ---
-        const scale = this.musicConfig.PENTATONIC_SCALE;
+        if (!chord) return;
 
-        // Main melody notes on beats
-        if (step === 0 || step === 4 || step === 8 || step === 12) {
-            const noteIdx = (measure + Math.floor(step / 4)) % scale.length;
-            const freq = root * 2 * scale[noteIdx];
-            this.playSynthNote(freq, 0.3, 'sine', 0.12, time);
+        // Track measure completion for section changes
+        if (this.stepIndex > 0 && this.stepIndex % beatsPerMeasure === 0) {
+            this.measureCount++;
+            // Check if we should advance to next section
+            if (this.measureCount >= this.measuresPerSection) {
+                this.measureCount = 0;
+                this.sectionIndex = (this.sectionIndex + 1) % this.sections.length;
+            }
         }
 
-        // Soft harmony on off-beats
-        if (step === 2 || step === 10) {
-            const noteIdx = (measure + 2) % scale.length;
-            const freq = root * 2 * scale[noteIdx];
-            this.playSynthNote(freq, 0.15, 'triangle', 0.06, time);
+        // Select melody and arpeggio style based on current section
+        const currentSection = this.sections[this.sectionIndex] || 'A';
+        const melody = this.melodies[currentSection] || this.melodies.A;
+
+        // Select arpeggio pattern based on section for variety
+        let arpKey = 'arp';
+        if (currentSection === 'B' || currentSection === 'D') {
+            arpKey = 'arp_alt';  // Descending arpeggios for B and D sections
+        } else if (currentSection === 'C') {
+            arpKey = 'arp_bounce';  // Bouncy arpeggios for playful C section
         }
+        const arp = chord[arpKey] || chord.arp;
+
+        const vol = GameConfig.AUDIO.MUSIC_VOLUME_MULTIPLIER * 0.5;
+
+        // --- Triangle Bass on beats 0 and 8 ---
+        if (step === 0 || step === 8) {
+            this.playChipNote(chord.bass, 0.4, 'triangle', vol * 0.8, time);
+        }
+
+        // --- Arpeggiated chord (square wave, soft) ---
+        // Play arpeggio notes on steps 0,2,4,6,8,10,12,14 (8th notes)
+        if (step % 2 === 0 && arp) {
+            const arpIndex = (step / 2) % arp.length;
+            this.playChipNote(arp[arpIndex], 0.15, 'square', vol * 0.3, time);
+        }
+
+        // --- Melody (square wave, prominent) ---
+        // Play melody on steps 0,4,8,12 (quarter notes)
+        if (step % 4 === 0 && melody && melody.length > 0) {
+            const melodyIndex = (this.stepIndex / 4) % melody.length;
+            const melodyNote = melody[melodyIndex];
+            if (melodyNote > 0) { // -1 = rest
+                this.playChipNote(melodyNote, 0.35, 'square', vol * 0.6, time);
+            }
+        }
+    }
+
+    // Play a chiptune-style note with slight attack/decay envelope
+    playChipNote(freq, duration, type, vol, time) {
+        if (!this.context || this.context.state !== 'running') return;
+
+        const osc = this.context.createOscillator();
+        const gain = this.context.createGain();
+
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, time);
+
+        // Chiptune envelope: quick attack, sustain, quick release
+        gain.gain.setValueAtTime(0, time);
+        gain.gain.linearRampToValueAtTime(vol * this.masterVolume, time + 0.01);
+        gain.gain.setValueAtTime(vol * this.masterVolume, time + duration - 0.02);
+        gain.gain.linearRampToValueAtTime(0, time + duration);
+
+        osc.connect(gain);
+        gain.connect(this.context.destination);
+
+        osc.start(time);
+        osc.stop(time + duration + 0.01);
     }
 
     playSynthNote(freq, duration, type, vol, time) {
@@ -266,76 +329,28 @@ export default class SoundManager {
         osc.stop(time + duration + 0.1);
     }
 
-    playDrum(type, time) {
-        if (!this.context || this.context.state !== 'running') return;
-
-        const drums = this.drumConfig;
-
-        if (type === 'kick') {
-            const osc = this.context.createOscillator();
-            const gain = this.context.createGain();
-            osc.frequency.setValueAtTime(drums.KICK_FREQ_START, time);
-            osc.frequency.exponentialRampToValueAtTime(0.01, time + drums.KICK_DURATION);
-            gain.gain.setValueAtTime(drums.KICK_VOLUME * this.masterVolume, time);
-            gain.gain.exponentialRampToValueAtTime(0.001, time + drums.KICK_DURATION);
-            osc.connect(gain);
-            gain.connect(this.context.destination);
-            osc.start(time);
-            osc.stop(time + drums.KICK_DURATION);
-        } else if (type === 'snare') {
-            const noise = this.context.createBufferSource();
-            const buffer = this.context.createBuffer(1, this.context.sampleRate * drums.SNARE_DURATION, this.context.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < buffer.length; i++) data[i] = Math.random() * 2 - 1;
-            noise.buffer = buffer;
-            const gain = this.context.createGain();
-            gain.gain.setValueAtTime(drums.SNARE_VOLUME * this.masterVolume, time);
-            gain.gain.exponentialRampToValueAtTime(0.001, time + drums.SNARE_DURATION);
-            noise.connect(gain);
-            gain.connect(this.context.destination);
-            noise.start(time);
-        } else if (type === 'hat') {
-            const noise = this.context.createBufferSource();
-            const buffer = this.context.createBuffer(1, this.context.sampleRate * drums.HAT_DURATION, this.context.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < buffer.length; i++) data[i] = Math.random() * 2 - 1;
-            noise.buffer = buffer;
-
-            const filter = this.context.createBiquadFilter();
-            filter.type = 'highpass';
-            filter.frequency.value = drums.HAT_HIGHPASS_FREQ;
-
-            const gain = this.context.createGain();
-            gain.gain.setValueAtTime(drums.HAT_VOLUME * this.masterVolume, time);
-            gain.gain.exponentialRampToValueAtTime(0.001, time + drums.HAT_DURATION);
-
-            noise.connect(filter);
-            filter.connect(gain);
-            gain.connect(this.context.destination);
-            noise.start(time);
-        }
-    }
-
     stopMusic() {
         this.isMusicPlaying = false;
         if (this.musicTimer) {
             clearTimeout(this.musicTimer);
             this.musicTimer = null;
         }
-        // Clear references to prevent stale context access
-        this.chordProgression = null;
+        // Clear references
+        this.chords = null;
+        this.melodies = {};
+        this.sections = null;
         this.stepIndex = 0;
         this.nextNoteTime = 0;
+        this.sectionIndex = 0;
+        this.measureCount = 0;
     }
 
     // Clean up when scene is destroyed
     destroy() {
         this.stopMusic();
-        // Don't null the shared context, just clear our reference
         this.context = null;
         this.scene = null;
         this.soundDefs = null;
         this.musicConfig = null;
-        this.drumConfig = null;
     }
 }

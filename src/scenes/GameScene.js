@@ -406,6 +406,9 @@ export default class GameScene extends Phaser.Scene {
             this.createObjectivesDisplay(this.cameras.main.width);
             this.updateProgressBar();
 
+            // Jelly-specific particles
+            this.emitJellyParticles(row, col);
+
             // Animate objective text
             if (this.objectiveText?.scene) {
                 this.tweens.add({
@@ -894,32 +897,71 @@ export default class GameScene extends Phaser.Scene {
     }
 
     emitParticles(row, col, type) {
-        if (!this.board) return;
+        if (!this.board || !this.emitter) return;
         const pos = this.board.gridToWorld(row, col);
-        
+
         const colors = GameConfig.COLORS;
         const color = colors[type] || 0xffffff;
-        
+
         this.emitter.setConfig({
             tint: color,
-            speed: { min: 50, max: 200 },
-            scale: { start: 0.5, end: 0 }
+            speed: { min: 80, max: 250 },
+            scale: { start: 0.6, end: 0 },
+            lifespan: 500,
+            angle: { min: 0, max: 360 }
         });
-        
-        this.emitter.emitParticleAt(pos.x, pos.y, 10);
+
+        this.emitter.emitParticleAt(pos.x, pos.y, 12);
+    }
+
+    emitJellyParticles(row, col) {
+        if (!this.board || !this.emitter) return;
+        const pos = this.board.gridToWorld(row, col);
+
+        // Pink/magenta burst for jelly
+        this.emitter.setConfig({
+            tint: 0xff69b4,
+            speed: { min: 100, max: 300 },
+            scale: { start: 0.8, end: 0 },
+            lifespan: 700,
+            angle: { min: 0, max: 360 },
+            alpha: { start: 1, end: 0.3 }
+        });
+
+        this.emitter.emitParticleAt(pos.x, pos.y, 20);
     }
 
     emitSpecialParticles(row, col, type) {
-        if (!this.board) return;
+        if (!this.board || !this.emitter) return;
         const pos = this.board.gridToWorld(row, col);
-        
-        this.emitter.setConfig({
+
+        // Different effects based on special type
+        let config = {
             tint: 0xffffff,
             speed: 300,
-            scale: { start: 1, end: 0 }
-        });
+            scale: { start: 1, end: 0 },
+            lifespan: 600
+        };
 
-        this.emitter.emitParticleAt(pos.x, pos.y, 30);
+        if (type === 'bomb' || type === 'color_bomb') {
+            config = {
+                tint: 0xffaa00,
+                speed: { min: 200, max: 400 },
+                scale: { start: 1.2, end: 0 },
+                lifespan: 800,
+                angle: { min: 0, max: 360 }
+            };
+        } else if (type === 'line_h' || type === 'line_v') {
+            config = {
+                tint: 0x00ffff,
+                speed: { min: 150, max: 350 },
+                scale: { start: 0.8, end: 0 },
+                lifespan: 500
+            };
+        }
+
+        this.emitter.setConfig(config);
+        this.emitter.emitParticleAt(pos.x, pos.y, type === 'color_bomb' ? 50 : 30);
     }
 
     setupHintSystem() {
@@ -1005,16 +1047,101 @@ export default class GameScene extends Phaser.Scene {
     }
 
     async playBonusRound() {
-        if (this.movesRemaining > 0) {
-            const bonusScore = this.movesRemaining * 1000;
-            const step = Math.floor(bonusScore / 10);
+        if (this.movesRemaining <= 0) return;
 
-            for (let i = 0; i < 10; i++) {
-                this.score += step;
-                if (this.scoreText?.scene) this.scoreText.setText(`Score: ${this.score}`);
-                if (this.soundManager) this.soundManager.play('match');
-                await new Promise(r => setTimeout(r, 100));
+        // Show BONUS text
+        const bonusText = this.add.text(this.cameras.main.width / 2, 200, 'BONUS!', {
+            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontSize: '48px',
+            color: '#ffeb3b',
+            stroke: '#ff6b00',
+            strokeThickness: 6
+        }).setOrigin(0.5).setDepth(100);
+
+        this.tweens.add({
+            targets: bonusText,
+            scaleX: 1.3,
+            scaleY: 1.3,
+            duration: 500,
+            yoyo: true,
+            repeat: 1
+        });
+
+        await new Promise(r => setTimeout(r, 800));
+
+        // Convert remaining moves to special candies (cap at 10)
+        const specialTypes = ['line_h', 'line_v', 'bomb', 'color_bomb'];
+        const movesToConvert = Math.min(this.movesRemaining, 10);
+
+        for (let i = 0; i < movesToConvert; i++) {
+            // Find a random non-special, non-locked candy
+            const candidates = [];
+            for (let r = 0; r < this.board.rows; r++) {
+                for (let c = 0; c < this.board.cols; c++) {
+                    const candy = this.board.candies[r][c];
+                    if (candy && candy.active && !candy.isSpecial && !candy.isIngredient && !this.board.locked[r][c]) {
+                        candidates.push(candy);
+                    }
+                }
             }
+
+            if (candidates.length === 0) break;
+
+            // Pick a random candy and convert it
+            const candy = candidates[Math.floor(Math.random() * candidates.length)];
+            const specialType = specialTypes[Math.floor(Math.random() * specialTypes.length)];
+            candy.makeSpecial(specialType);
+
+            // Visual feedback
+            if (this.soundManager) this.soundManager.play('select');
+            this.tweens.add({
+                targets: candy,
+                scaleX: 1.3,
+                scaleY: 1.3,
+                duration: 150,
+                yoyo: true
+            });
+
+            // Update moves display
+            this.movesRemaining--;
+            if (this.movesText?.scene) this.movesText.setText(`Moves: ${this.movesRemaining}`);
+
+            await new Promise(r => setTimeout(r, 200));
+        }
+
+        await new Promise(r => setTimeout(r, 500));
+        bonusText.destroy();
+
+        // Now activate all specials one by one
+        let hasSpecials = true;
+        while (hasSpecials) {
+            // Find the first special candy
+            let specialCandy = null;
+            for (let r = 0; r < this.board.rows && !specialCandy; r++) {
+                for (let c = 0; c < this.board.cols && !specialCandy; c++) {
+                    const candy = this.board.candies[r][c];
+                    if (candy && candy.active && candy.isSpecial) {
+                        specialCandy = candy;
+                    }
+                }
+            }
+
+            if (!specialCandy) {
+                hasSpecials = false;
+                break;
+            }
+
+            // Activate the special
+            if (this.soundManager) {
+                this.soundManager.play(specialCandy.specialType === 'bomb' || specialCandy.specialType === 'color_bomb' ? 'bomb' : 'line');
+            }
+
+            await this.board.activateSpecial(specialCandy);
+            await this.board.applyGravity();
+            await this.board.fillEmptySpaces();
+            await this.board.processCascades();
+
+            await new Promise(r => setTimeout(r, 300));
         }
     }
 

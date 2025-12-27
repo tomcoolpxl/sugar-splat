@@ -215,7 +215,8 @@ export default class Board {
                 await this.processCascades();
                 this.scene.events.emit('cascadeComplete');
             } else {
-                await this.swapCandies(candy1, candy2);
+                // Swap back with a shake effect
+                await this.swapCandiesWithShake(candy1, candy2);
                 this.scene.events.emit('invalidSwap');
             }
         } finally {
@@ -243,9 +244,83 @@ export default class Board {
 
             const pos1 = this.gridToWorld(candy1.row, candy1.col);
             const pos2 = this.gridToWorld(candy2.row, candy2.col);
+            const duration = GameConfig?.BOARD?.ANIMATION_SPEED?.SWAP || 150;
 
-            this.scene.tweens.add({ targets: candy1, x: pos1.x, y: pos1.y, duration: GameConfig?.BOARD?.ANIMATION_SPEED?.SWAP || 150, ease: 'Power2' });
-            this.scene.tweens.add({ targets: candy2, x: pos2.x, y: pos2.y, duration: GameConfig?.BOARD?.ANIMATION_SPEED?.SWAP || 150, ease: 'Power2', onComplete: resolve });
+            this.scene.tweens.add({ targets: candy1, x: pos1.x, y: pos1.y, duration, ease: 'Back.easeOut' });
+            this.scene.tweens.add({ targets: candy2, x: pos2.x, y: pos2.y, duration, ease: 'Back.easeOut', onComplete: resolve });
+        });
+    }
+
+    swapCandiesWithShake(candy1, candy2) {
+        return new Promise((resolve) => {
+            const tempType = this.grid[candy1.row][candy1.col];
+            this.grid[candy1.row][candy1.col] = this.grid[candy2.row][candy2.col];
+            this.grid[candy2.row][candy2.col] = tempType;
+
+            this.candies[candy1.row][candy1.col] = candy2;
+            this.candies[candy2.row][candy2.col] = candy1;
+
+            const tempRow = candy1.row;
+            const tempCol = candy1.col;
+            candy1.row = candy2.row;
+            candy1.col = candy2.col;
+            candy2.row = tempRow;
+            candy2.col = tempCol;
+
+            const pos1 = this.gridToWorld(candy1.row, candy1.col);
+            const pos2 = this.gridToWorld(candy2.row, candy2.col);
+            const duration = GameConfig?.BOARD?.ANIMATION_SPEED?.SWAP || 150;
+
+            // Swap back with elastic overshoot then shake
+            this.scene.tweens.add({
+                targets: candy1,
+                x: pos1.x,
+                y: pos1.y,
+                duration,
+                ease: 'Back.easeOut',
+                onComplete: () => {
+                    // Shake horizontally
+                    this.scene.tweens.add({
+                        targets: candy1,
+                        x: pos1.x + 8,
+                        duration: 40,
+                        yoyo: true,
+                        repeat: 3,
+                        ease: 'Sine.easeInOut',
+                        onComplete: () => { candy1.x = pos1.x; }
+                    });
+                }
+            });
+            this.scene.tweens.add({
+                targets: candy2,
+                x: pos2.x,
+                y: pos2.y,
+                duration,
+                ease: 'Back.easeOut',
+                onComplete: () => {
+                    // Shake horizontally
+                    this.scene.tweens.add({
+                        targets: candy2,
+                        x: pos2.x + 8,
+                        duration: 40,
+                        yoyo: true,
+                        repeat: 3,
+                        ease: 'Sine.easeInOut',
+                        onComplete: () => {
+                            candy2.x = pos2.x;
+                            resolve();
+                        }
+                    });
+                }
+            });
+
+            // Flash red tint briefly
+            candy1.setTint(0xff6666);
+            candy2.setTint(0xff6666);
+            this.scene.time.delayedCall(300, () => {
+                if (candy1.active) candy1.clearTint();
+                if (candy2.active) candy2.clearTint();
+            });
         });
     }
 
@@ -564,16 +639,33 @@ export default class Board {
     async clearCandiesWithSpecials(cells, specialsToCreate) {
         const specialPos = new Set(specialsToCreate.map(s => `${s.position.row},${s.position.col}`));
         const toClear = cells.filter(c => !specialPos.has(`${c.row},${c.col}`));
-        
+
         const promises = toClear.map((cell, i) => {
+            const key = `${cell.row},${cell.col}`;
+            // Skip if already being cleared
+            if (this.clearingCells.has(key)) return Promise.resolve();
+            this.clearingCells.add(key);
+
             const candy = this.candies[cell.row][cell.col];
-            if (candy) {
+            if (candy && candy.active) {
                 this.handleJellyAt(cell.row, cell.col);
                 this.grid[cell.row][cell.col] = -1;
                 this.candies[cell.row][cell.col] = null;
-                this.scene.events.emit('candyCleared', cell.row, cell.col, candy.candyType);
-                return new Promise(res => this.scene.tweens.add({ targets: candy, scaleX: 0, scaleY: 0, alpha: 0, duration: 200, delay: i * 20, onComplete: () => { candy.destroy(); res(); } }));
+                const candyType = candy.candyType;
+                this.scene.events.emit('candyCleared', cell.row, cell.col, candyType);
+                return new Promise(res => this.scene.tweens.add({
+                    targets: candy,
+                    scaleX: 0, scaleY: 0, alpha: 0,
+                    duration: 200,
+                    delay: i * 20,
+                    onComplete: () => {
+                        if (candy.active) candy.destroy();
+                        this.clearingCells.delete(key);
+                        res();
+                    }
+                }));
             }
+            this.clearingCells.delete(key);
             return Promise.resolve();
         });
 
@@ -581,8 +673,17 @@ export default class Board {
             const { row, col } = special.position;
             const old = this.candies[row][col];
             this.handleJellyAt(row, col);
-            if (old) {
-                return new Promise(res => this.scene.tweens.add({ targets: old, scaleX: 1.3, scaleY: 1.3, duration: 150, yoyo: true, onComplete: () => { old.makeSpecial(special.type); res(); } }));
+            if (old && old.active) {
+                return new Promise(res => this.scene.tweens.add({
+                    targets: old,
+                    scaleX: 1.3, scaleY: 1.3,
+                    duration: 150,
+                    yoyo: true,
+                    onComplete: () => {
+                        if (old.active) old.makeSpecial(special.type);
+                        res();
+                    }
+                }));
             } else {
                 const candy = this.createCandy(row, col, special.candyType);
                 candy.makeSpecial(special.type);
@@ -596,15 +697,35 @@ export default class Board {
 
     async clearCandies(cells) {
         const promises = cells.map((cell, i) => {
+            const key = `${cell.row},${cell.col}`;
+            // Skip if already being cleared
+            if (this.clearingCells.has(key)) return Promise.resolve();
+            this.clearingCells.add(key);
+
             const candy = this.candies[cell.row][cell.col];
-            if (candy) {
+            if (candy && candy.active) {
                 this.handleJellyAt(cell.row, cell.col);
-                if (this.locked[cell.row][cell.col]) { this.locked[cell.row][cell.col] = false; this.removeLockSprite(cell.row, cell.col); }
+                if (this.locked[cell.row][cell.col]) {
+                    this.locked[cell.row][cell.col] = false;
+                    this.removeLockSprite(cell.row, cell.col);
+                }
                 this.grid[cell.row][cell.col] = -1;
                 this.candies[cell.row][cell.col] = null;
-                this.scene.events.emit('candyCleared', cell.row, cell.col, candy.candyType);
-                return new Promise(res => this.scene.tweens.add({ targets: candy, scaleX: 0, scaleY: 0, alpha: 0, duration: 200, delay: i * 20, onComplete: () => { candy.destroy(); res(); } }));
+                const candyType = candy.candyType;
+                this.scene.events.emit('candyCleared', cell.row, cell.col, candyType);
+                return new Promise(res => this.scene.tweens.add({
+                    targets: candy,
+                    scaleX: 0, scaleY: 0, alpha: 0,
+                    duration: 200,
+                    delay: i * 20,
+                    onComplete: () => {
+                        if (candy.active) candy.destroy();
+                        this.clearingCells.delete(key);
+                        res();
+                    }
+                }));
             }
+            this.clearingCells.delete(key);
             return Promise.resolve();
         });
         await Promise.all(promises);

@@ -196,31 +196,98 @@ export default class MatchLogic {
     }
 
     findValidMove() {
-        const { rows, cols, grid, locked } = this.board;
+        const { rows, cols, locked } = this.board;
+        let bestMove = null;
+        let bestScore = -1;
+
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
                 if (locked[row][col]) continue;
 
+                // Try swap right
                 if (col < cols - 1 && !locked[row][col + 1]) {
                     this.swapGridData(row, col, row, col + 1);
-                    if (this.findMatches().length > 0) {
-                        this.swapGridData(row, col, row, col + 1);
-                        return [{ row, col }, { row, col: col + 1 }];
+                    const matches = this.findMatches();
+                    if (matches.length > 0) {
+                        const score = this.scoreMatches(matches);
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMove = [{ row, col }, { row, col: col + 1 }];
+                        }
                     }
                     this.swapGridData(row, col, row, col + 1);
                 }
 
+                // Try swap down
                 if (row < rows - 1 && !locked[row + 1][col]) {
                     this.swapGridData(row, col, row + 1, col);
-                    if (this.findMatches().length > 0) {
-                        this.swapGridData(row, col, row + 1, col);
-                        return [{ row, col }, { row: row + 1, col }];
+                    const matches = this.findMatches();
+                    if (matches.length > 0) {
+                        const score = this.scoreMatches(matches);
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMove = [{ row, col }, { row: row + 1, col }];
+                        }
                     }
                     this.swapGridData(row, col, row + 1, col);
                 }
             }
         }
-        return null;
+        return bestMove;
+    }
+
+    // Score matches based on objective progress and special candy creation
+    scoreMatches(matches) {
+        let score = 0;
+        const scene = this.board.scene;
+        const objective = this.board.levelConfig?.objective || 'score';
+        const collectTargets = this.board.levelConfig?.collect || {};
+
+        for (const match of matches) {
+            const cellCount = match.cells.length;
+
+            // Base score for match length (longer = better specials)
+            score += cellCount * 10;
+
+            // Bonus for special candy creation
+            if (match.specialToCreate === 'color_bomb') {
+                score += 200; // 5+ match = color bomb
+            } else if (match.specialToCreate === 'bomb') {
+                score += 150; // T/L shape = bomb
+            } else if (match.specialToCreate === 'line_h' || match.specialToCreate === 'line_v') {
+                score += 100; // 4 match = line clearer
+            }
+
+            // Objective-specific scoring
+            for (const cell of match.cells) {
+                // Jelly clearing bonus
+                if (objective === 'clearJelly' || objective === 'mixed' || objective === 'ultimate') {
+                    if (this.board.jelly[cell.row][cell.col] > 0) {
+                        score += 50; // Each jelly cell cleared is valuable
+                    }
+                }
+
+                // Collection bonus
+                if (objective === 'collect' || objective === 'mixed' || objective === 'ultimate') {
+                    const candyType = match.type;
+                    if (collectTargets[candyType] !== undefined) {
+                        const remaining = (scene?.objectives?.collect?.[candyType] || 0) -
+                                          (scene?.status?.collect?.[candyType] || 0);
+                        if (remaining > 0) {
+                            score += 40; // Matches target color
+                        }
+                    }
+                }
+
+                // Drop objective - prioritize lower row matches
+                if (objective === 'drop' || objective === 'mixed' || objective === 'ultimate') {
+                    // Matches in lower rows help ingredients fall
+                    score += cell.row * 2;
+                }
+            }
+        }
+
+        return score;
     }
 
     swapGridData(r1, c1, r2, c2) {
