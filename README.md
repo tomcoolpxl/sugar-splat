@@ -23,7 +23,7 @@ Then open `http://localhost:8000` in your browser.
 - Swap adjacent candies to create matches of 3+
 - Chain reactions (cascades) with combo multipliers
 - Move-limited levels with varied objectives
-- 30 levels with progressive difficulty
+- 40 levels with progressive difficulty across 8 worlds
 
 ### Special Candies
 | Match Pattern | Creates | Effect |
@@ -51,6 +51,11 @@ Then open `http://localhost:8000` in your browser.
 | Stone | Permanent obstacle; candies fall around it |
 | Honey | Spreads each turn! Match on honey to clear it |
 | Licorice Walls | Blocks swaps between cells (not matches) |
+| Chocolate | Spreads to adjacent cells; match next to it to clear |
+| Crate (1-3 layers) | Wooden box around candy; match to break layers |
+| Bomb Timer | Countdown bomb; must clear before it explodes! |
+| Conveyor Belt | Moves candies in direction each turn |
+| Portal | Teleports candies between paired locations |
 
 ### Objectives
 - Score targets
@@ -86,7 +91,7 @@ sugar-splash/
 │   ├── main.js                 # Phaser configuration
 │   ├── Config.js               # Centralized game config
 │   ├── data/
-│   │   └── LevelData.js        # Level definitions (20 levels)
+│   │   └── LevelData.js        # Level definitions (40 levels)
 │   ├── scenes/
 │   │   ├── BootScene.js        # Asset generation
 │   │   ├── MenuScene.js        # Title screen

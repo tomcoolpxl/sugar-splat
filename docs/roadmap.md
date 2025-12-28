@@ -7,9 +7,9 @@
 - [x] Cascades with combo multipliers
 - [x] Special candies (Line, Bomb, Color Bomb)
 - [x] Special + Special combo effects
-- [x] Blockers (Jelly, Locked, Ice, Chains, Stone, Honey, Licorice)
-- [x] Multiple objective types (Score, Jelly, Collect, Drop)
-- [x] 30 levels with progressive difficulty
+- [x] Blockers (Jelly, Locked, Ice, Chains, Stone, Honey, Licorice, Chocolate, Crate, Bomb Timer, Conveyor, Portal)
+- [x] Multiple objective types (Score, Jelly, Collect, Drop, Mixed, Ultimate)
+- [x] 40 levels with progressive difficulty across 8 worlds
 
 ### Systems
 - [x] ActionProcessor with error recovery
@@ -47,14 +47,16 @@
 ## Future Enhancements
 
 ### Features
-- [ ] More levels (31-50)
+- [x] More levels (31-40) - Added chocolate, crate, bomb timer, conveyor, portal mechanics
+- [ ] More levels (41-50)
 - [ ] Daily challenges
 - [ ] High score leaderboards (local)
 
 ### Polish
 - [ ] Improved in-game music quality (less repetitive)
-- [ ] More particle variety
-- [ ] Screen shake options
+- [x] More particle variety (blocker-specific particles, coin bonanza during bonus)
+- [x] Screen shake on special effects
+- [x] Smart hint system (prioritizes objectives, blockers, bomb timers)
 
 ### Low Priority
 - [ ] Level data externalization to JSON
