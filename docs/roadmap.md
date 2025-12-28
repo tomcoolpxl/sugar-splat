@@ -15,10 +15,12 @@
 - [x] ActionProcessor with error recovery
 - [x] Config centralization in Config.js
 - [x] Procedural WebAudio (music + SFX)
+- [x] C64Sequencer for menu chiptune music
 - [x] Powerup system with rewards
 - [x] Bonus round (moves to specials)
-- [x] Hint system (5s idle)
+- [x] Hint system with dual-candy highlighting
 - [x] Tutorial overlays
+- [x] Settings dialogs (Menu & Level Select)
 
 ### Architecture (Refactored Dec 2025)
 - [x] GameScene split into focused managers
@@ -35,6 +37,10 @@
 - [x] Mobile swipe controls
 - [x] Sound/music toggles
 - [x] Scene lifecycle cleanup
+- [x] Color bomb laser beam effect
+- [x] Score counter animation (counting up with pop effect)
+- [x] Animated menu/level select screens
+- [x] Hint system cycles visibility (show/hide)
 
 ---
 
@@ -47,9 +53,9 @@
 - [ ] High score leaderboards (local)
 
 ### Polish
-- [ ] Improved music quality (less repetitive)
-- [x] Score counter animation (counting up)
+- [ ] Improved in-game music quality (less repetitive)
 - [ ] More particle variety
+- [ ] Screen shake options
 
 ### Low Priority
 - [ ] Level data externalization to JSON

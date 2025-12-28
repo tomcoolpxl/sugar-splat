@@ -62,9 +62,13 @@ Earn powerups by completing levels with stars:
 
 ### Polish
 - Procedural audio (WebAudio synth music & SFX)
+- C64-style chiptune music for menus
 - Particle effects for matches and specials
+- Color bomb laser beam effect (beams to all targets)
+- Score counter animation (counts up smoothly)
 - Bonus round converts remaining moves to points
-- Hint system after 5 seconds idle
+- Hint system with pulsing rings on both swap candies
+- Animated menu screens with floating candies
 - Star ratings (1-3 based on moves remaining)
 - Local save (localStorage)
 
@@ -90,6 +94,7 @@ sugar-splash/
 │   │   ├── ActionProcessor.js  # Cascade/match processing
 │   │   ├── MatchLogic.js       # Match detection algorithms
 │   │   ├── SoundManager.js     # WebAudio procedural audio
+│   │   ├── C64Sequencer.js     # C64-style chiptune music
 │   │   ├── PowerupManager.js   # Powerup UI & activation
 │   │   ├── DialogManager.js    # Win/lose/pause dialogs
 │   │   ├── BonusRoundManager.js# End-of-level bonus round

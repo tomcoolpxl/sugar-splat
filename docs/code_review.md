@@ -28,10 +28,11 @@ src/
 │   ├── ActionProcessor.js  # Async cascade sequencing with error recovery
 │   ├── MatchLogic.js       # BFS matching, intersection detection
 │   ├── SoundManager.js     # WebAudio procedural synth (music + SFX)
+│   ├── C64Sequencer.js     # C64-style chiptune music for menus
 │   ├── PowerupManager.js   # Powerup UI, activation, rewards
-│   ├── DialogManager.js    # Modal dialogs (win/lose/pause/tutorial)
+│   ├── DialogManager.js    # Modal dialogs (win/lose/pause/tutorial/settings)
 │   ├── BonusRoundManager.js# End-of-level bonus round
-│   ├── HintManager.js      # Idle hint system
+│   ├── HintManager.js      # Idle hint with dual-candy highlighting
 │   └── ParticleManager.js  # Particle effects
 └── ui/
     └── HUDManager.js       # Score, moves, progress bar, objectives
@@ -84,14 +85,24 @@ All textures created with Phaser Graphics API, sounds with WebAudio oscillators.
 ### Manager Extraction
 GameScene was refactored from ~1920 lines to ~520 lines by extracting:
 - PowerupManager (482 lines)
-- DialogManager (381 lines)
-- HUDManager (330 lines)
+- HUDManager (413 lines) - includes score counter animation
+- DialogManager (389 lines) - includes settings dialogs
+- HintManager (352 lines) - dual-candy highlighting with visibility cycling
 - BonusRoundManager (256 lines)
 - ParticleManager (120 lines)
-- HintManager (109 lines)
+
+### Audio Architecture
+- **SoundManager** - WebAudio procedural synth for in-game music and SFX
+- **C64Sequencer** - Authentic C64-style chiptune for menu screens, using PAL timing and SID-inspired synthesis
 
 ### Error Recovery
 ActionProcessor uses try/catch/finally with re-entrancy protection. 10-second watchdog timer as last resort backup.
+
+### Visual Effects
+- **Color Bomb Lasers** - Beams shoot one-by-one to targets, all stay visible, then explode together
+- **Score Animation** - Smooth counting up with pop effect and color flash
+- **Hint System** - Pulsing rings on both candies, swap arrows between them, visibility cycles on/off
+- **Menu Animations** - Floating candies, bouncing across screen, rising bubbles, sparkles, cursor trail
 
 ### Mobile Support
 Touch input with swipe detection. Threshold-based gesture recognition distinguishes taps from swipes.
