@@ -323,7 +323,10 @@ export default class LevelSelectScene extends Phaser.Scene {
 
             const levelData = saveData.levels[level] || { completed: false, stars: 0 };
             // First 5 levels always unlocked, rest unlock when previous is completed
-            const isUnlocked = level <= 5 || saveData.levels[level - 1]?.completed;
+            // Also unlock if the level itself was ever played (has any data)
+            const prevCompleted = saveData.levels[level - 1]?.completed || saveData.levels[String(level - 1)]?.completed;
+            const selfPlayed = levelData.completed || levelData.stars > 0;
+            const isUnlocked = level <= 5 || prevCompleted || selfPlayed;
             const isBoss = this.bossLevels.includes(level);
 
             this.createLevelButton(this.levelContainer, x, y, level, levelData, isUnlocked, buttonSize, isBoss);
