@@ -23,7 +23,7 @@ Then open `http://localhost:8000` in your browser.
 - Swap adjacent candies to create matches of 3+
 - Chain reactions (cascades) with combo multipliers
 - Move-limited levels with varied objectives
-- 20 levels with progressive difficulty
+- 30 levels with progressive difficulty
 
 ### Special Candies
 | Match Pattern | Creates | Effect |
@@ -46,6 +46,11 @@ Then open `http://localhost:8000` in your browser.
 | Jelly (Single) | Clears when match occurs on cell |
 | Jelly (Double) | Requires 2 matches to clear |
 | Locked Tile | Unlocks when adjacent match occurs |
+| Ice (1-2 layers) | Frozen candy can't swap; match it to break ice |
+| Chains (1-2 layers) | Chained candy can't swap but can match through |
+| Stone | Permanent obstacle; candies fall around it |
+| Honey | Spreads each turn! Match on honey to clear it |
+| Licorice Walls | Blocks swaps between cells (not matches) |
 
 ### Objectives
 - Score targets

@@ -5,13 +5,32 @@ export default class MatchLogic {
 
     findMatches() {
         const matches = [];
-        const { rows, cols, grid, locked } = this.board;
+        const { rows, cols, grid, locked, stone } = this.board;
+
+        // Helper: check if cell can be part of a match
+        // Stone blocks matches, locked tiles block matches
+        // Ice and chains DO NOT block matches (matching breaks them)
+        const canMatch = (r, c) => {
+            if (!this.board.isValidCell(r, c)) return false;
+            if (stone[r][c]) return false;
+            if (locked[r][c]) return false;
+            const type = grid[r][c];
+            if (type === -1 || type >= 100) return false;
+            return true;
+        };
 
         // 1. Horizontal Matches
         for (let row = 0; row < rows; row++) {
             let col = 0;
             while (col < cols) {
+                // Stone cells block matches and have no candy
+                if (stone[row][col]) {
+                    col++;
+                    continue;
+                }
+
                 const type = grid[row][col];
+                // Skip empty, locked, and ingredient cells
                 if (type === -1 || locked[row][col] || type >= 100) {
                     col++;
                     continue;
@@ -19,8 +38,8 @@ export default class MatchLogic {
 
                 let matchLength = 1;
                 while (col + matchLength < cols &&
-                       grid[row][col + matchLength] === type &&
-                       !locked[row][col + matchLength]) {
+                       canMatch(row, col + matchLength) &&
+                       grid[row][col + matchLength] === type) {
                     matchLength++;
                 }
 
@@ -45,7 +64,14 @@ export default class MatchLogic {
         for (let col = 0; col < cols; col++) {
             let row = 0;
             while (row < rows) {
+                // Stone cells block matches and have no candy
+                if (stone[row][col]) {
+                    row++;
+                    continue;
+                }
+
                 const type = grid[row][col];
+                // Skip empty, locked, and ingredient cells
                 if (type === -1 || locked[row][col] || type >= 100) {
                     row++;
                     continue;
@@ -53,8 +79,8 @@ export default class MatchLogic {
 
                 let matchLength = 1;
                 while (row + matchLength < rows &&
-                       grid[row + matchLength][col] === type &&
-                       !locked[row + matchLength][col]) {
+                       canMatch(row + matchLength, col) &&
+                       grid[row + matchLength][col] === type) {
                     matchLength++;
                 }
 
@@ -163,16 +189,23 @@ export default class MatchLogic {
     }
 
     hasValidMoves() {
-        const { rows, cols, grid, candies, locked } = this.board;
+        const { rows, cols, candies, stone } = this.board;
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
-                if (locked[row][col]) continue;
+                // Skip stone cells
+                if (stone[row][col]) continue;
+
+                // Check if this cell can be swapped (ice, chains, honey, locked block swaps)
+                if (!this.board.canSwapAt(row, col)) continue;
 
                 const candy = candies[row][col];
-                if (candy && candy.isSpecial) return true; // Specials can always be tapped
+                // Specials that can be swapped can be activated
+                if (candy && candy.isSpecial) return true;
 
                 // Try swap right
-                if (col < cols - 1 && !locked[row][col + 1]) {
+                if (col < cols - 1 && !stone[row][col + 1] &&
+                    this.board.canSwapAt(row, col + 1) &&
+                    !this.board.hasLicoriceWall(row, col, row, col + 1)) {
                     this.swapGridData(row, col, row, col + 1);
                     if (this.findMatches().length > 0) {
                         this.swapGridData(row, col, row, col + 1);
@@ -182,7 +215,9 @@ export default class MatchLogic {
                 }
 
                 // Try swap down
-                if (row < rows - 1 && !locked[row + 1][col]) {
+                if (row < rows - 1 && !stone[row + 1][col] &&
+                    this.board.canSwapAt(row + 1, col) &&
+                    !this.board.hasLicoriceWall(row, col, row + 1, col)) {
                     this.swapGridData(row, col, row + 1, col);
                     if (this.findMatches().length > 0) {
                         this.swapGridData(row, col, row + 1, col);
@@ -196,16 +231,22 @@ export default class MatchLogic {
     }
 
     findValidMove() {
-        const { rows, cols, locked } = this.board;
+        const { rows, cols, stone } = this.board;
         let bestMove = null;
         let bestScore = -1;
 
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
-                if (locked[row][col]) continue;
+                // Skip stone cells
+                if (stone[row][col]) continue;
+
+                // Check if this cell can be swapped
+                if (!this.board.canSwapAt(row, col)) continue;
 
                 // Try swap right
-                if (col < cols - 1 && !locked[row][col + 1]) {
+                if (col < cols - 1 && !stone[row][col + 1] &&
+                    this.board.canSwapAt(row, col + 1) &&
+                    !this.board.hasLicoriceWall(row, col, row, col + 1)) {
                     this.swapGridData(row, col, row, col + 1);
                     const matches = this.findMatches();
                     if (matches.length > 0) {
@@ -219,7 +260,9 @@ export default class MatchLogic {
                 }
 
                 // Try swap down
-                if (row < rows - 1 && !locked[row + 1][col]) {
+                if (row < rows - 1 && !stone[row + 1][col] &&
+                    this.board.canSwapAt(row + 1, col) &&
+                    !this.board.hasLicoriceWall(row, col, row + 1, col)) {
                     this.swapGridData(row, col, row + 1, col);
                     const matches = this.findMatches();
                     if (matches.length > 0) {

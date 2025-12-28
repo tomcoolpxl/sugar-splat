@@ -8,7 +8,7 @@ const config = {
     parent: 'game-container',
     width: 720,
     height: 1280,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#FFB6C1', // Match game gradient top (pink)
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,

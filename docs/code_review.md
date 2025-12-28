@@ -12,10 +12,10 @@ Sugar Splash is a Phaser 3 match-3 game using ES6 modules. The codebase follows 
 
 ```
 src/
-├── Config.js               # Centralized configuration (colors, audio, timings)
+├── Config.js               # Centralized configuration (colors, audio, timings, blockers)
 ├── main.js                 # Phaser game initialization
 ├── data/
-│   └── LevelData.js        # Level definitions (20 levels)
+│   └── LevelData.js        # Level definitions (30 levels)
 ├── objects/
 │   ├── Board.js            # Grid state, rendering, input handling
 │   └── Candy.js            # Individual candy sprites with special types
@@ -66,6 +66,7 @@ export default class XxxManager {
 2. **Event-Driven Updates** - Score, objectives, UI update via Phaser events
 3. **Procedural Generation** - All textures and sounds generated at runtime (no external assets)
 4. **Composition** - GameScene composes managers rather than inheriting behavior
+5. **Blocker System** - 7 blocker types with consistent pattern: data array, sprite array, create function, handler function
 
 ### Data Flow
 

@@ -91,31 +91,33 @@ export default class DialogManager {
         const overlay = this.createOverlay(100);
         const container = this.createContainer(101);
 
-        this.createPanel(container, 320, 240, 20);
+        this.createPanel(container, 340, 300, 20);
 
         // Icon
-        const icon = this.scene.add.text(0, -70, tutorial.icon, { fontSize: '48px' }).setOrigin(0.5);
+        const icon = this.scene.add.text(0, -100, tutorial.icon, { fontSize: '48px' }).setOrigin(0.5);
         container.add(icon);
 
         // Title
-        const title = this.scene.add.text(0, -20, tutorial.title, {
+        const title = this.scene.add.text(0, -45, tutorial.title, {
             fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '28px',
+            fontSize: '26px',
             color: '#ff6b9d'
         }).setOrigin(0.5);
         container.add(title);
 
-        // Description
-        const desc = this.scene.add.text(0, 40, tutorial.text, {
+        // Description - with word wrap
+        const desc = this.scene.add.text(0, 20, tutorial.text, {
             fontFamily: 'Arial, sans-serif',
             fontSize: '18px',
             color: '#333333',
-            align: 'center'
+            align: 'center',
+            wordWrap: { width: 300 },
+            lineSpacing: 4
         }).setOrigin(0.5);
         container.add(desc);
 
         // Got it button
-        this.createButton(container, 0, 100, 'Got it!', () => {
+        this.createButton(container, 0, 115, 'Got it!', () => {
             localStorage.setItem(seenKey, 'true');
             overlay.destroy();
             container.destroy();
@@ -255,7 +257,7 @@ export default class DialogManager {
         // Buttons (65px spacing for comfortable touch targets)
         const buttonSpacing = 65;
 
-        if (currentLevel < 20) {
+        if (currentLevel < 30) {
             this.createButton(container, 0, buttonStartY, 'Next Level', onNext);
         } else {
             this.createButton(container, 0, buttonStartY, 'Main Menu', onNext);

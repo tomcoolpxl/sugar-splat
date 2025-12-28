@@ -4,7 +4,7 @@ import C64Sequencer from '../systems/C64Sequencer.js';
 export default class LevelSelectScene extends Phaser.Scene {
     constructor() {
         super('LevelSelectScene');
-        this.totalLevels = 20;
+        this.totalLevels = 30;
         this.columns = 4;
     }
 

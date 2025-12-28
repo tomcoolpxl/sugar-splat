@@ -53,6 +53,64 @@ export const GameConfig = {
         LOCK_COLOR: 0x87ceeb
     },
 
+    // Blocker Visuals
+    BLOCKERS: {
+        // Ice - frozen candy overlay
+        ICE_SINGLE_COLOR: 0x87CEEB,
+        ICE_DOUBLE_COLOR: 0x4FC3F7,
+        ICE_HIGHLIGHT: 0xFFFFFF,
+        ICE_SINGLE_ALPHA: 0.5,
+        ICE_DOUBLE_ALPHA: 0.7,
+        ICE_BORDER_SINGLE: 2,
+        ICE_BORDER_DOUBLE: 3,
+        ICE_PADDING: 4,
+        ICE_CORNER_RADIUS: 8,
+        ICE_SPARKLE_RADIUS: [3, 2, 2],
+
+        // Chains - metal links
+        CHAIN_COLOR: 0x9E9E9E,
+        CHAIN_HIGHLIGHT: 0xBDBDBD,
+        CHAIN_LINK_SIZE: 8,
+        CHAIN_SINGLE_WIDTH: 3,
+        CHAIN_DOUBLE_WIDTH: 4,
+        CHAIN_OFFSET_RATIO: 0.5,  // Offset from center as ratio of cellSize/2
+
+        // Stone - indestructible obstacle
+        STONE_COLOR: 0x757575,
+        STONE_CRACK_COLOR: 0x424242,
+        STONE_HIGHLIGHT: 0x9E9E9E,
+        STONE_PADDING: 4,
+        STONE_CORNER_RADIUS: 6,
+        STONE_CRACK_WIDTH: 2,
+        STONE_HIGHLIGHT_WIDTH: 2,
+
+        // Honey - spreading hazard
+        HONEY_COLOR: 0xFFB300,
+        HONEY_DRIP_COLOR: 0xFFC107,
+        HONEY_HIGHLIGHT: 0xFFE082,
+        HONEY_ALPHA: 0.75,
+        HONEY_PADDING: 6,
+        HONEY_CORNER_RADIUS: 12,
+        HONEY_DRIP_RADII: [8, 6, 5],
+        HONEY_HIGHLIGHT_RADII: [6, 3],
+        HONEY_SPREAD_INTERVAL: 2,        // Spread every N moves (1 = every move)
+        HONEY_SPREAD_CHANCE: 0.5,         // Chance each honey tile spreads (0-1)
+        HONEY_COVERAGE_LOSE_THRESHOLD: 0.85,
+
+        // Licorice - wall barrier
+        LICORICE_COLOR: 0x212121,
+        LICORICE_HIGHLIGHT: 0x424242,
+        LICORICE_THICKNESS: 8,
+        LICORICE_HIGHLIGHT_WIDTH: 2,
+
+        // Animation durations
+        CLEAR_DURATION: 200,
+        SHIMMER_DURATION: 1500,
+        CHAIN_RATTLE_DURATION: 100,
+        CHAIN_RATTLE_DELAY: 2000,
+        HONEY_DRIP_DURATION: 800
+    },
+
     // Powerup System
     POWERUPS: {
         hammer: {

@@ -235,5 +235,199 @@ export const LevelData = {
         collect: { 0: 15, 1: 15 },  // Reduced
         rows: 8, cols: 8,
         candyTypes: 5  // Keep 5 colors even for final level
+    },
+
+    // === WORLD 5: NEW BLOCKERS (Levels 21-25) ===
+    // Introduce ice, chains, and stone blockers
+
+    21: {
+        moves: 35,
+        objective: 'score',
+        targetScore: 3000,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Ice introduction - 4 single-layer ice tiles
+        ice: [
+            { row: 3, col: 2, layers: 1 }, { row: 3, col: 5, layers: 1 },
+            { row: 4, col: 2, layers: 1 }, { row: 4, col: 5, layers: 1 }
+        ],
+        tutorial: {
+            title: 'New: Ice!',
+            text: 'Frozen candies can\'t be swapped!\nMatch them to break the ice.',
+            icon: '🧊'
+        }
+    },
+    22: {
+        moves: 40,
+        objective: 'score',
+        targetScore: 3500,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Mix of 1-layer and 2-layer ice
+        ice: [
+            { row: 2, col: 2, layers: 2 }, { row: 2, col: 5, layers: 2 },
+            { row: 3, col: 3, layers: 1 }, { row: 3, col: 4, layers: 1 },
+            { row: 4, col: 3, layers: 1 }, { row: 4, col: 4, layers: 1 },
+            { row: 5, col: 2, layers: 2 }, { row: 5, col: 5, layers: 2 }
+        ]
+    },
+    23: {
+        moves: 35,
+        objective: 'score',
+        targetScore: 3500,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Chains introduction - candies can match through chains
+        chains: [
+            { row: 3, col: 2, layers: 1 }, { row: 3, col: 5, layers: 1 },
+            { row: 4, col: 2, layers: 1 }, { row: 4, col: 5, layers: 1 },
+            { row: 3, col: 3, layers: 1 }, { row: 4, col: 4, layers: 1 }
+        ],
+        tutorial: {
+            title: 'New: Chains!',
+            text: 'Chained candies can\'t move,\nbut can still match through!',
+            icon: '⛓️'
+        }
+    },
+    24: {
+        moves: 45,
+        objective: 'clearJelly',
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Ice + Chains + Jelly combo
+        jelly: [
+            { row: 3, col: 3 }, { row: 3, col: 4 },
+            { row: 4, col: 3 }, { row: 4, col: 4 },
+            { row: 5, col: 3 }, { row: 5, col: 4 }
+        ],
+        ice: [
+            { row: 2, col: 3, layers: 1 }, { row: 2, col: 4, layers: 1 }
+        ],
+        chains: [
+            { row: 3, col: 2, layers: 1 }, { row: 4, col: 5, layers: 1 }
+        ]
+    },
+    25: {
+        moves: 40,
+        objective: 'drop',
+        drop: 3,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Stone introduction - creates maze for ingredients
+        stone: [
+            { row: 3, col: 2 }, { row: 3, col: 5 },
+            { row: 5, col: 3 }, { row: 5, col: 4 }
+        ],
+        tutorial: {
+            title: 'New: Stone Blocks!',
+            text: 'Stone can\'t be cleared.\nCandies fall around it!',
+            icon: '🪨'
+        }
+    },
+
+    // === WORLD 6: HONEY & LICORICE (Levels 26-30) ===
+    // Introduce spreading honey and licorice walls
+
+    26: {
+        moves: 40,
+        objective: 'score',
+        targetScore: 2500,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Honey introduction - spreads over time!
+        honey: [
+            { row: 3, col: 3 }
+        ],
+        tutorial: {
+            title: 'Warning: Honey!',
+            text: 'Honey spreads over time!\nMatch on it to clear.',
+            icon: '🍯'
+        }
+    },
+    27: {
+        moves: 45,
+        objective: 'score',
+        targetScore: 3500,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Honey + Stone to contain it
+        honey: [
+            { row: 3, col: 3 }, { row: 4, col: 4 }
+        ],
+        stone: [
+            { row: 2, col: 2 }, { row: 2, col: 5 },
+            { row: 5, col: 2 }, { row: 5, col: 5 }
+        ]
+    },
+    28: {
+        moves: 45,
+        objective: 'collect',
+        collect: { 0: 20, 1: 20 },  // Red and Blue
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Licorice walls divide the board
+        licorice: [
+            { row: 0, col: 3, side: 'right' },
+            { row: 1, col: 3, side: 'right' },
+            { row: 2, col: 3, side: 'right' },
+            { row: 5, col: 3, side: 'right' },
+            { row: 6, col: 3, side: 'right' },
+            { row: 7, col: 3, side: 'right' }
+        ],
+        tutorial: {
+            title: 'New: Licorice Walls!',
+            text: 'Licorice blocks swaps,\nbut not matches or gravity!',
+            icon: '🖤'
+        }
+    },
+    29: {
+        moves: 50,
+        objective: 'mixed',
+        drop: 2,
+        jelly: [
+            { row: 5, col: 2 }, { row: 5, col: 3 },
+            { row: 5, col: 4 }, { row: 5, col: 5 },
+            { row: 6, col: 2 }, { row: 6, col: 3 },
+            { row: 6, col: 4 }, { row: 6, col: 5 }
+        ],
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Mixed Mayhem - Ice, Chains, Stone, Jelly
+        ice: [
+            { row: 2, col: 2, layers: 2 }, { row: 2, col: 5, layers: 2 }
+        ],
+        chains: [
+            { row: 3, col: 3, layers: 1 }, { row: 3, col: 4, layers: 1 }
+        ],
+        stone: [
+            { row: 4, col: 0 }, { row: 4, col: 7 }
+        ]
+    },
+    30: {
+        moves: 70,
+        objective: 'ultimate',
+        targetScore: 4000,
+        drop: 2,
+        collect: { 0: 12, 1: 12 },  // Red and Blue (reduced)
+        jelly: [
+            { row: 4, col: 3, layers: 2 }, { row: 4, col: 4, layers: 2 },
+            { row: 5, col: 3 }, { row: 5, col: 4 }
+        ],
+        rows: 8, cols: 8,
+        candyTypes: 5,  // Keep 5 colors for balance
+        // Ultimate Challenge - mix of blocker types (no honey to reduce difficulty)
+        ice: [
+            { row: 1, col: 1, layers: 1 }, { row: 1, col: 6, layers: 1 }
+        ],
+        chains: [
+            { row: 2, col: 3, layers: 1 }, { row: 2, col: 4, layers: 1 }
+        ],
+        stone: [
+            { row: 3, col: 0 }, { row: 3, col: 7 }
+        ],
+        licorice: [
+            { row: 3, col: 3, side: 'bottom' },
+            { row: 3, col: 4, side: 'bottom' }
+        ]
     }
 };

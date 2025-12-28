@@ -124,21 +124,28 @@ export default class HUDManager {
         const objectives = [];
 
         if (this.objectives.jelly > 0) {
-            objectives.push(`🍮 ${this.objectives.jelly - this.status.jelly}`);
+            const remaining = Math.max(0, this.objectives.jelly - this.status.jelly);
+            const display = remaining === 0 ? '✓' : remaining;
+            objectives.push(`🍮 ${display}`);
         }
 
         if (this.objectives.drop > 0) {
-            objectives.push(`🍒 ${this.objectives.drop - this.status.drop}`);
+            const remaining = Math.max(0, this.objectives.drop - this.status.drop);
+            const display = remaining === 0 ? '✓' : remaining;
+            objectives.push(`🍒 ${display}`);
         }
 
         for (const type in this.objectives.collect) {
             const icons = ['🔴', '🔵', '🟢', '🟡', '🟣', '🟠'];
-            objectives.push(`${icons[type] || '🍬'} ${this.objectives.collect[type] - this.status.collect[type]}`);
+            const remaining = Math.max(0, this.objectives.collect[type] - (this.status.collect[type] || 0));
+            const display = remaining === 0 ? '✓' : remaining;
+            objectives.push(`${icons[type] || '🍬'} ${display}`);
         }
 
         // If no specific objectives, show score target
         if (objectives.length === 0 && this.objectives.score > 0) {
-            objectives.push(`🎯 ${score} / ${this.objectives.score}`);
+            const display = score >= this.objectives.score ? '✓' : `${score} / ${this.objectives.score}`;
+            objectives.push(`🎯 ${display}`);
         }
 
         const text = objectives.join('   ');

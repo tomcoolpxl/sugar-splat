@@ -19,11 +19,24 @@ export default class Board {
         // Sprite references
         this.candies = [];
 
-        // Blocker data
+        // Blocker data - existing
         this.jelly = [];
         this.jellySprites = [];
         this.locked = [];
         this.lockSprites = [];
+
+        // Blocker data - new types
+        this.ice = [];              // ice[row][col] = layer count (0, 1, 2)
+        this.iceSprites = [];
+        this.chains = [];           // chains[row][col] = layer count (0, 1, 2)
+        this.chainSprites = [];
+        this.stone = [];            // stone[row][col] = boolean
+        this.stoneSprites = [];
+        this.honey = [];            // honey[row][col] = boolean
+        this.honeySprites = [];
+        this.honeyMoveCounter = 0;  // Track moves for honey spread interval
+        this.licorice = [];         // licorice[row][col] = { right: bool, bottom: bool }
+        this.licoriceSprites = [];
 
         // Level config for blockers
         this.levelConfig = config.levelConfig || null;
@@ -62,6 +75,16 @@ export default class Board {
             this.jellySprites[row] = [];
             this.locked[row] = [];
             this.lockSprites[row] = [];
+            this.ice[row] = [];
+            this.iceSprites[row] = [];
+            this.chains[row] = [];
+            this.chainSprites[row] = [];
+            this.stone[row] = [];
+            this.stoneSprites[row] = [];
+            this.honey[row] = [];
+            this.honeySprites[row] = [];
+            this.licorice[row] = [];
+            this.licoriceSprites[row] = [];
 
             for (let col = 0; col < this.cols; col++) {
                 this.grid[row][col] = -1;
@@ -70,12 +93,23 @@ export default class Board {
                 this.jellySprites[row][col] = null;
                 this.locked[row][col] = false;
                 this.lockSprites[row][col] = null;
+                this.ice[row][col] = 0;
+                this.iceSprites[row][col] = null;
+                this.chains[row][col] = 0;
+                this.chainSprites[row][col] = null;
+                this.stone[row][col] = false;
+                this.stoneSprites[row][col] = null;
+                this.honey[row][col] = false;
+                this.honeySprites[row][col] = null;
+                this.licorice[row][col] = { right: false, bottom: false };
+                this.licoriceSprites[row][col] = null;
             }
         }
 
         if (this.levelConfig) this.applyLevelBlockers();
         this.drawCellBackgrounds();
         this.drawJellyLayer();
+        this.drawBlockerLayers();  // New: draw all blocker types
         this.fillBoard();
         this.drawLockOverlays();
         this.setupSwipeInput();
@@ -127,9 +161,23 @@ export default class Board {
                 if (this.isValidCell(targetRow, targetCol)) {
                     const targetCandy = this.candies[targetRow][targetCol];
                     if (targetCandy && targetCandy.active) {
-                        // Execute the swap
-                        this.deselectCandy();
-                        this.trySwap(this.dragStartCandy, targetCandy);
+                        // Check if source candy can be swapped
+                        if (!this.canSwapAt(this.dragStartCandy.row, this.dragStartCandy.col)) {
+                            this.showBlockedFeedback(this.dragStartCandy);
+                        }
+                        // Check if target candy can be swapped
+                        else if (!this.canSwapAt(targetRow, targetCol)) {
+                            this.showBlockedFeedback(targetCandy);
+                        }
+                        // Check for licorice wall between candies
+                        else if (this.hasLicoriceWall(this.dragStartCandy.row, this.dragStartCandy.col, targetRow, targetCol)) {
+                            this.showLicoriceBlockFeedback(this.dragStartCandy, targetCandy);
+                        }
+                        else {
+                            // Execute the swap
+                            this.deselectCandy();
+                            this.trySwap(this.dragStartCandy, targetCandy);
+                        }
                     }
                 } else {
                     // Invalid swipe target (edge of board) - treat as tap instead
@@ -145,6 +193,7 @@ export default class Board {
     }
 
     applyLevelBlockers() {
+        // Existing blockers
         if (this.levelConfig.jelly) {
             for (const cell of this.levelConfig.jelly) {
                 if (this.isValidCell(cell.row, cell.col)) this.jelly[cell.row][cell.col] = cell.layers || 1;
@@ -153,6 +202,44 @@ export default class Board {
         if (this.levelConfig.locked) {
             for (const cell of this.levelConfig.locked) {
                 if (this.isValidCell(cell.row, cell.col)) this.locked[cell.row][cell.col] = true;
+            }
+        }
+
+        // New blockers - Ice (frozen candy)
+        if (this.levelConfig.ice) {
+            for (const cell of this.levelConfig.ice) {
+                if (this.isValidCell(cell.row, cell.col)) this.ice[cell.row][cell.col] = cell.layers || 1;
+            }
+        }
+
+        // Chains (locked in place but can match through)
+        if (this.levelConfig.chains) {
+            for (const cell of this.levelConfig.chains) {
+                if (this.isValidCell(cell.row, cell.col)) this.chains[cell.row][cell.col] = cell.layers || 1;
+            }
+        }
+
+        // Stone (permanent obstacle - no candy here)
+        if (this.levelConfig.stone) {
+            for (const cell of this.levelConfig.stone) {
+                if (this.isValidCell(cell.row, cell.col)) this.stone[cell.row][cell.col] = true;
+            }
+        }
+
+        // Honey (spreading hazard)
+        if (this.levelConfig.honey) {
+            for (const cell of this.levelConfig.honey) {
+                if (this.isValidCell(cell.row, cell.col)) this.honey[cell.row][cell.col] = true;
+            }
+        }
+
+        // Licorice (walls between cells)
+        if (this.levelConfig.licorice) {
+            for (const wall of this.levelConfig.licorice) {
+                if (this.isValidCell(wall.row, wall.col)) {
+                    if (wall.side === 'right') this.licorice[wall.row][wall.col].right = true;
+                    if (wall.side === 'bottom') this.licorice[wall.row][wall.col].bottom = true;
+                }
             }
         }
     }
@@ -182,8 +269,10 @@ export default class Board {
         if (this.selectedCandy && !this.selectedCandy.active) {
             this.selectedCandy = null;
         }
-        if (this.locked[candy.row][candy.col]) {
-            this.showLockedFeedback(candy);
+
+        // Check all blockers that prevent swapping (ice, chains, honey, locked)
+        if (!this.canSwapAt(candy.row, candy.col)) {
+            this.showBlockedFeedback(candy);
             return;
         }
 
@@ -206,8 +295,15 @@ export default class Board {
             this.scene.soundManager.play('click');
             this.deselectCandy();
         } else if (this.isAdjacent(this.selectedCandy.row, this.selectedCandy.col, candy.row, candy.col)) {
-            if (this.locked[candy.row][candy.col]) {
-                this.showLockedFeedback(candy);
+            // Check if target candy is blocked
+            if (!this.canSwapAt(candy.row, candy.col)) {
+                this.showBlockedFeedback(candy);
+                this.deselectCandy();
+                return;
+            }
+            // Check for licorice wall between the two candies
+            if (this.hasLicoriceWall(this.selectedCandy.row, this.selectedCandy.col, candy.row, candy.col)) {
+                this.showLicoriceBlockFeedback(this.selectedCandy, candy);
                 this.deselectCandy();
                 return;
             }
@@ -241,6 +337,75 @@ export default class Board {
             yoyo: true,
             repeat: 3,
             onComplete: () => { target.x = originalX; }
+        });
+    }
+
+    showBlockedFeedback(candy) {
+        // Generic feedback for any blocked candy (ice, chains, honey, locked)
+        const row = candy.row;
+        const col = candy.col;
+
+        // Find the appropriate blocker sprite
+        let blockerSprite = null;
+        if (this.ice[row][col] > 0) blockerSprite = this.iceSprites[row][col];
+        else if (this.chains[row][col] > 0) blockerSprite = this.chainSprites[row][col];
+        else if (this.honey[row][col]) blockerSprite = this.honeySprites[row][col];
+        else if (this.locked[row][col]) blockerSprite = this.lockSprites[row][col];
+
+        const target = blockerSprite || candy;
+        const originalX = target.x;
+
+        this.scene.soundManager.play('invalid');
+        this.scene.tweens.add({
+            targets: target,
+            x: originalX + 5,
+            duration: 50,
+            yoyo: true,
+            repeat: 3,
+            onComplete: () => { target.x = originalX; }
+        });
+    }
+
+    showLicoriceBlockFeedback(candy1, candy2) {
+        // Flash the licorice wall between two candies
+        const row1 = candy1.row, col1 = candy1.col;
+        const row2 = candy2.row, col2 = candy2.col;
+
+        let licoriceSprite = null;
+        if (row1 === row2) {
+            // Horizontal neighbors - wall is on the right of the left candy
+            const leftCol = Math.min(col1, col2);
+            licoriceSprite = this.licoriceSprites[row1][leftCol]?.right;
+        } else if (col1 === col2) {
+            // Vertical neighbors - wall is on the bottom of the top candy
+            const topRow = Math.min(row1, row2);
+            licoriceSprite = this.licoriceSprites[topRow][col1]?.bottom;
+        }
+
+        this.scene.soundManager.play('invalid');
+
+        if (licoriceSprite) {
+            // Flash the licorice wall
+            this.scene.tweens.add({
+                targets: licoriceSprite,
+                alpha: 0.3,
+                duration: 100,
+                yoyo: true,
+                repeat: 2
+            });
+        }
+
+        // Also shake both candies slightly
+        [candy1, candy2].forEach(candy => {
+            const originalX = candy.x;
+            this.scene.tweens.add({
+                targets: candy,
+                x: originalX + 3,
+                duration: 40,
+                yoyo: true,
+                repeat: 2,
+                onComplete: () => { candy.x = originalX; }
+            });
         });
     }
 
@@ -561,9 +726,360 @@ export default class Board {
         this.scene.events.emit('lockBroken', row, col);
     }
 
+    // --- New Blocker Rendering ---
+
+    drawBlockerLayers() {
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                if (this.stone[r][c]) this.createStoneSprite(r, c);
+                if (this.ice[r][c] > 0) this.createIceSprite(r, c);
+                if (this.chains[r][c] > 0) this.createChainSprite(r, c);
+                if (this.honey[r][c]) this.createHoneySprite(r, c);
+                if (this.licorice[r][c].right) this.createLicoriceSprite(r, c, 'right');
+                if (this.licorice[r][c].bottom) this.createLicoriceSprite(r, c, 'bottom');
+            }
+        }
+    }
+
+    createIceSprite(row, col) {
+        const { x, y } = this.gridToWorld(row, col);
+        const layers = this.ice[row][col];
+        if (this.iceSprites[row][col]) this.iceSprites[row][col].destroy();
+
+        const cfg = GameConfig.BLOCKERS;
+        const graphics = this.scene.add.graphics({ x, y }).setDepth(1.5);
+        const padding = cfg.ICE_PADDING;
+        const size = this.cellSize - padding * 2;
+        const half = this.cellSize / 2;
+
+        // Ice background
+        const iceColor = layers === 2 ? cfg.ICE_DOUBLE_COLOR : cfg.ICE_SINGLE_COLOR;
+        const alpha = layers === 2 ? cfg.ICE_DOUBLE_ALPHA : cfg.ICE_SINGLE_ALPHA;
+        graphics.fillStyle(iceColor, alpha);
+        graphics.fillRoundedRect(-half + padding, -half + padding, size, size, cfg.ICE_CORNER_RADIUS);
+
+        // Ice border
+        const borderWidth = layers === 2 ? cfg.ICE_BORDER_DOUBLE : cfg.ICE_BORDER_SINGLE;
+        graphics.lineStyle(borderWidth, cfg.ICE_HIGHLIGHT, 0.8);
+        graphics.strokeRoundedRect(-half + padding, -half + padding, size, size, cfg.ICE_CORNER_RADIUS);
+
+        // Frost crystals/sparkle effect
+        graphics.fillStyle(cfg.ICE_HIGHLIGHT, 0.6);
+        graphics.fillCircle(-8, -8, cfg.ICE_SPARKLE_RADIUS[0]);
+        graphics.fillCircle(10, -5, cfg.ICE_SPARKLE_RADIUS[1]);
+        graphics.fillCircle(-5, 10, cfg.ICE_SPARKLE_RADIUS[2]);
+
+        this.iceSprites[row][col] = graphics;
+
+        // Shimmer animation
+        this.scene.tweens.add({
+            targets: graphics,
+            alpha: cfg.ICE_DOUBLE_ALPHA,
+            duration: cfg.SHIMMER_DURATION,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+    }
+
+    createChainSprite(row, col) {
+        const { x, y } = this.gridToWorld(row, col);
+        const layers = this.chains[row][col];
+        if (this.chainSprites[row][col]) this.chainSprites[row][col].destroy();
+
+        const cfg = GameConfig.BLOCKERS;
+        const graphics = this.scene.add.graphics({ x, y }).setDepth(1.6);
+
+        // Draw chain links around the candy
+        const linkSize = cfg.CHAIN_LINK_SIZE;
+        const offset = this.cellSize * cfg.CHAIN_OFFSET_RATIO - 6;
+        const lineWidth = layers === 2 ? cfg.CHAIN_DOUBLE_WIDTH : cfg.CHAIN_SINGLE_WIDTH;
+
+        graphics.lineStyle(lineWidth, cfg.CHAIN_COLOR, 1);
+
+        // Top chain
+        for (let i = -1; i <= 1; i++) {
+            graphics.strokeEllipse(i * linkSize, -offset, linkSize, linkSize / 2);
+        }
+        // Bottom chain
+        for (let i = -1; i <= 1; i++) {
+            graphics.strokeEllipse(i * linkSize, offset, linkSize, linkSize / 2);
+        }
+        // Left chain
+        graphics.strokeEllipse(-offset, 0, linkSize / 2, linkSize);
+        // Right chain
+        graphics.strokeEllipse(offset, 0, linkSize / 2, linkSize);
+
+        // Highlight
+        graphics.lineStyle(1, cfg.CHAIN_HIGHLIGHT, 0.5);
+        graphics.strokeEllipse(0, -offset, linkSize, linkSize / 2);
+
+        this.chainSprites[row][col] = graphics;
+
+        // Subtle rattle animation
+        this.scene.tweens.add({
+            targets: graphics,
+            x: x + 1,
+            duration: cfg.CHAIN_RATTLE_DURATION,
+            yoyo: true,
+            repeat: -1,
+            repeatDelay: cfg.CHAIN_RATTLE_DELAY,
+            ease: 'Sine.easeInOut'
+        });
+    }
+
+    createStoneSprite(row, col) {
+        const { x, y } = this.gridToWorld(row, col);
+        if (this.stoneSprites[row][col]) this.stoneSprites[row][col].destroy();
+
+        const cfg = GameConfig.BLOCKERS;
+        const graphics = this.scene.add.graphics({ x, y }).setDepth(1);
+        const size = this.cellSize - cfg.STONE_PADDING;
+        const half = size / 2;
+
+        // Main stone body
+        graphics.fillStyle(cfg.STONE_COLOR, 1);
+        graphics.fillRoundedRect(-half, -half, size, size, cfg.STONE_CORNER_RADIUS);
+
+        // Darker cracks
+        graphics.lineStyle(cfg.STONE_CRACK_WIDTH, cfg.STONE_CRACK_COLOR, 0.8);
+        graphics.beginPath();
+        graphics.moveTo(-size / 4, -size / 3);
+        graphics.lineTo(0, 0);
+        graphics.lineTo(size / 5, size / 4);
+        graphics.strokePath();
+
+        graphics.beginPath();
+        graphics.moveTo(size / 3, -size / 4);
+        graphics.lineTo(size / 6, size / 6);
+        graphics.strokePath();
+
+        // Top-left highlight
+        graphics.lineStyle(cfg.STONE_HIGHLIGHT_WIDTH, cfg.STONE_HIGHLIGHT, 0.5);
+        graphics.beginPath();
+        graphics.moveTo(-half + 4, -half + 8);
+        graphics.lineTo(-half + 4, -half + 4);
+        graphics.lineTo(-half + 12, -half + 4);
+        graphics.strokePath();
+
+        this.stoneSprites[row][col] = graphics;
+    }
+
+    createHoneySprite(row, col) {
+        const { x, y } = this.gridToWorld(row, col);
+        if (this.honeySprites[row][col]) this.honeySprites[row][col].destroy();
+
+        const cfg = GameConfig.BLOCKERS;
+        const graphics = this.scene.add.graphics({ x, y }).setDepth(0.6);
+        const size = this.cellSize - cfg.HONEY_PADDING;
+        const half = size / 2;
+
+        // Honey blob (rounded rectangle with drip effect)
+        graphics.fillStyle(cfg.HONEY_COLOR, cfg.HONEY_ALPHA);
+        graphics.fillRoundedRect(-half, -half, size, size, cfg.HONEY_CORNER_RADIUS);
+
+        // Drip shapes at bottom
+        graphics.fillStyle(cfg.HONEY_DRIP_COLOR, 0.7);
+        graphics.fillCircle(-size / 4, half - 2, cfg.HONEY_DRIP_RADII[0]);
+        graphics.fillCircle(size / 5, half, cfg.HONEY_DRIP_RADII[1]);
+        graphics.fillCircle(0, half + 3, cfg.HONEY_DRIP_RADII[2]);
+
+        // Highlight bubbles
+        graphics.fillStyle(cfg.HONEY_HIGHLIGHT, 0.6);
+        graphics.fillCircle(-size / 4, -size / 4, cfg.HONEY_HIGHLIGHT_RADII[0]);
+        graphics.fillCircle(-size / 4 + 8, -size / 4 + 4, cfg.HONEY_HIGHLIGHT_RADII[1]);
+
+        this.honeySprites[row][col] = graphics;
+
+        // Drip animation
+        this.scene.tweens.add({
+            targets: graphics,
+            scaleY: 1.03,
+            duration: cfg.HONEY_DRIP_DURATION,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+    }
+
+    createLicoriceSprite(row, col, side) {
+        const { x, y } = this.gridToWorld(row, col);
+
+        // Store in a flat structure for licorice
+        if (!this.licoriceSprites[row][col]) this.licoriceSprites[row][col] = {};
+        if (this.licoriceSprites[row][col][side]) this.licoriceSprites[row][col][side].destroy();
+
+        const cfg = GameConfig.BLOCKERS;
+        const graphics = this.scene.add.graphics().setDepth(3);
+        const half = this.cellSize / 2;
+        const thickness = cfg.LICORICE_THICKNESS;
+        const highlightWidth = cfg.LICORICE_HIGHLIGHT_WIDTH;
+
+        if (side === 'right') {
+            // Vertical wall on right edge
+            graphics.fillStyle(cfg.LICORICE_COLOR, 1);
+            graphics.fillRect(x + half - thickness / 2, y - half, thickness, this.cellSize);
+            // Highlight stripe
+            graphics.fillStyle(cfg.LICORICE_HIGHLIGHT, 0.4);
+            graphics.fillRect(x + half - thickness / 2, y - half, highlightWidth, this.cellSize);
+        } else if (side === 'bottom') {
+            // Horizontal wall on bottom edge
+            graphics.fillStyle(cfg.LICORICE_COLOR, 1);
+            graphics.fillRect(x - half, y + half - thickness / 2, this.cellSize, thickness);
+            // Highlight stripe
+            graphics.fillStyle(cfg.LICORICE_HIGHLIGHT, 0.4);
+            graphics.fillRect(x - half, y + half - thickness / 2, this.cellSize, highlightWidth);
+        }
+
+        this.licoriceSprites[row][col][side] = graphics;
+    }
+
+    // --- Blocker Handlers ---
+
+    handleIceAt(row, col) {
+        if (this.ice[row][col] > 0) {
+            this.ice[row][col]--;
+            if (this.ice[row][col] === 0) {
+                if (this.iceSprites[row][col]) {
+                    const sprite = this.iceSprites[row][col];
+                    this.scene.tweens.add({
+                        targets: sprite,
+                        alpha: 0, scaleX: 1.3, scaleY: 1.3,
+                        duration: 200,
+                        onComplete: () => sprite.destroy()
+                    });
+                    this.iceSprites[row][col] = null;
+                }
+                this.scene.events.emit('iceCleared', row, col);
+            } else {
+                this.createIceSprite(row, col);
+                this.scene.events.emit('iceHit', row, col);
+            }
+        }
+    }
+
+    handleChainAt(row, col) {
+        if (this.chains[row][col] > 0) {
+            this.chains[row][col]--;
+            if (this.chains[row][col] === 0) {
+                if (this.chainSprites[row][col]) {
+                    const sprite = this.chainSprites[row][col];
+                    this.scene.tweens.add({
+                        targets: sprite,
+                        alpha: 0, scaleX: 1.2, scaleY: 1.2,
+                        duration: 200,
+                        onComplete: () => sprite.destroy()
+                    });
+                    this.chainSprites[row][col] = null;
+                }
+                this.scene.events.emit('chainBroken', row, col);
+            } else {
+                this.createChainSprite(row, col);
+                this.scene.events.emit('chainHit', row, col);
+            }
+        }
+    }
+
+    handleHoneyAt(row, col) {
+        if (this.honey[row][col]) {
+            this.honey[row][col] = false;
+            if (this.honeySprites[row][col]) {
+                const sprite = this.honeySprites[row][col];
+                this.scene.tweens.add({
+                    targets: sprite,
+                    alpha: 0, scaleY: 0.5,
+                    duration: 200,
+                    onComplete: () => sprite.destroy()
+                });
+                this.honeySprites[row][col] = null;
+            }
+            this.scene.events.emit('honeyCleared', row, col);
+        }
+    }
+
+    spreadHoney() {
+        // Collect all honey positions
+        const honeyPositions = [];
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                if (this.honey[r][c]) honeyPositions.push({ row: r, col: c });
+            }
+        }
+
+        if (honeyPositions.length === 0) return false;
+
+        // Check if it's time to spread (based on move interval)
+        this.honeyMoveCounter++;
+        const cfg = GameConfig.BLOCKERS;
+        if (this.honeyMoveCounter < cfg.HONEY_SPREAD_INTERVAL) {
+            return false; // Not time to spread yet
+        }
+        this.honeyMoveCounter = 0; // Reset counter
+
+        let spread = false;
+        for (const pos of honeyPositions) {
+            // Each honey tile has a chance to spread
+            if (Math.random() > cfg.HONEY_SPREAD_CHANCE) continue;
+
+            const adjacent = this.getAdjacentCells(pos.row, pos.col);
+            const validTargets = adjacent.filter(adj =>
+                !this.honey[adj.row][adj.col] &&
+                !this.stone[adj.row][adj.col] &&
+                this.candies[adj.row][adj.col]
+            );
+
+            if (validTargets.length > 0) {
+                const target = validTargets[Math.floor(Math.random() * validTargets.length)];
+                this.honey[target.row][target.col] = true;
+                this.createHoneySprite(target.row, target.col);
+                spread = true;
+            }
+        }
+
+        if (spread) {
+            this.scene.events.emit('honeySpread');
+        }
+
+        return spread;
+    }
+
+    // Check if cell blocks candy placement (stone)
+    isBlockedCell(row, col) {
+        return this.stone[row][col];
+    }
+
+    // Check if candy can be swapped (ice, chains, honey block swaps)
+    canSwapAt(row, col) {
+        if (this.ice[row][col] > 0) return false;
+        if (this.chains[row][col] > 0) return false;
+        if (this.honey[row][col]) return false;
+        if (this.locked[row][col]) return false;
+        return true;
+    }
+
+    // Check if licorice wall blocks swap between two cells
+    hasLicoriceWall(row1, col1, row2, col2) {
+        // Check if there's a wall between cell1 and cell2
+        if (row1 === row2) {
+            // Horizontal neighbors
+            const leftCol = Math.min(col1, col2);
+            const leftRow = row1;
+            return this.licorice[leftRow][leftCol].right;
+        } else if (col1 === col2) {
+            // Vertical neighbors
+            const topRow = Math.min(row1, row2);
+            const topCol = col1;
+            return this.licorice[topRow][topCol].bottom;
+        }
+        return false;
+    }
+
     fillBoard() {
         for (let r = 0; r < this.rows; r++) {
             for (let c = 0; c < this.cols; c++) {
+                // Skip stone cells - they can't have candies
+                if (this.stone[r][c]) continue;
+
                 if (this.grid[r][c] === -1) {
                     const type = this.getValidCandyType(r, c);
                     this.createCandy(r, c, type);
@@ -634,6 +1150,12 @@ export default class Board {
         for (let c = 0; c < this.cols; c++) {
             let emptyRow = this.rows - 1;
             for (let r = this.rows - 1; r >= 0; r--) {
+                // Stone blocks act as floor - candies can't fall through
+                if (this.stone[r][c]) {
+                    emptyRow = r - 1; // Next empty spot is above the stone
+                    continue;
+                }
+
                 if (this.grid[r][c] !== -1) {
                     if (r !== emptyRow) {
                         const candy = this.candies[r][c];
@@ -643,10 +1165,10 @@ export default class Board {
                         this.candies[r][c] = null;
                         candy.row = emptyRow;
                         const target = this.gridToWorld(emptyRow, c);
-                        tweens.push({ 
-                            targets: candy, 
-                            y: target.y, 
-                            duration: 150 + (emptyRow - r) * 50, 
+                        tweens.push({
+                            targets: candy,
+                            y: target.y,
+                            duration: 150 + (emptyRow - r) * 50,
                             ease: 'Bounce.easeOut',
                             onComplete: () => {
                                 // Landing juice squash
@@ -682,13 +1204,19 @@ export default class Board {
     async fillEmptySpaces() {
         const tweens = [];
         const scene = this.scene;
-        const needsDrop = scene.objectives.drop > 0 && 
+        const needsDrop = scene.objectives.drop > 0 &&
                          (scene.status.drop + this.countIngredients()) < scene.objectives.drop;
 
         for (let c = 0; c < this.cols; c++) {
             let emptyCount = 0;
-            for (let r = 0; r < this.rows; r++) if (this.grid[r][c] === -1) emptyCount++;
             for (let r = 0; r < this.rows; r++) {
+                // Don't count stone cells as empty
+                if (!this.stone[r][c] && this.grid[r][c] === -1) emptyCount++;
+            }
+            for (let r = 0; r < this.rows; r++) {
+                // Skip stone cells - they can't have candies
+                if (this.stone[r][c]) continue;
+
                 if (this.grid[r][c] === -1) {
                     let type = this.getValidCandyType(r, c);
                     
@@ -736,9 +1264,15 @@ export default class Board {
             if (this.clearingCells.has(key)) return Promise.resolve();
             this.clearingCells.add(key);
 
+            // Always handle blockers, even if no candy at this position
+            // (e.g., candy might have been cleared by another effect in same cascade)
+            this.handleJellyAt(cell.row, cell.col);
+            this.handleIceAt(cell.row, cell.col);
+            this.handleChainAt(cell.row, cell.col);
+            this.handleHoneyAt(cell.row, cell.col);
+
             const candy = this.candies[cell.row][cell.col];
             if (candy && candy.active) {
-                this.handleJellyAt(cell.row, cell.col);
                 this.grid[cell.row][cell.col] = -1;
                 this.candies[cell.row][cell.col] = null;
                 const candyType = candy.candyType;
@@ -762,7 +1296,11 @@ export default class Board {
         const specialPromises = specialsToCreate.map(special => {
             const { row, col } = special.position;
             const old = this.candies[row][col];
+            // Handle all blocker types at special creation position
             this.handleJellyAt(row, col);
+            this.handleIceAt(row, col);
+            this.handleChainAt(row, col);
+            this.handleHoneyAt(row, col);
             if (old && old.active) {
                 return new Promise(res => this.scene.tweens.add({
                     targets: old,
@@ -792,13 +1330,20 @@ export default class Board {
             if (this.clearingCells.has(key)) return Promise.resolve();
             this.clearingCells.add(key);
 
+            // Always handle blockers, even if no candy at this position
+            this.handleJellyAt(cell.row, cell.col);
+            this.handleIceAt(cell.row, cell.col);
+            this.handleChainAt(cell.row, cell.col);
+            this.handleHoneyAt(cell.row, cell.col);
+
+            // Handle locked tiles
+            if (this.locked[cell.row][cell.col]) {
+                this.locked[cell.row][cell.col] = false;
+                this.removeLockSprite(cell.row, cell.col);
+            }
+
             const candy = this.candies[cell.row][cell.col];
             if (candy && candy.active) {
-                this.handleJellyAt(cell.row, cell.col);
-                if (this.locked[cell.row][cell.col]) {
-                    this.locked[cell.row][cell.col] = false;
-                    this.removeLockSprite(cell.row, cell.col);
-                }
                 this.grid[cell.row][cell.col] = -1;
                 this.candies[cell.row][cell.col] = null;
                 const candyType = candy.candyType;

@@ -7,9 +7,9 @@
 - [x] Cascades with combo multipliers
 - [x] Special candies (Line, Bomb, Color Bomb)
 - [x] Special + Special combo effects
-- [x] Blockers (Jelly single/double, Locked tiles)
+- [x] Blockers (Jelly, Locked, Ice, Chains, Stone, Honey, Licorice)
 - [x] Multiple objective types (Score, Jelly, Collect, Drop)
-- [x] 20 levels with progressive difficulty
+- [x] 30 levels with progressive difficulty
 
 ### Systems
 - [x] ActionProcessor with error recovery
@@ -47,8 +47,7 @@
 ## Future Enhancements
 
 ### Features
-- [ ] More levels (21-40)
-- [ ] New blocker types (ice, chocolate spreader)
+- [ ] More levels (31-50)
 - [ ] Daily challenges
 - [ ] High score leaderboards (local)
 

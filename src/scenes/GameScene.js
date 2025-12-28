@@ -217,6 +217,38 @@ export default class GameScene extends Phaser.Scene {
             this.cameras.main.flash(100, 135, 206, 235, false);
         });
 
+        // Ice cleared event
+        this.events.on('iceCleared', (row, col) => {
+            if (this.soundManager) this.soundManager.play('line');
+            this.cameras.main.flash(100, 135, 206, 250, false); // Light blue flash
+        });
+
+        // Ice hit (2-layer to 1-layer)
+        this.events.on('iceHit', (row, col) => {
+            if (this.soundManager) this.soundManager.play('click');
+        });
+
+        // Chain broken event
+        this.events.on('chainBroken', (row, col) => {
+            if (this.soundManager) this.soundManager.play('line');
+            this.cameras.main.flash(100, 158, 158, 158, false); // Gray flash
+        });
+
+        // Chain hit
+        this.events.on('chainHit', (row, col) => {
+            if (this.soundManager) this.soundManager.play('click');
+        });
+
+        // Honey cleared event
+        this.events.on('honeyCleared', (row, col) => {
+            if (this.soundManager) this.soundManager.play('match');
+        });
+
+        // Honey spread event
+        this.events.on('honeySpread', () => {
+            if (this.soundManager) this.soundManager.play('invalid');
+        });
+
         // Valid swap - decrement moves
         this.events.on('validSwap', () => {
             if (this.soundManager) this.soundManager.play('swap');
@@ -236,6 +268,25 @@ export default class GameScene extends Phaser.Scene {
         // Cascade complete - check win/lose conditions
         this.events.on('cascadeComplete', () => {
             if (this.isGameOver) return;
+
+            // Spread honey after each completed cascade (if level has honey)
+            if (this.board.spreadHoney()) {
+                // Check if board is covered in honey (lose condition)
+                let honeyCount = 0;
+                let candyCount = 0;
+                for (let r = 0; r < this.board.rows; r++) {
+                    for (let c = 0; c < this.board.cols; c++) {
+                        if (this.board.candies[r][c]) candyCount++;
+                        if (this.board.honey[r][c]) honeyCount++;
+                    }
+                }
+                const threshold = GameConfig.BLOCKERS.HONEY_COVERAGE_LOSE_THRESHOLD;
+                if (honeyCount >= candyCount * threshold) {
+                    // Almost all covered in honey - lose!
+                    this.showLoseScreen();
+                    return;
+                }
+            }
 
             if (this.checkWinCondition()) {
                 this.showWinScreen();
@@ -342,7 +393,7 @@ export default class GameScene extends Phaser.Scene {
             stars,
             awardedPowerups,
             currentLevel: this.currentLevel,
-            onNext: () => this.currentLevel < 20
+            onNext: () => this.currentLevel < 30
                 ? this.scene.restart({ level: this.currentLevel + 1 })
                 : this.scene.start('MenuScene'),
             onReplay: () => this.scene.restart({ level: this.currentLevel }),
@@ -501,6 +552,12 @@ export default class GameScene extends Phaser.Scene {
         this.events.off('jellyCleared');
         this.events.off('jellyHit');
         this.events.off('lockBroken');
+        this.events.off('iceCleared');
+        this.events.off('iceHit');
+        this.events.off('chainBroken');
+        this.events.off('chainHit');
+        this.events.off('honeyCleared');
+        this.events.off('honeySpread');
         this.events.off('validSwap');
         this.events.off('cascadeComplete');
         this.events.off('invalidSwap');
