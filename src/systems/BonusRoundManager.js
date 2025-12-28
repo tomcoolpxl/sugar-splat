@@ -146,6 +146,16 @@ export default class BonusRoundManager {
                         duration: 80,
                         yoyo: true
                     });
+
+                    // Coin bonanza at the bonus counter!
+                    if (this.scene.particleManager) {
+                        const intensity = Math.min(currentBonus / 500, 2); // Scale with bonus
+                        this.scene.particleManager.emitCoins(
+                            this.scene.cameras.main.width / 2,
+                            bonusCounter.y + 30,
+                            0.5 + intensity * 0.5
+                        );
+                    }
                 }
 
                 await new Promise(r => setTimeout(r, 100));
@@ -165,6 +175,15 @@ export default class BonusRoundManager {
                 duration: 300,
                 ease: 'Back.easeOut'
             });
+
+            // MEGA coin bonanza for the finale!
+            if (this.scene.particleManager && totalBonus > 0) {
+                const width = this.scene.cameras.main.width;
+                // Big burst from center
+                this.scene.particleManager.emitCoins(width / 2, bonusCounter.y, 2);
+                // Coin rain from top
+                this.scene.particleManager.emitCoinRain(width, -20, Math.min(50, Math.floor(totalBonus / 100)));
+            }
         }
 
         // Confetti burst!

@@ -100,6 +100,9 @@ export default class BootScene extends Phaser.Scene {
 
         // Create UI textures
         this.createUITextures();
+
+        // Create particle textures
+        this.createParticleTextures();
     }
 
     drawCircleCandy(graphics, size, color) {
@@ -453,6 +456,95 @@ export default class BootScene extends Phaser.Scene {
         glowGraphics.fillCircle(32, 32, 32);
         glowGraphics.generateTexture('glow', 64, 64);
         glowGraphics.destroy();
+    }
+
+    createParticleTextures() {
+        const size = 16;
+
+        // Soft circle particle (default)
+        const circleGfx = this.add.graphics();
+        circleGfx.fillStyle(0xffffff, 1);
+        circleGfx.fillCircle(size / 2, size / 2, size / 2 - 1);
+        circleGfx.generateTexture('particle_circle', size, size);
+        circleGfx.destroy();
+
+        // Spark particle (4-pointed star)
+        const sparkGfx = this.add.graphics();
+        sparkGfx.fillStyle(0xffffff, 1);
+        const sparkPoints = this.createStarPoints(size / 2, size / 2, 4, size / 2 - 1, 2);
+        sparkGfx.fillPoints(sparkPoints, true);
+        sparkGfx.generateTexture('particle_spark', size, size);
+        sparkGfx.destroy();
+
+        // Ice shard particle (elongated diamond)
+        const shardGfx = this.add.graphics();
+        shardGfx.fillStyle(0xffffff, 1);
+        shardGfx.fillPoints([
+            { x: size / 2, y: 1 },
+            { x: size / 2 + 3, y: size / 2 },
+            { x: size / 2, y: size - 1 },
+            { x: size / 2 - 3, y: size / 2 }
+        ], true);
+        shardGfx.generateTexture('particle_shard', size, size);
+        shardGfx.destroy();
+
+        // Small square particle
+        const squareGfx = this.add.graphics();
+        squareGfx.fillStyle(0xffffff, 1);
+        squareGfx.fillRect(3, 3, size - 6, size - 6);
+        squareGfx.generateTexture('particle_square', size, size);
+        squareGfx.destroy();
+
+        // Ring particle (hollow circle)
+        const ringGfx = this.add.graphics();
+        ringGfx.lineStyle(2, 0xffffff, 1);
+        ringGfx.strokeCircle(size / 2, size / 2, size / 2 - 2);
+        ringGfx.generateTexture('particle_ring', size, size);
+        ringGfx.destroy();
+
+        // Wood chip particle (irregular polygon)
+        const chipGfx = this.add.graphics();
+        chipGfx.fillStyle(0xffffff, 1);
+        chipGfx.fillPoints([
+            { x: 2, y: size / 2 - 2 },
+            { x: size / 2, y: 2 },
+            { x: size - 2, y: size / 2 },
+            { x: size / 2 + 2, y: size - 3 },
+            { x: 4, y: size - 4 }
+        ], true);
+        chipGfx.generateTexture('particle_chip', size, size);
+        chipGfx.destroy();
+
+        // Swirl particle (curved arc)
+        const swirlGfx = this.add.graphics();
+        swirlGfx.lineStyle(3, 0xffffff, 1);
+        swirlGfx.beginPath();
+        swirlGfx.arc(size / 2, size / 2, size / 3, 0, Math.PI * 1.5);
+        swirlGfx.strokePath();
+        swirlGfx.generateTexture('particle_swirl', size, size);
+        swirlGfx.destroy();
+
+        // Chain link particle (small link shape)
+        const linkGfx = this.add.graphics();
+        linkGfx.lineStyle(2, 0xffffff, 1);
+        linkGfx.strokeRoundedRect(3, 5, size - 6, size - 10, 3);
+        linkGfx.generateTexture('particle_link', size, size);
+        linkGfx.destroy();
+
+        // Coin particle (golden circle with shine)
+        const coinSize = 20;
+        const coinGfx = this.add.graphics();
+        // Gold fill
+        coinGfx.fillStyle(0xFFD700, 1);
+        coinGfx.fillCircle(coinSize / 2, coinSize / 2, coinSize / 2 - 1);
+        // Darker edge
+        coinGfx.lineStyle(2, 0xDAA520, 1);
+        coinGfx.strokeCircle(coinSize / 2, coinSize / 2, coinSize / 2 - 2);
+        // Shine highlight
+        coinGfx.fillStyle(0xFFFFFF, 0.6);
+        coinGfx.fillCircle(coinSize / 2 - 3, coinSize / 2 - 3, 4);
+        coinGfx.generateTexture('particle_coin', coinSize, coinSize);
+        coinGfx.destroy();
     }
 
     create() {

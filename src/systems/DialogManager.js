@@ -257,7 +257,7 @@ export default class DialogManager {
         // Buttons (65px spacing for comfortable touch targets)
         const buttonSpacing = 65;
 
-        if (currentLevel < 30) {
+        if (currentLevel < 40) {
             this.createButton(container, 0, buttonStartY, 'Next Level', onNext);
         } else {
             this.createButton(container, 0, buttonStartY, 'Main Menu', onNext);

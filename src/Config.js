@@ -1,4 +1,18 @@
 export const GameConfig = {
+    // Particle settings
+    PARTICLES: {
+        CANDY_COUNT: 20,
+        JELLY_COUNT: 30,
+        SPECIAL_COUNT: 45,
+        COLOR_BOMB_COUNT: 80,
+        ICE_COUNT: 25,
+        CHAIN_COUNT: 20,
+        CHOCOLATE_COUNT: 30,
+        CRATE_COUNT: 28,
+        BOMB_TIMER_COUNT: 40,
+        PORTAL_COUNT: 35
+    },
+
     // Board Settings
     BOARD: {
         ROWS: 8,
@@ -108,7 +122,51 @@ export const GameConfig = {
         SHIMMER_DURATION: 1500,
         CHAIN_RATTLE_DURATION: 100,
         CHAIN_RATTLE_DELAY: 2000,
-        HONEY_DRIP_DURATION: 800
+        HONEY_DRIP_DURATION: 800,
+
+        // Chocolate - spreader blocker, blocks cell, cleared by adjacent match
+        CHOCOLATE_COLOR: 0x5D4037,
+        CHOCOLATE_DARK: 0x3E2723,
+        CHOCOLATE_HIGHLIGHT: 0x8D6E63,
+        CHOCOLATE_SWIRL_COLOR: 0x4E342E,
+        CHOCOLATE_ALPHA: 0.95,
+        CHOCOLATE_PADDING: 2,
+        CHOCOLATE_CORNER_RADIUS: 10,
+        CHOCOLATE_SPREAD_INTERVAL: 2,     // Spreads every 2 moves
+        CHOCOLATE_SPREAD_CHANCE: 0.35,    // 35% chance each tile spreads
+        CHOCOLATE_COVERAGE_LOSE_THRESHOLD: 0.75,
+
+        // Crate - wooden box around candy (1-3 layers)
+        CRATE_COLOR: 0xD7A86E,
+        CRATE_DARK: 0xA67C52,
+        CRATE_HIGHLIGHT: 0xE8C07D,
+        CRATE_NAIL_COLOR: 0x757575,
+        CRATE_PADDING: 3,
+        CRATE_CORNER_RADIUS: 4,
+        CRATE_PLANK_WIDTH: 3,
+
+        // Bomb Timer - countdown candy that must be cleared
+        BOMB_TIMER_BG_COLOR: 0x1A1A1A,
+        BOMB_TIMER_FUSE_COLOR: 0xFF5722,
+        BOMB_TIMER_WARNING_COLOR: 0xFF0000,
+        BOMB_TIMER_TEXT_COLOR: 0xFFFFFF,
+        BOMB_TIMER_DANGER_THRESHOLD: 3,   // Flash red when <= 3 moves
+        BOMB_TIMER_PULSE_DURATION: 300,
+
+        // Conveyor Belt - moves candies in direction
+        CONVEYOR_COLOR: 0x607D8B,
+        CONVEYOR_STRIPE_COLOR: 0x455A64,
+        CONVEYOR_ARROW_COLOR: 0xFFEB3B,
+        CONVEYOR_PADDING: 2,
+        CONVEYOR_ANIMATION_SPEED: 1000,
+
+        // Portal - paired teleporters
+        PORTAL_ENTRANCE_COLOR: 0x7C4DFF,
+        PORTAL_EXIT_COLOR: 0x00E676,
+        PORTAL_RING_COLOR: 0xFFFFFF,
+        PORTAL_GLOW_ALPHA: 0.6,
+        PORTAL_SIZE_RATIO: 0.7,
+        PORTAL_SPIN_DURATION: 2000
     },
 
     // Powerup System
@@ -277,7 +335,27 @@ export const GameConfig = {
                 17: 'dreamy',     // Contrast
                 18: 'warm',       // Rich
                 19: 'crystal',    // Penultimate - bright
-                20: 'punchy'      // Final level - intense
+                20: 'punchy',     // World 4 finale
+                21: 'gentle',     // World 5 - Ice intro
+                22: 'crystal',    // Ice layers - cold feel
+                23: 'chiptune',   // Chains intro
+                24: 'warm',       // Mixed blockers
+                25: 'punchy',     // Stone intro
+                26: 'dreamy',     // Honey intro - sticky
+                27: 'warm',       // Honey + Stone
+                28: 'chiptune',   // Licorice walls
+                29: 'punchy',     // Mixed mayhem
+                30: 'crystal',    // World 6 finale
+                31: 'gentle',     // World 7 - Chocolate intro
+                32: 'warm',       // Chocolate spread
+                33: 'punchy',     // Crate intro
+                34: 'crystal',    // Crate + Ice
+                35: 'chiptune',   // Bomb timer intro
+                36: 'punchy',     // Bomb timer danger
+                37: 'dreamy',     // Conveyor intro
+                38: 'warm',       // Conveyor + blockers
+                39: 'crystal',    // Portal intro
+                40: 'punchy'      // World 8 finale - all mechanics
             }
         },
 

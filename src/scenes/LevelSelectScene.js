@@ -4,8 +4,11 @@ import C64Sequencer from '../systems/C64Sequencer.js';
 export default class LevelSelectScene extends Phaser.Scene {
     constructor() {
         super('LevelSelectScene');
-        this.totalLevels = 30;
+        this.totalLevels = 40;
         this.columns = 4;
+        this.levelsPerPage = 32;
+        this.currentPage = 0;
+        this.bossLevels = [10, 20, 30, 40]; // Boss levels with special visuals
     }
 
     create() {
@@ -269,38 +272,75 @@ export default class LevelSelectScene extends Phaser.Scene {
     createLevelGrid(width, height) {
         const saveData = this.getSaveData();
 
-        const startY = 210;
-        const buttonSize = 100;
-        const padding = 20;
-        const gridWidth = this.columns * buttonSize + (this.columns - 1) * padding;
-        const startX = (width - gridWidth) / 2 + buttonSize / 2;
+        // Layout constants
+        const headerHeight = 140;
+        const bottomBarHeight = 100;
+        const paginationSpace = 60; // Extra space for pagination
+        const gap = 14; // Gap between buttons
 
-        // Create scrollable container for levels
-        const rows = Math.ceil(this.totalLevels / this.columns);
-        const gridHeight = rows * (buttonSize + padding);
+        // Available space
+        const sidePadding = 30;
+        const availableWidth = width - sidePadding * 2;
+        const availableHeight = height - headerHeight - bottomBarHeight - paginationSpace;
+
+        // Calculate rows needed
+        const numRows = Math.ceil(this.levelsPerPage / this.columns);
+
+        // Calculate button size to fill available space
+        const maxButtonByWidth = Math.floor((availableWidth - (this.columns - 1) * gap) / this.columns);
+        const maxButtonByHeight = Math.floor((availableHeight - (numRows - 1) * gap) / numRows);
+        const buttonSize = Math.min(maxButtonByWidth, maxButtonByHeight); // Use full available space
+
+        // Calculate actual grid dimensions
+        const gridWidth = this.columns * buttonSize + (this.columns - 1) * gap;
+        const gridHeight = numRows * buttonSize + (numRows - 1) * gap;
+
+        // Center the grid horizontally and vertically
+        const startX = (width - gridWidth) / 2 + buttonSize / 2;
+        const startY = headerHeight + (availableHeight - gridHeight) / 2 + buttonSize / 2;
+
+        // Calculate pagination
+        const totalPages = Math.ceil(this.totalLevels / this.levelsPerPage);
+        const startLevel = this.currentPage * this.levelsPerPage + 1;
+        const endLevel = Math.min(startLevel + this.levelsPerPage - 1, this.totalLevels);
+        const levelsOnPage = endLevel - startLevel + 1;
+
+        // Store container reference for page switching
+        if (this.levelContainer) {
+            this.levelContainer.destroy();
+        }
 
         // Create container for level buttons
-        const container = this.add.container(0, 0);
+        this.levelContainer = this.add.container(0, 0);
 
-        for (let i = 0; i < this.totalLevels; i++) {
-            const level = i + 1;
+        for (let i = 0; i < levelsOnPage; i++) {
+            const level = startLevel + i;
             const col = i % this.columns;
             const row = Math.floor(i / this.columns);
 
-            const x = startX + col * (buttonSize + padding);
-            const y = startY + row * (buttonSize + padding);
+            const x = startX + col * (buttonSize + gap);
+            const y = startY + row * (buttonSize + gap);
 
             const levelData = saveData.levels[level] || { completed: false, stars: 0 };
             // First 5 levels always unlocked, rest unlock when previous is completed
             const isUnlocked = level <= 5 || saveData.levels[level - 1]?.completed;
+            const isBoss = this.bossLevels.includes(level);
 
-            this.createLevelButton(container, x, y, level, levelData, isUnlocked, buttonSize);
+            this.createLevelButton(this.levelContainer, x, y, level, levelData, isUnlocked, buttonSize, isBoss);
+        }
+
+        // Create pagination controls if needed
+        if (totalPages > 1) {
+            this.createPaginationControls(width, height, totalPages);
         }
 
         // Enable scrolling if content exceeds screen
-        const visibleHeight = height - startY - 100;
-        if (gridHeight > visibleHeight) {
-            const minY = -(gridHeight - visibleHeight);
+        const actualRows = Math.ceil(levelsOnPage / this.columns);
+        const totalGridHeight = actualRows * (buttonSize + gap);
+        const visibleHeight = availableHeight;
+
+        if (totalGridHeight > visibleHeight) {
+            const minY = -(totalGridHeight - visibleHeight);
             const maxY = 0;
 
             // Track drag state
@@ -311,13 +351,13 @@ export default class LevelSelectScene extends Phaser.Scene {
             this.input.on('pointerdown', (pointer) => {
                 isDragging = true;
                 dragStartY = pointer.y;
-                containerStartY = container.y;
+                containerStartY = this.levelContainer.y;
             });
 
             this.input.on('pointermove', (pointer) => {
                 if (isDragging && pointer.isDown) {
                     const deltaY = pointer.y - dragStartY;
-                    container.y = Phaser.Math.Clamp(containerStartY + deltaY, minY, maxY);
+                    this.levelContainer.y = Phaser.Math.Clamp(containerStartY + deltaY, minY, maxY);
                 }
             });
 
@@ -327,78 +367,165 @@ export default class LevelSelectScene extends Phaser.Scene {
 
             // Mouse wheel support
             this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
-                container.y = Phaser.Math.Clamp(container.y - deltaY * 0.5, minY, maxY);
+                this.levelContainer.y = Phaser.Math.Clamp(this.levelContainer.y - deltaY * 0.5, minY, maxY);
             });
         }
     }
 
-    createLevelButton(container, x, y, level, levelData, isUnlocked, size) {
+    createPaginationControls(width, height, totalPages) {
+        const y = height - 115; // More space from bottom bar
+
+        // Remove old pagination if exists
+        if (this.paginationContainer) {
+            this.paginationContainer.destroy();
+        }
+
+        this.paginationContainer = this.add.container(width / 2, y);
+
+        // Page indicator
+        const pageText = this.add.text(0, 0, `Page ${this.currentPage + 1} / ${totalPages}`, {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '18px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+        this.paginationContainer.add(pageText);
+
+        // Previous button
+        if (this.currentPage > 0) {
+            const prevBtn = this.add.text(-80, 0, '◀', {
+                fontSize: '28px',
+                color: '#ffffff',
+                stroke: '#ff6b9d',
+                strokeThickness: 3
+            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+            prevBtn.on('pointerover', () => prevBtn.setScale(1.2));
+            prevBtn.on('pointerout', () => prevBtn.setScale(1));
+            prevBtn.on('pointerup', () => {
+                this.currentPage--;
+                this.createLevelGrid(width, height);
+            });
+            this.paginationContainer.add(prevBtn);
+        }
+
+        // Next button
+        if (this.currentPage < totalPages - 1) {
+            const nextBtn = this.add.text(80, 0, '▶', {
+                fontSize: '28px',
+                color: '#ffffff',
+                stroke: '#ff6b9d',
+                strokeThickness: 3
+            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+            nextBtn.on('pointerover', () => nextBtn.setScale(1.2));
+            nextBtn.on('pointerout', () => nextBtn.setScale(1));
+            nextBtn.on('pointerup', () => {
+                this.currentPage++;
+                this.createLevelGrid(width, height);
+            });
+            this.paginationContainer.add(nextBtn);
+        }
+    }
+
+    createLevelButton(container, x, y, level, levelData, isUnlocked, size, isBoss = false) {
+        const radius = 12;
+        const borderWidth = 5; // Much thicker white border
+
         // Button background
         const graphics = this.add.graphics();
 
+        // Boss levels have gold/special styling
+        const normalColor = 0xff6b9d;
+        const bossColor = 0xFFD700;
+        const lockedColor = 0x888888;
+        const buttonColor = isBoss ? bossColor : normalColor;
+        const hoverColor = isBoss ? 0xFFE44D : 0xff8fad;
+
+        const drawButton = (bgAlpha, innerColor, strokeAlpha = 0) => {
+            graphics.clear();
+            // White border/background
+            graphics.fillStyle(0xffffff, bgAlpha);
+            graphics.fillRoundedRect(x - size/2, y - size/2, size, size, radius);
+            // Inner colored area
+            graphics.fillStyle(innerColor, 1);
+            graphics.fillRoundedRect(x - size/2 + borderWidth, y - size/2 + borderWidth,
+                                     size - borderWidth*2, size - borderWidth*2, radius - 3);
+            // Extra stroke for boss levels
+            if (isBoss && strokeAlpha > 0) {
+                graphics.lineStyle(3, 0xFFFFFF, strokeAlpha);
+                graphics.strokeRoundedRect(x - size/2, y - size/2, size, size, radius);
+            }
+        };
+
         if (isUnlocked) {
-            // Unlocked level - colorful button
-            graphics.fillStyle(0xffffff, 0.9);
-            graphics.fillRoundedRect(x - size/2, y - size/2, size, size, 15);
-            graphics.fillStyle(0xff6b9d, 1);
-            graphics.fillRoundedRect(x - size/2 + 4, y - size/2 + 4, size - 8, size - 8, 12);
+            drawButton(0.95, buttonColor, isBoss ? 0.8 : 0);
         } else {
-            // Locked level - gray button
-            graphics.fillStyle(0x666666, 0.7);
-            graphics.fillRoundedRect(x - size/2, y - size/2, size, size, 15);
+            graphics.fillStyle(0xaaaaaa, 0.5);
+            graphics.fillRoundedRect(x - size/2, y - size/2, size, size, radius);
+            graphics.fillStyle(lockedColor, 0.6);
+            graphics.fillRoundedRect(x - size/2 + borderWidth, y - size/2 + borderWidth,
+                                     size - borderWidth*2, size - borderWidth*2, radius - 3);
         }
 
         container.add(graphics);
 
         if (isUnlocked) {
-            // Level number
-            const levelText = this.add.text(x, y - 10, level.toString(), {
+            // Crown for boss levels at TOP
+            if (isBoss) {
+                const crown = this.add.text(x, y - size/2 + 16, '👑', {
+                    fontSize: '18px'
+                }).setOrigin(0.5);
+                container.add(crown);
+            }
+
+            // Level number - BIG and centered
+            const levelText = this.add.text(x, y - 6, level.toString(), {
                 fontFamily: 'Arial Black, Arial, sans-serif',
                 fontSize: '32px',
                 color: '#ffffff',
                 stroke: '#000000',
-                strokeThickness: 2
+                strokeThickness: 4
             }).setOrigin(0.5);
             container.add(levelText);
 
-            // Stars
+            // Stars at bottom - BIGGER
+            const starScale = 0.5;
+            const starSpacing = 18;
+            const starY = y + size/2 - 16;
+
             for (let s = 0; s < 3; s++) {
-                const starX = x - 25 + s * 25;
-                const starY = y + 25;
+                const starX = x + (s - 1) * starSpacing;
                 const starTexture = s < levelData.stars ? 'star_filled' : 'star_empty';
-                const star = this.add.image(starX, starY, starTexture).setScale(0.5);
+                const star = this.add.image(starX, starY, starTexture).setScale(starScale);
+                if (isBoss && s < levelData.stars) {
+                    star.setTint(0xff6b9d);
+                }
                 container.add(star);
             }
 
-            // Make interactive
+            // Interactive hit area
             const hitArea = this.add.rectangle(x, y, size, size, 0x000000, 0)
                 .setInteractive({ useHandCursor: true });
             container.add(hitArea);
 
-            hitArea.on('pointerover', () => {
-                graphics.clear();
-                graphics.fillStyle(0xffffff, 1);
-                graphics.fillRoundedRect(x - size/2, y - size/2, size, size, 15);
-                graphics.fillStyle(0xff8fad, 1);
-                graphics.fillRoundedRect(x - size/2 + 4, y - size/2 + 4, size - 8, size - 8, 12);
-            });
-
-            hitArea.on('pointerout', () => {
-                graphics.clear();
-                graphics.fillStyle(0xffffff, 0.9);
-                graphics.fillRoundedRect(x - size/2, y - size/2, size, size, 15);
-                graphics.fillStyle(0xff6b9d, 1);
-                graphics.fillRoundedRect(x - size/2 + 4, y - size/2 + 4, size - 8, size - 8, 12);
-            });
-
-            hitArea.on('pointerup', () => {
-                this.scene.start('GameScene', { level: level });
-            });
+            hitArea.on('pointerover', () => drawButton(1, hoverColor, isBoss ? 1 : 0));
+            hitArea.on('pointerout', () => drawButton(0.95, buttonColor, isBoss ? 0.8 : 0));
+            hitArea.on('pointerup', () => this.scene.start('GameScene', { level: level }));
         } else {
-            // Lock icon
-            const lockText = this.add.text(x, y, '🔒', {
-                fontSize: '36px'
+            // Locked: level number dimmed
+            const levelText = this.add.text(x, y - 6, level.toString(), {
+                fontFamily: 'Arial Black, Arial, sans-serif',
+                fontSize: '26px',
+                color: '#555555'
             }).setOrigin(0.5);
+            container.add(levelText);
+
+            // Lock icon below
+            const lockText = this.add.text(x, y + size/2 - 18, '🔒', {
+                fontSize: '20px'
+            }).setOrigin(0.5).setAlpha(0.7);
             container.add(lockText);
         }
     }

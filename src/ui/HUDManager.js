@@ -142,9 +142,9 @@ export default class HUDManager {
             objectives.push(`${icons[type] || '🍬'} ${display}`);
         }
 
-        // If no specific objectives, show score target
-        if (objectives.length === 0 && this.objectives.score > 0) {
-            const display = score >= this.objectives.score ? '✓' : `${score} / ${this.objectives.score}`;
+        // Always show score target when it exists
+        if (this.objectives.score > 0) {
+            const display = score >= this.objectives.score ? '✓' : `${score}/${this.objectives.score}`;
             objectives.push(`🎯 ${display}`);
         }
 

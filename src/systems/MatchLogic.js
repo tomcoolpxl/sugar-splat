@@ -8,11 +8,13 @@ export default class MatchLogic {
         const { rows, cols, grid, locked, stone } = this.board;
 
         // Helper: check if cell can be part of a match
-        // Stone blocks matches, locked tiles block matches
-        // Ice and chains DO NOT block matches (matching breaks them)
+        // Stone and chocolate block matches (they block cells entirely)
+        // Locked tiles block matches
+        // Ice, chains, and crates DO NOT block matches (matching breaks them)
         const canMatch = (r, c) => {
             if (!this.board.isValidCell(r, c)) return false;
             if (stone[r][c]) return false;
+            if (this.board.chocolate[r][c]) return false;
             if (locked[r][c]) return false;
             const type = grid[r][c];
             if (type === -1 || type >= 100) return false;
@@ -23,8 +25,8 @@ export default class MatchLogic {
         for (let row = 0; row < rows; row++) {
             let col = 0;
             while (col < cols) {
-                // Stone cells block matches and have no candy
-                if (stone[row][col]) {
+                // Stone and chocolate cells block matches and have no candy
+                if (stone[row][col] || this.board.chocolate[row][col]) {
                     col++;
                     continue;
                 }
@@ -64,8 +66,8 @@ export default class MatchLogic {
         for (let col = 0; col < cols; col++) {
             let row = 0;
             while (row < rows) {
-                // Stone cells block matches and have no candy
-                if (stone[row][col]) {
+                // Stone and chocolate cells block matches and have no candy
+                if (stone[row][col] || this.board.chocolate[row][col]) {
                     row++;
                     continue;
                 }
@@ -189,13 +191,13 @@ export default class MatchLogic {
     }
 
     hasValidMoves() {
-        const { rows, cols, candies, stone } = this.board;
+        const { rows, cols, candies, stone, chocolate } = this.board;
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
-                // Skip stone cells
-                if (stone[row][col]) continue;
+                // Skip stone and chocolate cells (they block entirely)
+                if (stone[row][col] || chocolate[row][col]) continue;
 
-                // Check if this cell can be swapped (ice, chains, honey, locked block swaps)
+                // Check if this cell can be swapped (ice, chains, honey, crate, locked block swaps)
                 if (!this.board.canSwapAt(row, col)) continue;
 
                 const candy = candies[row][col];
@@ -203,7 +205,7 @@ export default class MatchLogic {
                 if (candy && candy.isSpecial) return true;
 
                 // Try swap right
-                if (col < cols - 1 && !stone[row][col + 1] &&
+                if (col < cols - 1 && !stone[row][col + 1] && !chocolate[row][col + 1] &&
                     this.board.canSwapAt(row, col + 1) &&
                     !this.board.hasLicoriceWall(row, col, row, col + 1)) {
                     this.swapGridData(row, col, row, col + 1);
@@ -215,7 +217,7 @@ export default class MatchLogic {
                 }
 
                 // Try swap down
-                if (row < rows - 1 && !stone[row + 1][col] &&
+                if (row < rows - 1 && !stone[row + 1][col] && !chocolate[row + 1][col] &&
                     this.board.canSwapAt(row + 1, col) &&
                     !this.board.hasLicoriceWall(row, col, row + 1, col)) {
                     this.swapGridData(row, col, row + 1, col);
@@ -231,20 +233,20 @@ export default class MatchLogic {
     }
 
     findValidMove() {
-        const { rows, cols, stone } = this.board;
+        const { rows, cols, stone, chocolate } = this.board;
         let bestMove = null;
         let bestScore = -1;
 
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
-                // Skip stone cells
-                if (stone[row][col]) continue;
+                // Skip stone and chocolate cells
+                if (stone[row][col] || chocolate[row][col]) continue;
 
                 // Check if this cell can be swapped
                 if (!this.board.canSwapAt(row, col)) continue;
 
                 // Try swap right
-                if (col < cols - 1 && !stone[row][col + 1] &&
+                if (col < cols - 1 && !stone[row][col + 1] && !chocolate[row][col + 1] &&
                     this.board.canSwapAt(row, col + 1) &&
                     !this.board.hasLicoriceWall(row, col, row, col + 1)) {
                     this.swapGridData(row, col, row, col + 1);
@@ -260,7 +262,7 @@ export default class MatchLogic {
                 }
 
                 // Try swap down
-                if (row < rows - 1 && !stone[row + 1][col] &&
+                if (row < rows - 1 && !stone[row + 1][col] && !chocolate[row + 1][col] &&
                     this.board.canSwapAt(row + 1, col) &&
                     !this.board.hasLicoriceWall(row, col, row + 1, col)) {
                     this.swapGridData(row, col, row + 1, col);
@@ -285,6 +287,7 @@ export default class MatchLogic {
         const scene = this.board.scene;
         const objective = this.board.levelConfig?.objective || 'score';
         const collectTargets = this.board.levelConfig?.collect || {};
+        const { rows, cols, chocolate, bombTimer, honey, ice, chains, jelly } = this.board;
 
         for (const match of matches) {
             const cellCount = match.cells.length;
@@ -303,9 +306,11 @@ export default class MatchLogic {
 
             // Objective-specific scoring
             for (const cell of match.cells) {
+                const { row, col } = cell;
+
                 // Jelly clearing bonus
                 if (objective === 'clearJelly' || objective === 'mixed' || objective === 'ultimate') {
-                    if (this.board.jelly[cell.row][cell.col] > 0) {
+                    if (jelly[row][col] > 0) {
                         score += 50; // Each jelly cell cleared is valuable
                     }
                 }
@@ -322,10 +327,57 @@ export default class MatchLogic {
                     }
                 }
 
-                // Drop objective - prioritize lower row matches
+                // Drop objective - prioritize matches in columns with ingredients
                 if (objective === 'drop' || objective === 'mixed' || objective === 'ultimate') {
-                    // Matches in lower rows help ingredients fall
-                    score += cell.row * 2;
+                    // Check if there's an ingredient above this cell
+                    for (let r = 0; r < row; r++) {
+                        const candy = this.board.candies[r][col];
+                        if (candy && candy.isIngredient) {
+                            score += 80; // High priority - helps ingredient fall
+                            break;
+                        }
+                    }
+                    // Also favor lower matches in general
+                    score += row * 2;
+                }
+
+                // Chocolate adjacency bonus - matches next to chocolate help clear it
+                if (chocolate) {
+                    const neighbors = [[row-1, col], [row+1, col], [row, col-1], [row, col+1]];
+                    for (const [nr, nc] of neighbors) {
+                        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && chocolate[nr][nc]) {
+                            score += 60; // Clearing chocolate is important
+                        }
+                    }
+                }
+
+                // Bomb timer urgency - prioritize moves near bomb timers with low counts
+                if (bombTimer) {
+                    for (let dr = -2; dr <= 2; dr++) {
+                        for (let dc = -2; dc <= 2; dc++) {
+                            const nr = row + dr;
+                            const nc = col + dc;
+                            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && bombTimer[nr][nc] > 0) {
+                                const urgency = Math.max(0, 15 - bombTimer[nr][nc]); // More urgent as timer decreases
+                                score += urgency * 10;
+                            }
+                        }
+                    }
+                }
+
+                // Honey clearing bonus
+                if (honey && honey[row][col]) {
+                    score += 45; // Clearing honey stops spreading
+                }
+
+                // Ice breaking bonus
+                if (ice && ice[row][col] > 0) {
+                    score += 35;
+                }
+
+                // Chain breaking bonus
+                if (chains && chains[row][col] > 0) {
+                    score += 30;
                 }
             }
         }

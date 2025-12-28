@@ -221,22 +221,26 @@ export default class GameScene extends Phaser.Scene {
         this.events.on('iceCleared', (row, col) => {
             if (this.soundManager) this.soundManager.play('line');
             this.cameras.main.flash(100, 135, 206, 250, false); // Light blue flash
+            this.particleManager.emitIce(row, col, 1);
         });
 
         // Ice hit (2-layer to 1-layer)
         this.events.on('iceHit', (row, col) => {
             if (this.soundManager) this.soundManager.play('click');
+            this.particleManager.emitIce(row, col, 0.5); // Smaller burst for hit
         });
 
         // Chain broken event
         this.events.on('chainBroken', (row, col) => {
             if (this.soundManager) this.soundManager.play('line');
             this.cameras.main.flash(100, 158, 158, 158, false); // Gray flash
+            this.particleManager.emitChain(row, col, 1);
         });
 
         // Chain hit
         this.events.on('chainHit', (row, col) => {
             if (this.soundManager) this.soundManager.play('click');
+            this.particleManager.emitChain(row, col, 0.5);
         });
 
         // Honey cleared event
@@ -247,6 +251,51 @@ export default class GameScene extends Phaser.Scene {
         // Honey spread event
         this.events.on('honeySpread', () => {
             if (this.soundManager) this.soundManager.play('invalid');
+        });
+
+        // Chocolate cleared event
+        this.events.on('chocolateCleared', (row, col) => {
+            if (this.soundManager) this.soundManager.play('match');
+            this.cameras.main.flash(100, 93, 64, 55, false); // Brown flash
+            this.particleManager.emitChocolate(row, col);
+        });
+
+        // Chocolate spread event
+        this.events.on('chocolateSpread', () => {
+            if (this.soundManager) this.soundManager.play('invalid');
+            this.cameras.main.shake(100, 0.003);
+        });
+
+        // Crate broken event
+        this.events.on('crateBroken', (row, col) => {
+            if (this.soundManager) this.soundManager.play('line');
+            this.cameras.main.flash(100, 215, 168, 110, false); // Wooden color flash
+            this.particleManager.emitCrate(row, col, 1);
+        });
+
+        // Crate hit event
+        this.events.on('crateHit', (row, col) => {
+            if (this.soundManager) this.soundManager.play('click');
+            this.particleManager.emitCrate(row, col, 0.5);
+        });
+
+        // Bomb timer cleared (defused) event
+        this.events.on('bombTimerCleared', (row, col) => {
+            if (this.soundManager) this.soundManager.play('win');
+            this.cameras.main.flash(100, 255, 235, 59, false); // Yellow flash - safe!
+            this.particleManager.emitBombTimerCleared(row, col);
+        });
+
+        // Bomb timer expired - LOSE!
+        this.events.on('bombTimerExpired', (row, col) => {
+            if (this.soundManager) this.soundManager.play('levelFail');
+            this.cameras.main.shake(500, 0.05);
+            this.showLoseScreen();
+        });
+
+        // Conveyor moved event
+        this.events.on('conveyorMoved', () => {
+            if (this.soundManager) this.soundManager.play('swap');
         });
 
         // Valid swap - decrement moves
@@ -266,7 +315,7 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // Cascade complete - check win/lose conditions
-        this.events.on('cascadeComplete', () => {
+        this.events.on('cascadeComplete', async () => {
             if (this.isGameOver) return;
 
             // Spread honey after each completed cascade (if level has honey)
@@ -287,6 +336,32 @@ export default class GameScene extends Phaser.Scene {
                     return;
                 }
             }
+
+            // Spread chocolate after each move (more aggressive than honey)
+            if (this.board.spreadChocolate()) {
+                // Check if chocolate has taken over
+                let chocolateCount = 0;
+                let totalCells = 0;
+                for (let r = 0; r < this.board.rows; r++) {
+                    for (let c = 0; c < this.board.cols; c++) {
+                        if (!this.board.stone[r][c]) totalCells++;
+                        if (this.board.chocolate[r][c]) chocolateCount++;
+                    }
+                }
+                const threshold = GameConfig.BLOCKERS.CHOCOLATE_COVERAGE_LOSE_THRESHOLD;
+                if (chocolateCount >= totalCells * threshold) {
+                    this.showLoseScreen();
+                    return;
+                }
+            }
+
+            // Decrement bomb timers - if any expire, it's game over
+            if (this.board.decrementBombTimers()) {
+                return; // bombTimerExpired event will trigger showLoseScreen
+            }
+
+            // Process conveyors (move candies)
+            await this.board.processConveyors();
 
             if (this.checkWinCondition()) {
                 this.showWinScreen();

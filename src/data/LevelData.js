@@ -429,5 +429,209 @@ export const LevelData = {
             { row: 3, col: 3, side: 'bottom' },
             { row: 3, col: 4, side: 'bottom' }
         ]
+    },
+
+    // === WORLD 7: CHOCOLATE & CRATES (Levels 31-35) ===
+    // Introduce chocolate spreader and crate boxes
+
+    31: {
+        moves: 45,
+        objective: 'score',
+        targetScore: 2500,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Chocolate introduction - single tile that spreads
+        chocolate: [
+            { row: 3, col: 3 }
+        ],
+        tutorial: {
+            title: 'Warning: Chocolate!',
+            text: "Chocolate spreads sometimes!\nMatch NEXT TO it to clear.",
+            icon: '🍫'
+        }
+    },
+    32: {
+        moves: 50,
+        objective: 'score',
+        targetScore: 3500,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Multiple chocolate tiles
+        chocolate: [
+            { row: 2, col: 2 }, { row: 5, col: 5 }
+        ],
+        // Stone to slow spread
+        stone: [
+            { row: 3, col: 3 }, { row: 4, col: 4 }
+        ]
+    },
+    33: {
+        moves: 40,
+        objective: 'score',
+        targetScore: 3500,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Crate introduction - single layer
+        crate: [
+            { row: 3, col: 3, layers: 1 }, { row: 3, col: 4, layers: 1 },
+            { row: 4, col: 3, layers: 1 }, { row: 4, col: 4, layers: 1 }
+        ],
+        tutorial: {
+            title: 'New: Crates!',
+            text: "Candies in crates can match\nbut can't be swapped!",
+            icon: '📦'
+        }
+    },
+    34: {
+        moves: 45,
+        objective: 'clearJelly',
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Crate + Ice combo
+        jelly: [
+            { row: 3, col: 3 }, { row: 3, col: 4 },
+            { row: 4, col: 3 }, { row: 4, col: 4 },
+            { row: 5, col: 3 }, { row: 5, col: 4 }
+        ],
+        crate: [
+            { row: 2, col: 3, layers: 2 }, { row: 2, col: 4, layers: 2 }
+        ],
+        ice: [
+            { row: 3, col: 2, layers: 1 }, { row: 4, col: 5, layers: 1 }
+        ]
+    },
+    35: {
+        moves: 30,
+        objective: 'score',
+        targetScore: 4000,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Bomb Timer introduction - must clear before timer runs out
+        bombTimer: [
+            { row: 3, col: 3, moves: 15 }, { row: 4, col: 4, moves: 15 }
+        ],
+        tutorial: {
+            title: 'Danger: Bomb Timers!',
+            text: "Clear bombs before they\nexplode or you lose!",
+            icon: '💣'
+        }
+    },
+
+    // === WORLD 8: CONVEYORS & PORTALS (Levels 36-40) ===
+    // Introduce movement mechanics
+
+    36: {
+        moves: 35,
+        objective: 'score',
+        targetScore: 4500,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Multiple bomb timers with different countdowns
+        bombTimer: [
+            { row: 2, col: 2, moves: 12 },
+            { row: 2, col: 5, moves: 18 },
+            { row: 5, col: 3, moves: 10 }
+        ],
+        // Some crates to add challenge
+        crate: [
+            { row: 3, col: 3, layers: 1 }, { row: 3, col: 4, layers: 1 }
+        ]
+    },
+    37: {
+        moves: 40,
+        objective: 'drop',
+        drop: 4,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Conveyor introduction - helps ingredients fall
+        conveyor: [
+            { row: 3, col: 3, direction: 'down' },
+            { row: 3, col: 4, direction: 'down' },
+            { row: 4, col: 3, direction: 'down' },
+            { row: 4, col: 4, direction: 'down' }
+        ],
+        tutorial: {
+            title: 'New: Conveyors!',
+            text: "Conveyors move candies\nin the arrow direction!",
+            icon: '➡️'
+        }
+    },
+    38: {
+        moves: 45,
+        objective: 'collect',
+        collect: { 0: 25, 1: 25 },  // Red and Blue
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Conveyor loop pattern
+        conveyor: [
+            { row: 2, col: 2, direction: 'right' },
+            { row: 2, col: 3, direction: 'right' },
+            { row: 2, col: 4, direction: 'down' },
+            { row: 3, col: 4, direction: 'down' },
+            { row: 4, col: 4, direction: 'left' },
+            { row: 4, col: 3, direction: 'left' },
+            { row: 4, col: 2, direction: 'up' },
+            { row: 3, col: 2, direction: 'up' }
+        ],
+        // Some chocolate in the middle
+        chocolate: [
+            { row: 3, col: 3 }
+        ]
+    },
+    39: {
+        moves: 45,
+        objective: 'drop',
+        drop: 5,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Portal introduction - teleport candies
+        portals: [
+            { entrance: { row: 3, col: 1 }, exit: { row: 0, col: 6 } },
+            { entrance: { row: 3, col: 6 }, exit: { row: 0, col: 1 } }
+        ],
+        // Stone blocks creating maze
+        stone: [
+            { row: 4, col: 3 }, { row: 4, col: 4 }
+        ],
+        tutorial: {
+            title: 'New: Portals!',
+            text: "Candies teleport through\npurple to green portals!",
+            icon: '🌀'
+        }
+    },
+    40: {
+        moves: 60,
+        objective: 'ultimate',
+        targetScore: 6000,
+        drop: 3,
+        collect: { 0: 15, 1: 15 },
+        jelly: [
+            { row: 5, col: 3, layers: 2 }, { row: 5, col: 4, layers: 2 },
+            { row: 6, col: 3 }, { row: 6, col: 4 }
+        ],
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        // Ultimate challenge - mix of new mechanics
+        chocolate: [
+            { row: 2, col: 2 }
+        ],
+        crate: [
+            { row: 3, col: 3, layers: 2 }, { row: 3, col: 4, layers: 2 }
+        ],
+        bombTimer: [
+            { row: 1, col: 1, moves: 25 }, { row: 1, col: 6, moves: 25 }
+        ],
+        conveyor: [
+            { row: 4, col: 2, direction: 'right' },
+            { row: 4, col: 3, direction: 'right' },
+            { row: 4, col: 4, direction: 'right' },
+            { row: 4, col: 5, direction: 'right' }
+        ],
+        portals: [
+            { entrance: { row: 7, col: 0 }, exit: { row: 0, col: 7 } }
+        ],
+        stone: [
+            { row: 0, col: 0 }, { row: 7, col: 7 }
+        ]
     }
 };
