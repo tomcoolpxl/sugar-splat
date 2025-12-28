@@ -4,17 +4,7 @@ A polished match-3 puzzle game built with Phaser 3.
 
 ## Quick Start
 
-Start a local server in the project directory:
-
-```bash
-# Using Python 3
-python -m http.server 8000
-
-# Using Node.js
-npx serve .
-```
-
-Then open `http://localhost:8000` in your browser.
+<https://tomcoolpxl.github.io/sugar-splat/>
 
 ## Features
 

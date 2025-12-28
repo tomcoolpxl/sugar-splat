@@ -468,7 +468,7 @@ export default class GameScene extends Phaser.Scene {
             stars,
             awardedPowerups,
             currentLevel: this.currentLevel,
-            onNext: () => this.currentLevel < 30
+            onNext: () => this.currentLevel < 40
                 ? this.scene.restart({ level: this.currentLevel + 1 })
                 : this.scene.start('MenuScene'),
             onReplay: () => this.scene.restart({ level: this.currentLevel }),

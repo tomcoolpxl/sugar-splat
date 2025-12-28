@@ -339,6 +339,12 @@ export default class LevelSelectScene extends Phaser.Scene {
         const totalGridHeight = actualRows * (buttonSize + gap);
         const visibleHeight = availableHeight;
 
+        // Remove old scroll listeners before adding new ones
+        this.input.off('pointerdown');
+        this.input.off('pointermove');
+        this.input.off('pointerup');
+        this.input.off('wheel');
+
         if (totalGridHeight > visibleHeight) {
             const minY = -(totalGridHeight - visibleHeight);
             const maxY = 0;
