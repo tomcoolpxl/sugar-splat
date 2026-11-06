@@ -196,8 +196,8 @@ export default class ActionProcessor {
                 const target = this.board.candies[cell.row][cell.col];
                 if (target && target.isSpecial && target !== candy &&
                     !target._activating && !triggeredSet.has(target) &&
+                    !specialsToActivate.includes(target) &&
                     this.board.crate[cell.row][cell.col] === 0) {
-                    triggeredSet.add(target);
                     specialsToActivate.push(target);
                 } else {
                     cellsToClear.push(cell);

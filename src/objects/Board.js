@@ -35,6 +35,7 @@ export default class Board {
         this.honey = [];            // honey[row][col] = boolean
         this.honeySprites = [];
         this.honeyMoveCounter = 0;  // Track moves for honey spread interval
+        this.honeyClearedThisTurn = false; // Breathing room: honey does not spread if cleared this turn
         this.licorice = [];         // licorice[row][col] = { right: bool, bottom: bool }
         this.licoriceSprites = [];
 
@@ -42,6 +43,7 @@ export default class Board {
         this.chocolate = [];        // chocolate[row][col] = boolean (blocks cell entirely)
         this.chocolateSprites = [];
         this.chocolateMoveCounter = 0;
+        this.chocolateClearedThisTurn = false; // Breathing room: chocolate does not spread if cleared this turn
         this.crate = [];            // crate[row][col] = layer count (0, 1, 2, 3)
         this.crateSprites = [];
         this.bombTimer = [];        // bombTimer[row][col] = countdown value (0 = none)
@@ -546,6 +548,8 @@ export default class Board {
     async activateTap(candy) {
         this.inputLocked = true;
         this.deselectCandy();
+        this.honeyClearedThisTurn = false;
+        this.chocolateClearedThisTurn = false;
         try {
             this.scene.events.emit('validSwap');
             await this.activateSpecial(candy);
@@ -561,6 +565,8 @@ export default class Board {
     async trySwap(candy1, candy2) {
         this.inputLocked = true;
         this.deselectCandy();
+        this.honeyClearedThisTurn = false;
+        this.chocolateClearedThisTurn = false;
         try {
             const bothSpecial = candy1.isSpecial && candy2.isSpecial;
             const oneSpecial = candy1.isSpecial || candy2.isSpecial;
@@ -597,6 +603,15 @@ export default class Board {
             const matches = this.findMatches();
             if (matches.length > 0) {
                 this.scene.events.emit('validSwap');
+                // If one of the swapped candies is a special candy and is not inside matches,
+                // also activate it so the player's intentional special swap is not swallowed by an accidental match elsewhere!
+                if (oneSpecial) {
+                    const specialCandy = candy1.isSpecial ? candy1 : candy2;
+                    const inMatch = matches.some(m => m.cells.some(c => c.row === specialCandy.row && c.col === specialCandy.col));
+                    if (!inMatch && specialCandy.active) {
+                        await this.activateSpecial(specialCandy);
+                    }
+                }
                 await this.processMatches(matches);
                 await this.completeTurn();
             } else if (oneSpecial) {
@@ -776,14 +791,46 @@ export default class Board {
         } else if (type1 === 'color_bomb' || type2 === 'color_bomb') {
             const colorBomb = type1 === 'color_bomb' ? candy1 : candy2;
             const other = type1 === 'color_bomb' ? candy2 : candy1;
-            const targetColor = other.candyType;
+            let targetColor = other.candyType;
             const targetSpecial = other.specialType === 'bomb' ? 'bomb' : (Math.random() > 0.5 ? 'line_h' : 'line_v');
 
-            const targets = [];
+            let targets = [];
             for (let r = 0; r < this.rows; r++) {
                 for (let c = 0; c < this.cols; c++) {
                     if (this.grid[r][c] === targetColor && this.candies[r][c] && !this.candies[r][c].isIngredient && this.candies[r][c] !== colorBomb) {
                         targets.push(this.candies[r][c]);
+                    }
+                }
+            }
+
+            // Fallback: If targetColor has fewer than 2 candies, convert the color with the most candies
+            if (targets.length < 2) {
+                const colorCounts = {};
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        const ct = this.grid[r][c];
+                        if (ct >= 0 && ct < 90 && this.candies[r][c] && !this.candies[r][c].isIngredient && this.candies[r][c] !== colorBomb) {
+                            colorCounts[ct] = (colorCounts[ct] || 0) + 1;
+                        }
+                    }
+                }
+                let bestColor = targetColor;
+                let maxC = -1;
+                for (const [colStr, count] of Object.entries(colorCounts)) {
+                    if (count > maxC) {
+                        maxC = count;
+                        bestColor = Number(colStr);
+                    }
+                }
+                if (maxC > targets.length) {
+                    targetColor = bestColor;
+                    targets = [];
+                    for (let r = 0; r < this.rows; r++) {
+                        for (let c = 0; c < this.cols; c++) {
+                            if (this.grid[r][c] === targetColor && this.candies[r][c] && !this.candies[r][c].isIngredient && this.candies[r][c] !== colorBomb) {
+                                targets.push(this.candies[r][c]);
+                            }
+                        }
                     }
                 }
             }
@@ -824,22 +871,26 @@ export default class Board {
                 }
                 await this.showBigExplosion(row, col);
             } else {
-                const line = type1.startsWith('line') ? candy1 : candy2;
+                // Line + Bomb: Giant 3-row by 3-column Mega Cross!
                 const bomb = type1 === 'bomb' ? candy1 : candy2;
-                if (line.specialType === 'line_h') {
-                    for (let r = bomb.row - 1; r <= bomb.row + 1; r++) {
-                        if (r >= 0 && r < this.rows) {
-                            for (let c = 0; c < this.cols; c++) if (!this.stone[r][c]) cells.push({ row: r, col: c });
-                        }
-                    }
-                } else {
-                    for (let c = bomb.col - 1; c <= bomb.col + 1; c++) {
-                        if (c >= 0 && c < this.cols) {
-                            for (let r = 0; r < this.rows; r++) if (!this.stone[r][c]) cells.push({ row: r, col: c });
+                const centerRow = bomb.row;
+                const centerCol = bomb.col;
+
+                for (let r = centerRow - 1; r <= centerRow + 1; r++) {
+                    if (r >= 0 && r < this.rows) {
+                        for (let c = 0; c < this.cols; c++) {
+                            if (!this.stone[r][c]) cells.push({ row: r, col: c });
                         }
                     }
                 }
-                await this.showBigExplosion(bomb.row, bomb.col);
+                for (let c = centerCol - 1; c <= centerCol + 1; c++) {
+                    if (c >= 0 && c < this.cols) {
+                        for (let r = 0; r < this.rows; r++) {
+                            if (!this.stone[r][c]) cells.push({ row: r, col: c });
+                        }
+                    }
+                }
+                await this.showBigExplosion(centerRow, centerCol);
             }
         }
 
@@ -850,7 +901,7 @@ export default class Board {
         for (const cell of cells) {
             this.getAdjacentCells(cell.row, cell.col).forEach(adj => adjacentCells.add(`${adj.row},${adj.col}`));
             const target = this.candies[cell.row][cell.col];
-            if (target && target.isSpecial && target !== candy1 && target !== candy2) {
+            if (target && target.isSpecial && target !== candy1 && target !== candy2 && !specialsToActivate.includes(target)) {
                 specialsToActivate.push(target);
             } else {
                 cellsToClear.push(cell);
@@ -1494,6 +1545,7 @@ export default class Board {
     handleHoneyAt(row, col) {
         if (this.honey[row][col]) {
             this.honey[row][col] = false;
+            this.honeyClearedThisTurn = true;
             if (this.honeySprites[row][col]) {
                 const sprite = this.honeySprites[row][col];
                 this.scene.tweens.add({
@@ -1508,16 +1560,46 @@ export default class Board {
         }
     }
 
+    clearAdjacentHoney(row, col, hitSet = null) {
+        const adjacent = this.getAdjacentCells(row, col);
+        for (const adj of adjacent) {
+            const key = `honey_${adj.row},${adj.col}`;
+            if (hitSet && hitSet.has(key)) continue;
+            if (this.honey[adj.row][adj.col]) {
+                if (hitSet) hitSet.add(key);
+                this.handleHoneyAt(adj.row, adj.col);
+            }
+        }
+    }
+
     spreadHoney() {
-        // Collect all honey positions
-        const honeyPositions = [];
+        // Breathing room: Do not spread if honey was cleared this turn
+        if (this.honeyClearedThisTurn) return false;
+
+        // Collect all honey positions that have valid targets to spread into
+        const candidates = [];
         for (let r = 0; r < this.rows; r++) {
             for (let c = 0; c < this.cols; c++) {
-                if (this.honey[r][c]) honeyPositions.push({ row: r, col: c });
+                if (this.honey[r][c]) {
+                    const adjacent = this.getAdjacentCells(r, c);
+                    const validTargets = adjacent.filter(adj =>
+                        !this.honey[adj.row][adj.col] &&
+                        !this.stone[adj.row][adj.col] &&
+                        !this.chocolate[adj.row][adj.col] &&
+                        this.crate[adj.row][adj.col] === 0 &&
+                        !this.locked[adj.row][adj.col] &&
+                        this.candies[adj.row][adj.col] &&
+                        !this.candies[adj.row][adj.col].isIngredient &&
+                        !this.candies[adj.row][adj.col].isSpecial
+                    );
+                    if (validTargets.length > 0) {
+                        candidates.push({ pos: { row: r, col: c }, targets: validTargets });
+                    }
+                }
             }
         }
 
-        if (honeyPositions.length === 0) return false;
+        if (candidates.length === 0) return false;
 
         // Check if it's time to spread (based on move interval)
         this.honeyMoveCounter++;
@@ -1527,36 +1609,16 @@ export default class Board {
         }
         this.honeyMoveCounter = 0; // Reset counter
 
-        let spread = false;
-        for (const pos of honeyPositions) {
-            // Each honey tile has a chance to spread
-            if (Math.random() > cfg.HONEY_SPREAD_CHANCE) continue;
+        if (Math.random() > cfg.HONEY_SPREAD_CHANCE) return false;
 
-            const adjacent = this.getAdjacentCells(pos.row, pos.col);
-            const validTargets = adjacent.filter(adj =>
-                !this.honey[adj.row][adj.col] &&
-                !this.stone[adj.row][adj.col] &&
-                !this.chocolate[adj.row][adj.col] &&
-                this.crate[adj.row][adj.col] === 0 &&
-                !this.locked[adj.row][adj.col] &&
-                this.candies[adj.row][adj.col] &&
-                !this.candies[adj.row][adj.col].isIngredient &&
-                !this.candies[adj.row][adj.col].isSpecial
-            );
+        // Spread to AT MOST 1 tile per spread trigger
+        const chosen = Phaser.Utils.Array.GetRandom(candidates);
+        const target = Phaser.Utils.Array.GetRandom(chosen.targets);
+        this.honey[target.row][target.col] = true;
+        this.createHoneySprite(target.row, target.col);
 
-            if (validTargets.length > 0) {
-                const target = validTargets[Math.floor(Math.random() * validTargets.length)];
-                this.honey[target.row][target.col] = true;
-                this.createHoneySprite(target.row, target.col);
-                spread = true;
-            }
-        }
-
-        if (spread) {
-            this.scene.events.emit('honeySpread');
-        }
-
-        return spread;
+        this.scene.events.emit('honeySpread');
+        return true;
     }
 
     // --- New World 7-8 Blocker Handlers ---
@@ -1566,6 +1628,7 @@ export default class Board {
         // This is called when a candy ADJACENT to chocolate is cleared
         if (this.chocolate[row][col]) {
             this.chocolate[row][col] = false;
+            this.chocolateClearedThisTurn = true;
             if (this.chocolateSprites[row][col]) {
                 const sprite = this.chocolateSprites[row][col];
                 this.scene.tweens.add({
@@ -1581,15 +1644,34 @@ export default class Board {
     }
 
     spreadChocolate() {
-        // Collect all chocolate positions
-        const chocolatePositions = [];
+        // Breathing room: Do not spread if chocolate was cleared this turn
+        if (this.chocolateClearedThisTurn) return false;
+
+        // Collect all chocolate positions that have valid targets
+        const candidates = [];
         for (let r = 0; r < this.rows; r++) {
             for (let c = 0; c < this.cols; c++) {
-                if (this.chocolate[r][c]) chocolatePositions.push({ row: r, col: c });
+                if (this.chocolate[r][c]) {
+                    const adjacent = this.getAdjacentCells(r, c);
+                    const validTargets = adjacent.filter(adj =>
+                        !this.chocolate[adj.row][adj.col] &&
+                        !this.stone[adj.row][adj.col] &&
+                        !this.isPinnedCandy(adj.row, adj.col) &&
+                        this.bombTimer[adj.row][adj.col] === 0 &&
+                        !this.isPortalCell(adj.row, adj.col) &&
+                        !(this.levelConfig?.drop > 0 && adj.row === this.rows - 1) &&
+                        this.candies[adj.row][adj.col] &&
+                        !this.candies[adj.row][adj.col].isSpecial &&
+                        !this.candies[adj.row][adj.col].isIngredient
+                    );
+                    if (validTargets.length > 0) {
+                        candidates.push({ pos: { row: r, col: c }, targets: validTargets });
+                    }
+                }
             }
         }
 
-        if (chocolatePositions.length === 0) return false;
+        if (candidates.length === 0) return false;
 
         // Check if it's time to spread
         this.chocolateMoveCounter++;
@@ -1599,43 +1681,22 @@ export default class Board {
         }
         this.chocolateMoveCounter = 0;
 
-        let spread = false;
-        for (const pos of chocolatePositions) {
-            if (Math.random() > cfg.CHOCOLATE_SPREAD_CHANCE) continue;
+        if (Math.random() > cfg.CHOCOLATE_SPREAD_CHANCE) return false;
 
-            const adjacent = this.getAdjacentCells(pos.row, pos.col);
-            const validTargets = adjacent.filter(adj =>
-                !this.chocolate[adj.row][adj.col] &&
-                !this.stone[adj.row][adj.col] &&
-                !this.isPinnedCandy(adj.row, adj.col) &&
-                this.bombTimer[adj.row][adj.col] === 0 &&
-                !this.isPortalCell(adj.row, adj.col) &&
-                !(this.levelConfig?.drop > 0 && adj.row === this.rows - 1) &&
-                this.candies[adj.row][adj.col] &&
-                !this.candies[adj.row][adj.col].isSpecial &&
-                !this.candies[adj.row][adj.col].isIngredient
-            );
-
-            if (validTargets.length > 0) {
-                const target = validTargets[Math.floor(Math.random() * validTargets.length)];
-                // Chocolate destroys the candy and takes over the cell
-                const candy = this.candies[target.row][target.col];
-                if (candy && candy.active) {
-                    candy.destroy();
-                    this.candies[target.row][target.col] = null;
-                    this.grid[target.row][target.col] = -1;
-                }
-                this.chocolate[target.row][target.col] = true;
-                this.createChocolateSprite(target.row, target.col);
-                spread = true;
-            }
+        // Spread to AT MOST 1 tile per spread trigger
+        const chosen = Phaser.Utils.Array.GetRandom(candidates);
+        const target = Phaser.Utils.Array.GetRandom(chosen.targets);
+        const candy = this.candies[target.row][target.col];
+        if (candy && candy.active) {
+            candy.destroy();
+            this.candies[target.row][target.col] = null;
+            this.grid[target.row][target.col] = -1;
         }
+        this.chocolate[target.row][target.col] = true;
+        this.createChocolateSprite(target.row, target.col);
 
-        if (spread) {
-            this.scene.events.emit('chocolateSpread');
-        }
-
-        return spread;
+        this.scene.events.emit('chocolateSpread');
+        return true;
     }
 
     clearAdjacentChocolate(row, col, hitSet = null) {
@@ -2213,10 +2274,12 @@ export default class Board {
                 ease: 'Bounce.easeOut',
                 onComplete: () => {
                     if (!candy.active) return;
+                    const bx = candy.baseScaleX || candy.scaleX;
+                    const by = candy.baseScaleY || candy.scaleY;
                     this.scene.tweens.add({
                         targets: candy,
-                        scaleX: 1.1,
-                        scaleY: 0.9,
+                        scaleX: bx * 1.1,
+                        scaleY: by * 0.9,
                         duration: GameConfig.BOARD.ANIMATION_SPEED.LANDING_SQUASH,
                         yoyo: true,
                         ease: 'Sine.easeOut'
@@ -2289,10 +2352,12 @@ export default class Board {
                         ease: 'Bounce.easeOut',
                         onComplete: () => {
                             if (!candy.active) return;
+                            const bx = candy.baseScaleX || candy.scaleX;
+                            const by = candy.baseScaleY || candy.scaleY;
                             this.scene.tweens.add({
                                 targets: candy,
-                                scaleX: 1.1,
-                                scaleY: 0.9,
+                                scaleX: bx * 1.1,
+                                scaleY: by * 0.9,
                                 duration: GameConfig.BOARD.ANIMATION_SPEED.LANDING_SQUASH,
                                 yoyo: true,
                                 ease: 'Sine.easeOut'
@@ -2324,6 +2389,7 @@ export default class Board {
             this.handleHoneyAt(cell.row, cell.col);
             this.clearBombTimerAt(cell.row, cell.col);
             this.clearAdjacentChocolate(cell.row, cell.col, waveHitSet);
+            this.clearAdjacentHoney(cell.row, cell.col, waveHitSet);
             this.clearAdjacentCrates(cell.row, cell.col, waveHitSet);
             this.clearAdjacentLocks(cell.row, cell.col, waveHitSet);
 
@@ -2366,6 +2432,7 @@ export default class Board {
             this.handleHoneyAt(row, col);
             this.clearBombTimerAt(row, col);
             this.clearAdjacentChocolate(row, col, waveHitSet);
+            this.clearAdjacentHoney(row, col, waveHitSet);
             this.clearAdjacentCrates(row, col, waveHitSet);
 
             const applySpecial = (candyObj) => {
@@ -2381,9 +2448,11 @@ export default class Board {
             };
 
             if (old && old.active) {
+                const bx = old.baseScaleX || old.scaleX;
+                const by = old.baseScaleY || old.scaleY;
                 return new Promise(res => this.scene.tweens.add({
                     targets: old,
-                    scaleX: 1.3, scaleY: 1.3,
+                    scaleX: bx * 1.3, scaleY: by * 1.3,
                     duration: 150,
                     yoyo: true,
                     onComplete: () => {
@@ -2394,8 +2463,10 @@ export default class Board {
             } else {
                 const candy = this.createCandy(row, col, special.candyType);
                 applySpecial(candy);
+                const targetScaleX = candy.baseScaleX || candy.scaleX;
+                const targetScaleY = candy.baseScaleY || candy.scaleY;
                 candy.setScale(0);
-                return new Promise(res => this.scene.tweens.add({ targets: candy, scaleX: 1, scaleY: 1, duration: 200, onComplete: res }));
+                return new Promise(res => this.scene.tweens.add({ targets: candy, scaleX: targetScaleX, scaleY: targetScaleY, duration: 200, onComplete: res }));
             }
         });
 
@@ -2422,6 +2493,7 @@ export default class Board {
             this.handleChocolateAt(cell.row, cell.col);
             this.clearBombTimerAt(cell.row, cell.col);
             this.clearAdjacentChocolate(cell.row, cell.col, waveHitSet);
+            this.clearAdjacentHoney(cell.row, cell.col, waveHitSet);
             this.clearAdjacentLocks(cell.row, cell.col, waveHitSet);
             if (!hadCrate) {
                 this.clearAdjacentCrates(cell.row, cell.col, waveHitSet);
@@ -2965,8 +3037,8 @@ export default class Board {
                 await Promise.all(targets.map(candy => new Promise(res => {
                     this.scene.tweens.add({
                         targets: candy,
-                        scaleX: 1,
-                        scaleY: 1,
+                        scaleX: candy.baseScaleX || 1,
+                        scaleY: candy.baseScaleY || 1,
                         duration: GameConfig.BOARD.ANIMATION_SPEED.SHUFFLE_SCALE,
                         ease: 'Back.easeOut',
                         onComplete: res

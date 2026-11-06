@@ -7,7 +7,6 @@ export default class MatchLogic {
         if (!this.board.isValidCell(r, c)) return false;
         if (this.board.stone[r][c]) return false;
         if (this.board.chocolate[r][c]) return false;
-        if (this.board.locked[r][c]) return false;
         if (this.board.crate[r][c] > 0) return false;
         const type = this.board.grid[r][c];
         if (type === -1 || type >= 90) return false;
@@ -396,6 +395,9 @@ export default class MatchLogic {
                         }
                         if (this.board.crate && this.board.crate[nr][nc] > 0) {
                             score += 50; // Breaking wooden crates
+                        }
+                        if (this.board.honey && this.board.honey[nr][nc]) {
+                            score += 55; // Clearing honey
                         }
                         if (this.board.locked && this.board.locked[nr][nc]) {
                             score += 45; // Unlocking locked tiles

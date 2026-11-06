@@ -27,6 +27,17 @@ export default class Candy extends Phaser.GameObjects.Image {
 
         // Selection indicator
         this.selectionIndicator = null;
+
+        // Base scale for responsive sizing
+        this.baseScaleX = this.scaleX;
+        this.baseScaleY = this.scaleY;
+    }
+
+    setDisplaySize(width, height) {
+        super.setDisplaySize(width, height);
+        this.baseScaleX = this.scaleX;
+        this.baseScaleY = this.scaleY;
+        return this;
     }
 
     select() {
@@ -34,11 +45,14 @@ export default class Candy extends Phaser.GameObjects.Image {
 
         this.isSelected = true;
 
+        const bx = this.baseScaleX || this.scaleX;
+        const by = this.baseScaleY || this.scaleY;
+
         // Squash and Stretch selection effect
         this.scene.tweens.add({
             targets: this,
-            scaleX: 1.1,
-            scaleY: 0.9,
+            scaleX: bx * 1.1,
+            scaleY: by * 0.9,
             duration: 100,
             yoyo: true,
             repeat: 0,
@@ -46,8 +60,8 @@ export default class Candy extends Phaser.GameObjects.Image {
                 if (this.isSelected) {
                     this.scene.tweens.add({
                         targets: this,
-                        scaleX: 1.05,
-                        scaleY: 1.05,
+                        scaleX: bx * 1.05,
+                        scaleY: by * 1.05,
                         duration: 400,
                         yoyo: true,
                         repeat: -1,
@@ -89,11 +103,14 @@ export default class Candy extends Phaser.GameObjects.Image {
         // Stop pulsing
         this.scene.tweens.killTweensOf(this);
 
+        const bx = this.baseScaleX || 1;
+        const by = this.baseScaleY || 1;
+
         // Reset scale with a small bounce
         this.scene.tweens.add({
             targets: this,
-            scaleX: 1,
-            scaleY: 1,
+            scaleX: bx,
+            scaleY: by,
             duration: 200,
             ease: 'Back.easeOut'
         });
@@ -129,11 +146,14 @@ export default class Candy extends Phaser.GameObjects.Image {
                 break;
         }
 
+        const bx = this.baseScaleX || this.scaleX;
+        const by = this.baseScaleY || this.scaleY;
+
         // Creation animation
         this.scene.tweens.add({
             targets: this,
-            scaleX: 1.3,
-            scaleY: 1.3,
+            scaleX: bx * 1.3,
+            scaleY: by * 1.3,
             duration: 150,
             yoyo: true,
             ease: 'Back.easeOut'
@@ -233,10 +253,12 @@ export default class Candy extends Phaser.GameObjects.Image {
 
     bounce() {
         // Quick bounce effect for feedback
+        const bx = this.baseScaleX || this.scaleX;
+        const by = this.baseScaleY || this.scaleY;
         this.scene.tweens.add({
             targets: this,
-            scaleX: 0.9,
-            scaleY: 0.9,
+            scaleX: bx * 0.9,
+            scaleY: by * 0.9,
             duration: 100,
             yoyo: true,
             ease: 'Power2'
