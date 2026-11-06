@@ -2683,12 +2683,14 @@ export default class Board {
                 });
             }
 
-            // Quick delay between beams
-            await new Promise(r => setTimeout(r, 25));
+            // Quick delay between beams (scaled by tween timeScale for fast bonus rounds)
+            const timeScale = this.scene?.tweens?.timeScale || 1;
+            await new Promise(r => setTimeout(r, Math.max(4, Math.round(25 / timeScale))));
         }
 
         // All beams visible - brief dramatic pause
-        await new Promise(r => setTimeout(r, 150));
+        const timeScale = this.scene?.tweens?.timeScale || 1;
+        await new Promise(r => setTimeout(r, Math.max(20, Math.round(150 / timeScale))));
 
         // Stop glow pulsing
         this.scene.tweens.killTweensOf(glow);

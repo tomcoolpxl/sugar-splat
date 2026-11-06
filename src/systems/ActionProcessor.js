@@ -104,8 +104,8 @@ export default class ActionProcessor {
                 }
             }
 
-            // Final check: Is the board stuck?
-            if (!this.board.hasValidMoves()) {
+            // Final check: Is the board stuck? (Skip during bonus round or game over)
+            if (!this.board.inBonusRound && !this.scene?.isGameOver && !this.board.hasValidMoves()) {
                 await this.safeAwait(this.board.shuffle());
             }
         } catch (error) {
