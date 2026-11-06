@@ -25,7 +25,8 @@ export default class HintManager {
         });
 
         // Reset hint on any pointer interaction
-        this.scene.input.on('pointerdown', () => this.reset());
+        this.onPointerDown = () => this.reset();
+        this.scene.input.on('pointerdown', this.onPointerDown);
     }
 
     reset() {
@@ -76,7 +77,7 @@ export default class HintManager {
         }
 
         const move = this.board.findValidMove();
-        if (!move || move.length < 2) return;
+        if (!move || move.length < 1) return;
 
         this.currentMove = move;
         this.showHint();
@@ -129,7 +130,7 @@ export default class HintManager {
 
         // Re-find move in case board changed
         const move = this.board.findValidMove();
-        if (!move || move.length < 2) return;
+        if (!move || move.length < 1) return;
 
         // Clear any existing elements
         this.hintElements.forEach(el => {
@@ -138,11 +139,33 @@ export default class HintManager {
         this.hintElements = [];
 
         const cell1 = move[0];
-        const cell2 = move[1];
         const candy1 = this.board.candies[cell1.row][cell1.col];
+        if (!candy1) return;
+
+        if (move.length === 1) {
+            const ring1 = this.createGlowRing(candy1.x, candy1.y);
+            const finger = this.scene.add.text(candy1.x + 14, candy1.y + 18, '👆', {
+                fontSize: '26px'
+            }).setOrigin(0.5).setDepth(12);
+            this.scene.tweens.add({
+                targets: finger,
+                y: candy1.y + 8,
+                scaleX: 0.9,
+                scaleY: 0.9,
+                duration: 350,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+            this.hintElements.push(ring1, finger);
+            this.hintVisible = true;
+            return;
+        }
+
+        const cell2 = move[1];
         const candy2 = this.board.candies[cell2.row][cell2.col];
 
-        if (!candy1 || !candy2) return;
+        if (!candy2) return;
 
         // Create glowing rings around BOTH candies
         const ring1 = this.createGlowRing(candy1.x, candy1.y);
@@ -295,7 +318,28 @@ export default class HintManager {
             ease: 'Sine.easeInOut'
         });
 
-        elements.push(arrow1, arrow2);
+        // Add animated pointing finger sliding from candy1 to candy2
+        const finger = this.scene.add.text(candy1.x + 10, candy1.y + 16, '👆', {
+            fontSize: '26px'
+        }).setOrigin(0.5).setDepth(12).setAlpha(0);
+
+        this.scene.tweens.add({
+            targets: finger,
+            alpha: 1,
+            duration: 200
+        });
+
+        this.scene.tweens.add({
+            targets: finger,
+            x: candy2.x + 10,
+            y: candy2.y + 16,
+            duration: 650,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+
+        elements.push(arrow1, arrow2, finger);
         return elements;
     }
 
@@ -355,6 +399,10 @@ export default class HintManager {
     }
 
     destroy() {
+        if (this.onPointerDown && this.scene?.input) {
+            this.scene.input.off('pointerdown', this.onPointerDown);
+            this.onPointerDown = null;
+        }
         if (this.hintTimer) {
             this.hintTimer.remove();
             this.hintTimer = null;

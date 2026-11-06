@@ -152,6 +152,7 @@ export default class C64Sequencer {
 
     playStep() {
         if (!this.context || !this.isPlaying) return;
+        if (localStorage.getItem('sugarSplash_music') === 'false') return;
 
         if (this.currentStep >= 32) this.currentStep = 0;
         const now = this.context.currentTime;

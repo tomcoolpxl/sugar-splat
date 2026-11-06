@@ -38,16 +38,18 @@ export const GameConfig = {
 
     // Candy Colors (Palette)
     COLORS: [
-        0xff4757, // Red
-        0x3742fa, // Blue
-        0x2ed573, // Green
-        0xffa502, // Yellow/Orange
-        0xa55eea, // Purple
-        0xff7f50  // Orange/Coral
+        0xff4757, // Red (Circle)
+        0x3742fa, // Blue (Rounded Square)
+        0x2ed573, // Green (Diamond)
+        0xffd32a, // Sunny Golden Yellow (Star)
+        0xa55eea, // Purple (Triangle)
+        0xff6348  // Vivid Coral-Orange (Hexagon)
     ],
 
-    // UI Colors
+    // UI Colors & Typography
     UI: {
+        FONT_FAMILY: "'Fredoka', 'Arial Black', Arial, sans-serif",
+        FONT_FAMILY_BODY: "'Fredoka', Arial, sans-serif",
         BACKGROUND_GRADIENT_START: { r: 255, g: 182, b: 193 },
         BACKGROUND_GRADIENT_END: { r: 173, g: 216, b: 230 },
         SCORE_TEXT: '#ffffff',

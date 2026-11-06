@@ -5,15 +5,38 @@ export default class LevelSelectScene extends Phaser.Scene {
     constructor() {
         super('LevelSelectScene');
         this.totalLevels = 40;
-        this.columns = 4;
-        this.levelsPerPage = 32;
+        this.columns = 5;
+        this.levelsPerPage = 20;
         this.currentPage = 0;
         this.bossLevels = [10, 20, 30, 40]; // Boss levels with special visuals
+        this.dragDistance = 0;
+        this.worldNames = [
+            'World 1: Sweet Meadows',
+            'World 2: Frosty Peaks',
+            'World 3: Chain Factory',
+            'World 4: Honey Hive',
+            'World 5: Licorice Maze',
+            'World 6: Stone Quarry',
+            'World 7: Cocoa Fortress',
+            'World 8: Portal Nexus'
+        ];
     }
 
     create() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
+
+        // Auto-open the page containing the player's highest unlocked level
+        const saveData = this.getSaveData();
+        let highestUnlocked = 1;
+        for (let lvl = 1; lvl <= this.totalLevels; lvl++) {
+            const prevCompleted = saveData.levels[lvl - 1]?.completed || saveData.levels[String(lvl - 1)]?.completed;
+            const selfPlayed = saveData.levels[lvl]?.completed || (saveData.levels[lvl]?.stars > 0);
+            if (lvl <= 5 || prevCompleted || selfPlayed) {
+                highestUnlocked = lvl;
+            }
+        }
+        this.currentPage = Math.floor((highestUnlocked - 1) / this.levelsPerPage);
 
         // Initialize C64 Sequencer for menu music
         this.sequencer = new C64Sequencer(this);
@@ -59,8 +82,8 @@ export default class LevelSelectScene extends Phaser.Scene {
         for (let i = 0; i < steps; i++) {
             const t = i / steps;
             const color = Phaser.Display.Color.Interpolate.ColorWithColor(
-                { r: 255, g: 182, b: 193 },
-                { r: 173, g: 216, b: 230 },
+                GameConfig.UI.BACKGROUND_GRADIENT_START,
+                GameConfig.UI.BACKGROUND_GRADIENT_END,
                 steps,
                 i
             );
@@ -247,7 +270,7 @@ export default class LevelSelectScene extends Phaser.Scene {
     createHeader(width, height) {
         // Title
         this.add.text(width / 2, 60, 'Select Level', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '42px',
             color: '#ff6b9d',
             stroke: '#ffffff',
@@ -261,7 +284,7 @@ export default class LevelSelectScene extends Phaser.Scene {
 
         this.add.image(width / 2 - 40, 110, 'star_filled').setScale(0.8);
         this.add.text(width / 2, 110, `${totalStars} / ${maxStars}`, {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '24px',
             color: '#ffffff',
             stroke: '#000000',
@@ -272,32 +295,31 @@ export default class LevelSelectScene extends Phaser.Scene {
     createLevelGrid(width, height) {
         const saveData = this.getSaveData();
 
-        // Layout constants
+        // Layout constants for 2 pages of 20 levels (4 Worlds of 5 levels per page)
         const headerHeight = 140;
         const bottomBarHeight = 100;
-        const paginationSpace = 60; // Extra space for pagination
-        const gap = 14; // Gap between buttons
+        const paginationSpace = 60;
+        const gapX = 12;
+        const worldHeaderHeight = 28;
+        const worldGapY = 20;
 
-        // Available space
-        const sidePadding = 30;
+        const sidePadding = 28;
         const availableWidth = width - sidePadding * 2;
         const availableHeight = height - headerHeight - bottomBarHeight - paginationSpace;
 
-        // Calculate rows needed
-        const numRows = Math.ceil(this.levelsPerPage / this.columns);
+        const numWorldsOnPage = Math.ceil(this.levelsPerPage / this.columns); // 4 worlds per page
+        const maxButtonByWidth = Math.floor((availableWidth - (this.columns - 1) * gapX) / this.columns);
+        const maxButtonByHeight = Math.floor(
+            (availableHeight - numWorldsOnPage * worldHeaderHeight - (numWorldsOnPage - 1) * worldGapY) / numWorldsOnPage
+        );
+        const buttonSize = Math.min(maxButtonByWidth, maxButtonByHeight, 94);
 
-        // Calculate button size to fill available space
-        const maxButtonByWidth = Math.floor((availableWidth - (this.columns - 1) * gap) / this.columns);
-        const maxButtonByHeight = Math.floor((availableHeight - (numRows - 1) * gap) / numRows);
-        const buttonSize = Math.min(maxButtonByWidth, maxButtonByHeight); // Use full available space
+        const gridWidth = this.columns * buttonSize + (this.columns - 1) * gapX;
+        const worldBlockHeight = worldHeaderHeight + buttonSize;
+        const totalGridHeight = numWorldsOnPage * worldBlockHeight + (numWorldsOnPage - 1) * worldGapY;
 
-        // Calculate actual grid dimensions
-        const gridWidth = this.columns * buttonSize + (this.columns - 1) * gap;
-        const gridHeight = numRows * buttonSize + (numRows - 1) * gap;
-
-        // Center the grid horizontally and vertically
         const startX = (width - gridWidth) / 2 + buttonSize / 2;
-        const startY = headerHeight + (availableHeight - gridHeight) / 2 + buttonSize / 2;
+        const startY = headerHeight + Math.max(0, (availableHeight - totalGridHeight) / 2);
 
         // Calculate pagination
         const totalPages = Math.ceil(this.totalLevels / this.levelsPerPage);
@@ -310,20 +332,38 @@ export default class LevelSelectScene extends Phaser.Scene {
             this.levelContainer.destroy();
         }
 
-        // Create container for level buttons
+        // Create container for level buttons and world headers
         this.levelContainer = this.add.container(0, 0);
 
         for (let i = 0; i < levelsOnPage; i++) {
             const level = startLevel + i;
             const col = i % this.columns;
-            const row = Math.floor(i / this.columns);
+            const worldRow = Math.floor(i / this.columns);
+            const worldIndex = Math.floor((level - 1) / 5);
 
-            const x = startX + col * (buttonSize + gap);
-            const y = startY + row * (buttonSize + gap);
+            const blockTopY = startY + worldRow * (worldBlockHeight + worldGapY);
+
+            // Render World Header at the start of each 5-level row
+            if (col === 0) {
+                const headerBg = this.add.graphics();
+                headerBg.fillStyle(0x000000, 0.22);
+                headerBg.fillRoundedRect((width - gridWidth) / 2, blockTopY, gridWidth, 24, 8);
+                this.levelContainer.add(headerBg);
+
+                const worldTitle = this.add.text(width / 2, blockTopY + 12, this.worldNames[worldIndex] || `World ${worldIndex + 1}`, {
+                    fontFamily: GameConfig.UI.FONT_FAMILY,
+                    fontSize: '15px',
+                    color: '#ffffff',
+                    stroke: '#ff6b9d',
+                    strokeThickness: 3
+                }).setOrigin(0.5);
+                this.levelContainer.add(worldTitle);
+            }
+
+            const x = startX + col * (buttonSize + gapX);
+            const y = blockTopY + worldHeaderHeight + buttonSize / 2;
 
             const levelData = saveData.levels[level] || { completed: false, stars: 0 };
-            // First 5 levels always unlocked, rest unlock when previous is completed
-            // Also unlock if the level itself was ever played (has any data)
             const prevCompleted = saveData.levels[level - 1]?.completed || saveData.levels[String(level - 1)]?.completed;
             const selfPlayed = levelData.completed || levelData.stars > 0;
             const isUnlocked = level <= 5 || prevCompleted || selfPlayed;
@@ -337,47 +377,50 @@ export default class LevelSelectScene extends Phaser.Scene {
             this.createPaginationControls(width, height, totalPages);
         }
 
-        // Enable scrolling if content exceeds screen
-        const actualRows = Math.ceil(levelsOnPage / this.columns);
-        const totalGridHeight = actualRows * (buttonSize + gap);
+        // Remove only our scroll listeners (preserving cursor candy trail listener)
+        if (this.scrollDownHandler) this.input.off('pointerdown', this.scrollDownHandler);
+        if (this.scrollMoveHandler) this.input.off('pointermove', this.scrollMoveHandler);
+        if (this.scrollUpHandler) this.input.off('pointerup', this.scrollUpHandler);
+        if (this.scrollWheelHandler) this.input.off('wheel', this.scrollWheelHandler);
+
         const visibleHeight = availableHeight;
-
-        // Remove old scroll listeners before adding new ones
-        this.input.off('pointerdown');
-        this.input.off('pointermove');
-        this.input.off('pointerup');
-        this.input.off('wheel');
-
         if (totalGridHeight > visibleHeight) {
             const minY = -(totalGridHeight - visibleHeight);
             const maxY = 0;
 
-            // Track drag state
             let isDragging = false;
             let dragStartY = 0;
             let containerStartY = 0;
 
-            this.input.on('pointerdown', (pointer) => {
+            this.scrollDownHandler = (pointer) => {
                 isDragging = true;
+                this.dragDistance = 0;
                 dragStartY = pointer.y;
                 containerStartY = this.levelContainer.y;
-            });
+            };
 
-            this.input.on('pointermove', (pointer) => {
+            this.scrollMoveHandler = (pointer) => {
                 if (isDragging && pointer.isDown) {
                     const deltaY = pointer.y - dragStartY;
+                    this.dragDistance = Math.abs(deltaY);
                     this.levelContainer.y = Phaser.Math.Clamp(containerStartY + deltaY, minY, maxY);
                 }
-            });
+            };
 
-            this.input.on('pointerup', () => {
+            this.scrollUpHandler = () => {
                 isDragging = false;
-            });
+            };
 
-            // Mouse wheel support
-            this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
+            this.scrollWheelHandler = (pointer, gameObjects, deltaX, deltaY) => {
                 this.levelContainer.y = Phaser.Math.Clamp(this.levelContainer.y - deltaY * 0.5, minY, maxY);
-            });
+            };
+
+            this.input.on('pointerdown', this.scrollDownHandler);
+            this.input.on('pointermove', this.scrollMoveHandler);
+            this.input.on('pointerup', this.scrollUpHandler);
+            this.input.on('wheel', this.scrollWheelHandler);
+        } else {
+            this.dragDistance = 0;
         }
     }
 
@@ -392,8 +435,9 @@ export default class LevelSelectScene extends Phaser.Scene {
         this.paginationContainer = this.add.container(width / 2, y);
 
         // Page indicator
-        const pageText = this.add.text(0, 0, `Page ${this.currentPage + 1} / ${totalPages}`, {
-            fontFamily: 'Arial, sans-serif',
+        const worldsRange = this.currentPage === 0 ? 'Worlds 1–4' : 'Worlds 5–8';
+        const pageText = this.add.text(0, 0, `Page ${this.currentPage + 1} / ${totalPages} (${worldsRange})`, {
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '18px',
             color: '#ffffff',
             stroke: '#000000',
@@ -403,7 +447,7 @@ export default class LevelSelectScene extends Phaser.Scene {
 
         // Previous button
         if (this.currentPage > 0) {
-            const prevBtn = this.add.text(-80, 0, '◀', {
+            const prevBtn = this.add.text(-130, 0, '◀', {
                 fontSize: '28px',
                 color: '#ffffff',
                 stroke: '#ff6b9d',
@@ -421,7 +465,7 @@ export default class LevelSelectScene extends Phaser.Scene {
 
         // Next button
         if (this.currentPage < totalPages - 1) {
-            const nextBtn = this.add.text(80, 0, '▶', {
+            const nextBtn = this.add.text(130, 0, '▶', {
                 fontSize: '28px',
                 color: '#ffffff',
                 stroke: '#ff6b9d',
@@ -491,8 +535,8 @@ export default class LevelSelectScene extends Phaser.Scene {
 
             // Level number - BIG and centered
             const levelText = this.add.text(x, y - 6, level.toString(), {
-                fontFamily: 'Arial Black, Arial, sans-serif',
-                fontSize: '32px',
+                fontFamily: GameConfig.UI.FONT_FAMILY,
+                fontSize: '30px',
                 color: '#ffffff',
                 stroke: '#000000',
                 strokeThickness: 4
@@ -500,8 +544,8 @@ export default class LevelSelectScene extends Phaser.Scene {
             container.add(levelText);
 
             // Stars at bottom - BIGGER
-            const starScale = 0.5;
-            const starSpacing = 18;
+            const starScale = 0.48;
+            const starSpacing = 17;
             const starY = y + size/2 - 16;
 
             for (let s = 0; s < 3; s++) {
@@ -521,11 +565,15 @@ export default class LevelSelectScene extends Phaser.Scene {
 
             hitArea.on('pointerover', () => drawButton(1, hoverColor, isBoss ? 1 : 0));
             hitArea.on('pointerout', () => drawButton(0.95, buttonColor, isBoss ? 0.8 : 0));
-            hitArea.on('pointerup', () => this.scene.start('GameScene', { level: level }));
+            hitArea.on('pointerup', () => {
+                if ((this.dragDistance || 0) < 10) {
+                    this.scene.start('GameScene', { level: level });
+                }
+            });
         } else {
             // Locked: level number dimmed
             const levelText = this.add.text(x, y - 6, level.toString(), {
-                fontFamily: 'Arial Black, Arial, sans-serif',
+                fontFamily: GameConfig.UI.FONT_FAMILY,
                 fontSize: '26px',
                 color: '#555555'
             }).setOrigin(0.5);
@@ -541,7 +589,7 @@ export default class LevelSelectScene extends Phaser.Scene {
 
     createBackButton(width, height) {
         const backBtn = this.add.text(60, 60, '←', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '48px',
             color: '#ffffff',
             stroke: '#ff6b9d',
@@ -604,7 +652,7 @@ export default class LevelSelectScene extends Phaser.Scene {
 
         // Title
         const title = this.add.text(0, -115, 'Settings', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '32px',
             color: '#ff6b9d'
         }).setOrigin(0.5);
@@ -613,7 +661,7 @@ export default class LevelSelectScene extends Phaser.Scene {
         // Music toggle
         const musicOn = localStorage.getItem('sugarSplash_music') !== 'false';
         const musicText = this.add.text(0, -30, musicOn ? '☑ Music' : '☐ Music', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '28px',
             color: musicOn ? '#4ade80' : '#666666'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -640,7 +688,7 @@ export default class LevelSelectScene extends Phaser.Scene {
         // Sound toggle
         const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
         const soundText = this.add.text(0, 30, soundOn ? '☑ Sound' : '☐ Sound', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '28px',
             color: soundOn ? '#4ade80' : '#666666'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -658,7 +706,7 @@ export default class LevelSelectScene extends Phaser.Scene {
         // Close button
         const closeBtn = this.add.image(0, 115, 'button').setScale(0.9).setInteractive({ useHandCursor: true });
         const closeBtnText = this.add.text(0, 115, 'Close', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '22px',
             color: '#ffffff'
         }).setOrigin(0.5);
@@ -710,8 +758,12 @@ export default class LevelSelectScene extends Phaser.Scene {
 
     getPowerups() {
         try {
-            const saved = localStorage.getItem('sugarSplash_powerups');
-            return saved ? JSON.parse(saved) : {};
+            const saveData = this.getSaveData();
+            if (saveData && saveData.powerups) {
+                return saveData.powerups;
+            }
+            const legacy = localStorage.getItem('sugarSplash_powerups');
+            return legacy ? JSON.parse(legacy) : {};
         } catch (e) {
             return {};
         }
@@ -728,7 +780,7 @@ export default class LevelSelectScene extends Phaser.Scene {
 
         // Label
         this.add.text(40, height - 70, 'Powerups:', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '16px',
             color: '#ffffff',
             stroke: '#000000',
@@ -751,7 +803,7 @@ export default class LevelSelectScene extends Phaser.Scene {
 
             // Count
             this.add.text(x + 18, height - 65, `×${count}`, {
-                fontFamily: 'Arial Black',
+                fontFamily: GameConfig.UI.FONT_FAMILY,
                 fontSize: '14px',
                 color: count > 0 ? '#4ade80' : '#999999',
                 stroke: '#000000',

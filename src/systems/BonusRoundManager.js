@@ -1,3 +1,5 @@
+import { GameConfig } from '../Config.js';
+
 /**
  * BonusRoundManager - Handles the end-of-level bonus round
  * Converts remaining moves to specials and activates them for bonus points
@@ -10,7 +12,7 @@ export default class BonusRoundManager {
     }
 
     async play(movesRemaining, onMovesUpdate) {
-        if (movesRemaining <= 0) return;
+        if (movesRemaining <= 0) return 0;
 
         // --- PHASE 0: Setup ---
         const bonusScoreStart = this.scene.score;
@@ -18,7 +20,7 @@ export default class BonusRoundManager {
 
         // Show BONUS text with entrance animation
         const bonusText = this.scene.add.text(this.scene.cameras.main.width / 2, 180, 'BONUS!', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '52px',
             color: '#ffeb3b',
             stroke: '#ff6b00',
@@ -35,7 +37,7 @@ export default class BonusRoundManager {
 
         // Live bonus counter
         const bonusCounter = this.scene.add.text(this.scene.cameras.main.width / 2, 230, 'Bonus: +0', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '28px',
             color: '#ffffff',
             stroke: '#333333',
@@ -50,6 +52,7 @@ export default class BonusRoundManager {
         });
 
         await new Promise(r => setTimeout(r, 500));
+        if (!this.scene || !this.board) return movesRemaining;
 
         // --- PHASE 1: Convert moves to specials ---
         const specialWeights = { line_h: 30, line_v: 30, bomb: 35, color_bomb: 5 };
@@ -57,12 +60,13 @@ export default class BonusRoundManager {
         let currentMoves = movesRemaining;
 
         for (let i = 0; i < movesToConvert; i++) {
-            // Find random normal candy
+            if (!this.scene || !this.board) return currentMoves;
+            // Find random movable normal candy
             const candidates = [];
             for (let r = 0; r < this.board.rows; r++) {
                 for (let c = 0; c < this.board.cols; c++) {
                     const candy = this.board.candies[r][c];
-                    if (candy && candy.active && !candy.isSpecial && !candy.isIngredient && !this.board.locked[r][c]) {
+                    if (candy && candy.active && !candy.isSpecial && !candy.isIngredient && this.board.canSwapAt(r, c)) {
                         candidates.push(candy);
                     }
                 }
@@ -74,6 +78,10 @@ export default class BonusRoundManager {
             const candy = candidates[Math.floor(Math.random() * candidates.length)];
             const specialType = this.weightedRandomSpecial(specialWeights);
             candy.makeSpecial(specialType);
+            if (specialType === 'color_bomb') {
+                candy.candyType = 99;
+                this.board.grid[candy.row][candy.col] = 99;
+            }
 
             // Sparkle particle effect at conversion
             if (this.scene.emitter) {
@@ -97,14 +105,28 @@ export default class BonusRoundManager {
             await new Promise(r => setTimeout(r, 120));
         }
 
+        // Convert any remaining moves above 10 into direct bonus points (+250 each)
+        while (currentMoves > 0) {
+            if (!this.scene || !this.board) return currentMoves;
+            currentMoves--;
+            if (onMovesUpdate) onMovesUpdate(currentMoves);
+            this.scene.events.emit('scoreUpdate', 250, 1);
+            if (bonusCounter?.scene) {
+                bonusCounter.setText(`Bonus: +${this.scene.score - bonusScoreStart}`);
+            }
+            await new Promise(r => setTimeout(r, 60));
+        }
+
         await new Promise(r => setTimeout(r, 200));
-        bonusText.destroy();
+        if (!this.scene || !this.board) return currentMoves;
+        if (bonusText?.scene) bonusText.destroy();
 
         // --- PHASE 2: Activate specials one by one until none remain ---
         let safetyCounter = 0;
         const maxIterations = 50;
 
         while (safetyCounter < maxIterations) {
+            if (!this.scene || !this.board) return currentMoves;
             const allSpecials = this.getAllSpecialsOnBoard();
             if (allSpecials.length === 0) break;
 
@@ -112,6 +134,7 @@ export default class BonusRoundManager {
             safetyCounter++;
 
             for (const special of allSpecials) {
+                if (!this.scene || !this.board) return currentMoves;
                 if (!special.active) continue;
 
                 // Highlight effect - flash before activation
@@ -123,6 +146,7 @@ export default class BonusRoundManager {
                     repeat: 1
                 });
                 await new Promise(r => setTimeout(r, 80));
+                if (!this.scene || !this.board) return currentMoves;
 
                 // Play activation sound
                 if (this.soundManager) {
@@ -131,9 +155,13 @@ export default class BonusRoundManager {
 
                 // Activate and wait for cascades
                 await this.board.activateSpecial(special);
+                if (!this.scene || !this.board) return currentMoves;
                 await this.board.applyGravity();
+                if (!this.scene || !this.board) return currentMoves;
                 await this.board.fillEmptySpaces();
+                if (!this.scene || !this.board) return currentMoves;
                 await this.board.processCascades();
+                if (!this.scene || !this.board) return currentMoves;
 
                 // Update live bonus counter
                 const currentBonus = this.scene.score - bonusScoreStart;
@@ -161,6 +189,8 @@ export default class BonusRoundManager {
                 await new Promise(r => setTimeout(r, 100));
             }
         }
+
+        if (!this.scene || !this.board) return currentMoves;
 
         // --- PHASE 3: Grand Finale ---
         const totalBonus = this.scene.score - bonusScoreStart;
@@ -212,7 +242,7 @@ export default class BonusRoundManager {
         for (let r = 0; r < this.board.rows; r++) {
             for (let c = 0; c < this.board.cols; c++) {
                 const candy = this.board.candies[r][c];
-                if (candy && candy.active && candy.isSpecial) {
+                if (candy && candy.active && candy.isSpecial && this.board.crate[r][c] === 0) {
                     specials.push(candy);
                 }
             }

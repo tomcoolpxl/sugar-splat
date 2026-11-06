@@ -25,3 +25,5 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+window.__GAME__ = game;
+

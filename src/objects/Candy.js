@@ -139,6 +139,12 @@ export default class Candy extends Phaser.GameObjects.Image {
             ease: 'Back.easeOut'
         });
 
+        // Stop any existing special pulse before starting a new one
+        if (this.specialPulse) {
+            this.specialPulse.stop();
+            this.specialPulse = null;
+        }
+
         // Continuous special pulse/sparkle
         this.specialPulse = this.scene.tweens.add({
             targets: this,
@@ -254,14 +260,24 @@ export default class Candy extends Phaser.GameObjects.Image {
     }
 
     destroy() {
+        if (this.scene?.tweens) {
+            this.scene.tweens.killTweensOf(this);
+        }
         if (this.selectionIndicator) {
             this.selectionIndicator.destroy();
+            this.selectionIndicator = null;
         }
         if (this.glowTween) {
             this.glowTween.stop();
+            this.glowTween = null;
+        }
+        if (this.specialPulse) {
+            this.specialPulse.stop();
+            this.specialPulse = null;
         }
         if (this.lockOverlay) {
             this.lockOverlay.destroy();
+            this.lockOverlay = null;
         }
         super.destroy();
     }

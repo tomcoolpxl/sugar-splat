@@ -68,7 +68,7 @@ export default class PowerupManager {
 
             // Count badge
             const count = this.scene.add.text(x + 14, barY + 14, `${this.powerups[type]}`, {
-                fontFamily: 'Arial Black',
+                fontFamily: GameConfig.UI.FONT_FAMILY,
                 fontSize: '12px',
                 color: this.powerups[type] > 0 ? '#ffffff' : '#666666',
                 stroke: '#000000',
@@ -152,7 +152,7 @@ export default class PowerupManager {
             hintY,
             `Tap a candy to use ${config.name}`,
             {
-                fontFamily: 'Arial, sans-serif',
+                fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
                 fontSize: '20px',
                 color: '#ffffff',
                 stroke: '#000000',
@@ -206,6 +206,24 @@ export default class PowerupManager {
     // --- Activation ---
 
     async activate(type, row, col, candy) {
+        // Prevent wasting Hammer or Color Blast on an indestructible Drop Ingredient (Cherry) or Color Bomb
+        if ((type === 'hammer' || type === 'colorblast') && candy?.isIngredient) {
+            if (this.scene.soundManager) this.scene.soundManager.play('invalid');
+            candy.bounce();
+            this.cancel();
+            return;
+        }
+        if (type === 'hammer' && (!candy || !candy.active) && !this.board.chocolate[row][col] && this.board.jelly[row][col] === 0) {
+            if (this.scene.soundManager) this.scene.soundManager.play('invalid');
+            this.cancel();
+            return;
+        }
+        if (type === 'colorblast' && (!candy || candy.candyType >= 90)) {
+            if (this.scene.soundManager) this.scene.soundManager.play('invalid');
+            this.cancel();
+            return;
+        }
+
         // Use up the powerup
         this.powerups[type]--;
         this.updateButton(type);
@@ -231,21 +249,23 @@ export default class PowerupManager {
                     break;
             }
 
-            // Process cascades
+            // Process cascades and ingredient collection
+            await this.board.checkIngredientCollection();
             await this.board.applyGravity();
             await this.board.fillEmptySpaces();
             await this.board.processCascades();
-            this.scene.events.emit('cascadeComplete');
+            await this.board.completeTurn();
         } finally {
-            this.board.inputLocked = false;
+            this.board.unlockInput();
         }
     }
 
     async activateHammer(row, col, candy) {
-        if (!candy || !candy.active) return;
+        if ((!candy || !candy.active) && !this.board.chocolate[row][col] && this.board.jelly[row][col] === 0) return;
 
         const pos = this.board.gridToWorld(row, col);
         const hammer = this.scene.add.text(pos.x, pos.y - 60, '🔨', { fontSize: '48px' }).setOrigin(0.5).setDepth(100);
+        const particleTint = candy?.tint || 0xffffff;
 
         await new Promise(resolve => {
             this.scene.tweens.add({
@@ -260,13 +280,13 @@ export default class PowerupManager {
 
                     // Particles
                     if (this.scene.particleManager) {
-                        this.scene.particleManager.emitAt(pos.x, pos.y, 15, candy.tint || 0xffffff);
+                        this.scene.particleManager.emitAt(pos.x, pos.y, 15, particleTint);
                     } else if (this.scene.emitter) {
                         this.scene.emitter.setConfig({
                             speed: { min: 100, max: 200 },
                             scale: { start: 0.5, end: 0 },
                             lifespan: 400,
-                            tint: candy.tint || 0xffffff
+                            tint: particleTint
                         });
                         this.scene.emitter.emitParticleAt(pos.x, pos.y, 15);
                     }
@@ -277,7 +297,6 @@ export default class PowerupManager {
             });
         });
 
-        this.board.handleJellyAt(row, col);
         await this.board.clearCandies([{ row, col }]);
     }
 
@@ -305,12 +324,11 @@ export default class PowerupManager {
             });
         });
 
-        // Clear 3x3 area
+        // Clear 3x3 area (excluding stone)
         const cells = [];
         for (let r = row - 1; r <= row + 1; r++) {
             for (let c = col - 1; c <= col + 1; c++) {
-                if (this.board.isValidCell(r, c) && this.board.candies[r][c]) {
-                    this.board.handleJellyAt(r, c);
+                if (this.board.isValidCell(r, c) && !this.board.stone[r][c]) {
                     cells.push({ row: r, col: c });
                 }
             }
@@ -318,6 +336,7 @@ export default class PowerupManager {
 
         const score = this.board.calculateScore(cells.length, 1);
         this.scene.events.emit('scoreUpdate', score, 1);
+        this.board.showFloatingScore(cells, score, 1);
         await this.board.clearCandies(cells);
     }
 
@@ -327,15 +346,13 @@ export default class PowerupManager {
 
         // Row
         for (let c = 0; c < this.board.cols; c++) {
-            if (this.board.candies[row][c]) {
-                this.board.handleJellyAt(row, c);
+            if (!this.board.stone[row][c]) {
                 cells.push({ row, col: c });
             }
         }
         // Column (avoid duplicating center)
         for (let r = 0; r < this.board.rows; r++) {
-            if (r !== row && this.board.candies[r][col]) {
-                this.board.handleJellyAt(r, col);
+            if (r !== row && !this.board.stone[r][col]) {
                 cells.push({ row: r, col });
             }
         }
@@ -365,6 +382,7 @@ export default class PowerupManager {
 
         const score = this.board.calculateScore(cells.length, 1);
         this.scene.events.emit('scoreUpdate', score, 1);
+        this.board.showFloatingScore([{ row, col }], score, 1);
         await this.board.clearCandies(cells);
     }
 
@@ -378,8 +396,7 @@ export default class PowerupManager {
         for (let r = 0; r < this.board.rows; r++) {
             for (let c = 0; c < this.board.cols; c++) {
                 const cell = this.board.candies[r][c];
-                if (cell && cell.candyType === targetType) {
-                    this.board.handleJellyAt(r, c);
+                if (cell && cell.candyType === targetType && !cell.isIngredient) {
                     cells.push({ row: r, col: c });
                 }
             }

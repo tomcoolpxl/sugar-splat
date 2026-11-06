@@ -63,12 +63,12 @@ export default class SoundManager {
         this.palette = palettes[paletteName] || palettes.chiptune;
     }
 
-    play(key) {
+    play(key, cascadeLevel = 1) {
         if (!this.scene?.sound) return;
-        if (this.scene.sound.mute) return;
+        if (this.scene.sound.mute || localStorage.getItem('sugarSplash_sound') === 'false') return;
         if (!this.ensureContextRunning()) return;
 
-        this.playSynth(key);
+        this.playSynth(key, cascadeLevel);
     }
 
     // Ensure AudioContext is running (handles browser autoplay policies)
@@ -89,7 +89,7 @@ export default class SoundManager {
         return this.context.state === 'running';
     }
 
-    playSynth(key) {
+    playSynth(key, cascadeLevel = 1) {
         if (!this.context || this.context.state !== 'running') return;
 
         const def = this.soundDefs[key];
@@ -108,11 +108,32 @@ export default class SoundManager {
             return;
         }
 
+        // Ascending C-major scale multiplier for match/cascade combos
+        let pitchMultiplier = 1;
+        if ((key === 'match' || key === 'cascade') && cascadeLevel >= 1) {
+            const majorScale = [1, 9 / 8, 5 / 4, 4 / 3, 3 / 2, 5 / 3, 15 / 8, 2, 9 / 4, 5 / 2];
+            const idx = Math.min(Math.max(0, cascadeLevel - 1), majorScale.length - 1);
+            // Use 'match' base C5 frequency so cascade 1..10 climbs smoothly from C5 to E6
+            const baseDef = this.soundDefs.match || def;
+            this.playTone(baseDef, majorScale[idx]);
+            // Add harmonic shimmer on combo cascades (2x+)
+            if (cascadeLevel > 1) {
+                this.playTone({
+                    type: 'triangle',
+                    freqStart: baseDef.freqStart * majorScale[idx] * 1.5,
+                    freqEnd: baseDef.freqEnd * majorScale[idx] * 1.5,
+                    duration: 0.18,
+                    vol: 0.12
+                }, 1);
+            }
+            return;
+        }
+
         // Single Tone
-        this.playTone(def);
+        this.playTone(def, pitchMultiplier);
     }
 
-    playTone(def) {
+    playTone(def, pitchMultiplier = 1) {
         if (!this.context || this.context.state !== 'running') return;
 
         const t = this.context.currentTime;
@@ -122,12 +143,12 @@ export default class SoundManager {
         osc.type = def.type || 'sine';
         
         // Frequency Envelope
-        osc.frequency.setValueAtTime(def.freqStart, t);
+        osc.frequency.setValueAtTime(def.freqStart * pitchMultiplier, t);
         if (def.freqEnd) {
             if (def.slide) {
-                osc.frequency.linearRampToValueAtTime(def.freqEnd, t + def.duration);
+                osc.frequency.linearRampToValueAtTime(def.freqEnd * pitchMultiplier, t + def.duration);
             } else {
-                osc.frequency.exponentialRampToValueAtTime(def.freqEnd, t + def.duration);
+                osc.frequency.exponentialRampToValueAtTime(def.freqEnd * pitchMultiplier, t + def.duration);
             }
         }
 
@@ -248,7 +269,7 @@ export default class SoundManager {
     }
 
     playStep(time) {
-        if (!this.scene || this.scene.sound.mute) return;
+        if (!this.scene || localStorage.getItem('sugarSplash_music') === 'false') return;
         if (!this.context || this.context.state !== 'running') return;
         if (!this.chords || this.chords.length === 0) return;
 

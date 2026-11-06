@@ -1,4 +1,5 @@
 import C64Sequencer from '../systems/C64Sequencer.js';
+import { GameConfig } from '../Config.js';
 
 export default class MenuScene extends Phaser.Scene {
     constructor() {
@@ -46,8 +47,8 @@ export default class MenuScene extends Phaser.Scene {
         for (let i = 0; i < steps; i++) {
             const t = i / steps;
             const color = Phaser.Display.Color.Interpolate.ColorWithColor(
-                { r: 255, g: 182, b: 193 },  // Light pink
-                { r: 173, g: 216, b: 230 },  // Light blue
+                GameConfig.UI.BACKGROUND_GRADIENT_START,
+                GameConfig.UI.BACKGROUND_GRADIENT_END,
                 steps,
                 i
             );
@@ -59,7 +60,7 @@ export default class MenuScene extends Phaser.Scene {
     createTitle(width, height) {
         // Shadow
         this.add.text(width / 2 + 4, height * 0.2 + 4, 'Sugar Splash', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '64px',
             color: '#000000',
             align: 'center'
@@ -67,7 +68,7 @@ export default class MenuScene extends Phaser.Scene {
 
         // Main title
         const title = this.add.text(width / 2, height * 0.2, 'Sugar Splash', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '64px',
             color: '#ff6b9d',
             align: 'center',
@@ -99,7 +100,7 @@ export default class MenuScene extends Phaser.Scene {
 
         // Button text
         const buttonText = this.add.text(width / 2, buttonY, 'PLAY', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '36px',
             color: '#ffffff',
             align: 'center'
@@ -201,7 +202,7 @@ export default class MenuScene extends Phaser.Scene {
 
         // Title
         const title = this.add.text(0, -115, 'Settings', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '32px',
             color: '#ff6b9d'
         }).setOrigin(0.5);
@@ -210,7 +211,7 @@ export default class MenuScene extends Phaser.Scene {
         // Music toggle
         const musicOn = localStorage.getItem('sugarSplash_music') !== 'false';
         const musicText = this.add.text(0, -30, musicOn ? '☑ Music' : '☐ Music', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '28px',
             color: musicOn ? '#4ade80' : '#666666'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -237,7 +238,7 @@ export default class MenuScene extends Phaser.Scene {
         // Sound toggle
         const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
         const soundText = this.add.text(0, 30, soundOn ? '☑ Sound' : '☐ Sound', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '28px',
             color: soundOn ? '#4ade80' : '#666666'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -255,7 +256,7 @@ export default class MenuScene extends Phaser.Scene {
         // Close button
         const closeBtn = this.add.image(0, 115, 'button').setScale(0.9).setInteractive({ useHandCursor: true });
         const closeBtnText = this.add.text(0, 115, 'Close', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '22px',
             color: '#ffffff'
         }).setOrigin(0.5);

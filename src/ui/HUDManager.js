@@ -1,3 +1,5 @@
+import { GameConfig } from '../Config.js';
+
 /**
  * HUDManager - Handles all HUD elements (top bar, bottom bar, progress, objectives)
  */
@@ -56,8 +58,8 @@ export default class HUDManager {
         const steps = 20;
         for (let i = 0; i < steps; i++) {
             const color = Phaser.Display.Color.Interpolate.ColorWithColor(
-                { r: 255, g: 182, b: 193 },
-                { r: 173, g: 216, b: 230 },
+                GameConfig.UI.BACKGROUND_GRADIENT_START,
+                GameConfig.UI.BACKGROUND_GRADIENT_END,
                 steps,
                 i
             );
@@ -74,7 +76,7 @@ export default class HUDManager {
 
         // Level number
         this.scene.add.text(40, 35, `Level ${currentLevel}`, {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '28px',
             color: '#ffffff',
             stroke: '#000000',
@@ -87,7 +89,7 @@ export default class HUDManager {
         pauseBtnBg.fillRoundedRect(width - 85, 28, 50, 40, 10);
 
         const pauseBtn = this.scene.add.text(width - 60, 48, '| |', {
-            fontFamily: 'Arial Black',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '20px',
             color: '#ffffff',
             stroke: '#000000',
@@ -112,7 +114,7 @@ export default class HUDManager {
 
         // Moves counter (with spacing from pause button)
         this.movesText = this.scene.add.text(width - 100, 35, `Moves: ${movesRemaining}`, {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '24px',
             color: '#ffffff',
             stroke: '#000000',
@@ -136,7 +138,7 @@ export default class HUDManager {
         }
 
         for (const type in this.objectives.collect) {
-            const icons = ['🔴', '🔵', '🟢', '🟡', '🟣', '🟠'];
+            const icons = ['🔴', '🔵', '🟢', '⭐', '🟣', '🟠'];
             const remaining = Math.max(0, this.objectives.collect[type] - (this.status.collect[type] || 0));
             const display = remaining === 0 ? '✓' : remaining;
             objectives.push(`${icons[type] || '🍬'} ${display}`);
@@ -148,14 +150,17 @@ export default class HUDManager {
             objectives.push(`🎯 ${display}`);
         }
 
-        const text = objectives.join('   ');
+        const isCompact = objectives.length >= 3;
+        const text = objectives.join(isCompact ? '  ' : '   ');
+        const fontSize = isCompact ? '21px' : '26px';
 
         if (this.objectiveText && this.objectiveText.scene) {
+            this.objectiveText.setFontSize(fontSize);
             this.objectiveText.setText(text);
         } else {
             this.objectiveText = this.scene.add.text(width / 2, 80, text, {
-                fontFamily: 'Arial, sans-serif',
-                fontSize: '26px',
+                fontFamily: GameConfig.UI.FONT_FAMILY,
+                fontSize,
                 color: '#ffffff',
                 stroke: '#000000',
                 strokeThickness: 3
@@ -187,7 +192,7 @@ export default class HUDManager {
 
         // Score display - positioned on the right side to leave room for powerups
         this.scoreText = this.scene.add.text(width - 40, height - 52, `${score}`, {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '26px',
             color: '#ffffff',
             stroke: '#000000',
@@ -196,7 +201,7 @@ export default class HUDManager {
 
         // Score label
         this.scene.add.text(width - 40, height - 75, 'Score', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '14px',
             color: '#cccccc'
         }).setOrigin(1, 0.5);
@@ -204,7 +209,7 @@ export default class HUDManager {
 
     createComboText(width) {
         this.comboText = this.scene.add.text(width / 2, 155, '', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '42px',
             color: '#ffeb3b',
             stroke: '#ff6b9d',
@@ -318,33 +323,35 @@ export default class HUDManager {
         const progressBarY = 115;
 
         let targetProgress = 0;
-        let color = 0x4ade80; // Default green
+        let color = GameConfig.UI.PROGRESS_BAR_FILL_SCORE; // Default green
 
-        // Calculate aggregate progress of all objectives
-        let totalGoals = 0;
-        let totalCurrent = 0;
+        // Calculate normalized progress across all active objectives (including score in multi-objective levels)
+        const fractions = [];
 
         if (this.objectives.jelly > 0) {
-            totalGoals += this.objectives.jelly;
-            totalCurrent += this.status.jelly;
-            color = 0xff69b4;
+            fractions.push(Math.min(this.status.jelly / this.objectives.jelly, 1));
+            color = GameConfig.UI.PROGRESS_BAR_FILL_JELLY;
         }
 
         if (this.objectives.drop > 0) {
-            totalGoals += this.objectives.drop;
-            totalCurrent += this.status.drop;
+            fractions.push(Math.min(this.status.drop / this.objectives.drop, 1));
             color = 0xd63031;
         }
 
         for (const type in this.objectives.collect) {
-            totalGoals += this.objectives.collect[type];
-            totalCurrent += this.status.collect[type];
+            const goal = this.objectives.collect[type];
+            if (goal > 0) {
+                fractions.push(Math.min((this.status.collect[type] || 0) / goal, 1));
+            }
         }
 
-        if (totalGoals > 0) {
-            targetProgress = Math.min(totalCurrent / totalGoals, 1);
-        } else if (this.objectives.score > 0) {
-            targetProgress = Math.min(score / this.objectives.score, 1);
+        if (this.objectives.score > 0) {
+            fractions.push(Math.min(score / this.objectives.score, 1));
+        }
+
+        if (fractions.length > 0) {
+            const sum = fractions.reduce((a, b) => a + b, 0);
+            targetProgress = Math.min(sum / fractions.length, 1);
         }
 
         // Kill any existing progress tween

@@ -42,10 +42,10 @@ A polished match-3 puzzle game built with Phaser 3.
 | Honey | Spreads each turn! Match on honey to clear it |
 | Licorice Walls | Blocks swaps between cells (not matches) |
 | Chocolate | Spreads to adjacent cells; match next to it to clear |
-| Crate (1-3 layers) | Wooden box around candy; match to break layers |
-| Bomb Timer | Countdown bomb; must clear before it explodes! |
-| Conveyor Belt | Moves candies in direction each turn |
-| Portal | Teleports candies between paired locations |
+| Crate (1-3 layers) | Wooden box around candy; match adjacent to break layers |
+| Bomb Timer | Countdown bomb; moves with its candy and must be cleared before it explodes! |
+| Conveyor Belt | Moves candies simultaneously in belt direction each turn |
+| Portal | Teleports falling candies from purple entrance to green exit |
 
 ### Objectives
 - Score targets

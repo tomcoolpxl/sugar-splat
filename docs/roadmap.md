@@ -60,4 +60,6 @@
 
 ### Low Priority
 - [ ] Level data externalization to JSON
-- [ ] Accessibility improvements (more colorblind patterns)
+- [x] Accessibility improvements (shape-preserved special tiles & high-contrast candy palette)
+- [x] Single-move input buffering, ascending cascade musical pitch & floating score popups
+- [x] 3-tier anti-block shuffle & perched Drop Ingredient diagonal slide-off

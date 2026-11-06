@@ -1,3 +1,5 @@
+import { GameConfig } from '../Config.js';
+
 export default class BootScene extends Phaser.Scene {
     constructor() {
         super('BootScene');
@@ -10,7 +12,7 @@ export default class BootScene extends Phaser.Scene {
 
         // Loading text
         const loadingText = this.add.text(width / 2, height / 2 - 50, 'Loading...', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '32px',
             color: '#ffffff'
         }).setOrigin(0.5);
@@ -51,40 +53,12 @@ export default class BootScene extends Phaser.Scene {
 
     createCandyTextures() {
         const candySize = 64;
-        const colors = [
-            0xff4757, // Red
-            0x3742fa, // Blue
-            0x2ed573, // Green
-            0xffa502, // Yellow/Orange
-            0xa55eea, // Purple
-            0xff7f50  // Orange/Coral
-        ];
+        const colors = GameConfig.COLORS;
 
         // Create each candy type
         colors.forEach((color, index) => {
             const graphics = this.add.graphics();
-
-            switch (index) {
-                case 0: // Circle (Red)
-                    this.drawCircleCandy(graphics, candySize, color);
-                    break;
-                case 1: // Square (Blue)
-                    this.drawSquareCandy(graphics, candySize, color);
-                    break;
-                case 2: // Diamond (Green)
-                    this.drawDiamondCandy(graphics, candySize, color);
-                    break;
-                case 3: // Star (Yellow)
-                    this.drawStarCandy(graphics, candySize, color);
-                    break;
-                case 4: // Triangle (Purple)
-                    this.drawTriangleCandy(graphics, candySize, color);
-                    break;
-                case 5: // Hexagon (Orange)
-                    this.drawHexagonCandy(graphics, candySize, color);
-                    break;
-            }
-
+            this.drawCandyShapeByIndex(graphics, index, candySize, color);
             graphics.generateTexture(`candy_${index}`, candySize, candySize);
             graphics.destroy();
         });
@@ -103,6 +77,29 @@ export default class BootScene extends Phaser.Scene {
 
         // Create particle textures
         this.createParticleTextures();
+    }
+
+    drawCandyShapeByIndex(graphics, index, candySize, color) {
+        switch (index) {
+            case 0: // Circle (Red)
+                this.drawCircleCandy(graphics, candySize, color);
+                break;
+            case 1: // Square (Blue)
+                this.drawSquareCandy(graphics, candySize, color);
+                break;
+            case 2: // Diamond (Green)
+                this.drawDiamondCandy(graphics, candySize, color);
+                break;
+            case 3: // Star (Yellow)
+                this.drawStarCandy(graphics, candySize, color);
+                break;
+            case 4: // Triangle (Purple)
+                this.drawTriangleCandy(graphics, candySize, color);
+                break;
+            case 5: // Hexagon (Orange)
+                this.drawHexagonCandy(graphics, candySize, color);
+                break;
+        }
     }
 
     drawCircleCandy(graphics, size, color) {
@@ -297,51 +294,70 @@ export default class BootScene extends Phaser.Scene {
     }
 
     createSpecialTextures(size, colors) {
-        // Line clearer (horizontal stripe)
+        const center = size / 2;
+
+        // Line clearer (horizontal stripe) - preserves base candy shape for colorblind accessibility
         colors.forEach((color, index) => {
             const graphics = this.add.graphics();
 
             // Draw base candy shape
-            graphics.fillStyle(color, 1);
-            graphics.fillCircle(size / 2, size / 2, size / 2 - 4);
+            this.drawCandyShapeByIndex(graphics, index, size, color);
 
-            // Draw horizontal stripe
-            graphics.fillStyle(0xffffff, 0.8);
-            graphics.fillRect(4, size / 2 - 4, size - 8, 8);
+            // Draw horizontal glowing stripe with dark outline for high contrast
+            graphics.fillStyle(0x000000, 0.35);
+            graphics.fillRoundedRect(6, center - 6, size - 12, 12, 4);
+            graphics.fillStyle(0xffffff, 0.95);
+            graphics.fillRoundedRect(8, center - 4, size - 16, 8, 3);
+
+            // Left/Right directional arrow tips
+            graphics.fillStyle(0xffffff, 1);
+            graphics.fillTriangle(4, center, 12, center - 6, 12, center + 6);
+            graphics.fillTriangle(size - 4, center, size - 12, center - 6, size - 12, center + 6);
 
             graphics.generateTexture(`candy_${index}_line_h`, size, size);
             graphics.destroy();
         });
 
-        // Line clearer (vertical stripe)
+        // Line clearer (vertical stripe) - preserves base candy shape for colorblind accessibility
         colors.forEach((color, index) => {
             const graphics = this.add.graphics();
 
-            graphics.fillStyle(color, 1);
-            graphics.fillCircle(size / 2, size / 2, size / 2 - 4);
+            // Draw base candy shape
+            this.drawCandyShapeByIndex(graphics, index, size, color);
 
-            graphics.fillStyle(0xffffff, 0.8);
-            graphics.fillRect(size / 2 - 4, 4, 8, size - 8);
+            // Draw vertical glowing stripe with dark outline for high contrast
+            graphics.fillStyle(0x000000, 0.35);
+            graphics.fillRoundedRect(center - 6, 6, 12, size - 12, 4);
+            graphics.fillStyle(0xffffff, 0.95);
+            graphics.fillRoundedRect(center - 4, 8, 8, size - 16, 3);
+
+            // Top/Bottom directional arrow tips
+            graphics.fillStyle(0xffffff, 1);
+            graphics.fillTriangle(center, 4, center - 6, 12, center + 6, 12);
+            graphics.fillTriangle(center, size - 4, center - 6, size - 12, center + 6, size - 12);
 
             graphics.generateTexture(`candy_${index}_line_v`, size, size);
             graphics.destroy();
         });
 
-        // Bomb (wrapped candy)
+        // Bomb (wrapped candy) - preserves base candy shape with glowing wrapper aura & star core
         colors.forEach((color, index) => {
             const graphics = this.add.graphics();
 
-            // Outer glow
-            graphics.fillStyle(0xffffff, 0.3);
-            graphics.fillCircle(size / 2, size / 2, size / 2 - 2);
+            // Outer glowing wrapper aura
+            graphics.fillStyle(0xffffff, 0.35);
+            graphics.fillRoundedRect(2, 2, size - 4, size - 4, 14);
+            graphics.lineStyle(2, 0xffffff, 0.8);
+            graphics.strokeRoundedRect(2, 2, size - 4, size - 4, 14);
 
-            // Main candy
-            graphics.fillStyle(color, 1);
-            graphics.fillCircle(size / 2, size / 2, size / 2 - 6);
+            // Base candy shape
+            this.drawCandyShapeByIndex(graphics, index, size, color);
 
-            // Cross pattern
-            graphics.lineStyle(3, 0xffffff, 0.8);
-            graphics.strokeCircle(size / 2, size / 2, size / 2 - 10);
+            // Inner bomb ring & golden spark core
+            graphics.lineStyle(3, 0xffffff, 0.9);
+            graphics.strokeCircle(center, center, size / 4);
+            graphics.fillStyle(0xffeb3b, 0.95);
+            graphics.fillCircle(center, center, 5);
 
             graphics.generateTexture(`candy_${index}_bomb`, size, size);
             graphics.destroy();
@@ -367,7 +383,7 @@ export default class BootScene extends Phaser.Scene {
         graphics.strokeCircle(center, center, radius);
 
         // Colorful sprinkles
-        const colors = [0xff4757, 0x3742fa, 0x2ed573, 0xffa502, 0xa55eea, 0xff7f50];
+        const colors = GameConfig.COLORS;
         
         for (let i = 0; i < 8; i++) {
             const angle = (i / 8) * Math.PI * 2;

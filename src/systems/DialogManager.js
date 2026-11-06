@@ -49,7 +49,7 @@ export default class DialogManager {
     createButton(container, x, y, text, callback, scale = 1) {
         const btn = this.scene.add.image(x, y, 'button').setScale(scale).setInteractive({ useHandCursor: true });
         const btnText = this.scene.add.text(x, y, text, {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: scale < 1 ? '20px' : '24px',
             color: '#ffffff'
         }).setOrigin(0.5);
@@ -99,7 +99,7 @@ export default class DialogManager {
 
         // Title
         const title = this.scene.add.text(0, -45, tutorial.title, {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '26px',
             color: '#ff6b9d'
         }).setOrigin(0.5);
@@ -107,7 +107,7 @@ export default class DialogManager {
 
         // Description - with word wrap
         const desc = this.scene.add.text(0, 20, tutorial.text, {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '18px',
             color: '#333333',
             align: 'center',
@@ -135,7 +135,7 @@ export default class DialogManager {
 
         // Title
         const title = this.scene.add.text(0, -110, 'Out of Moves!', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '36px',
             color: '#ff4757'
         }).setOrigin(0.5);
@@ -143,7 +143,7 @@ export default class DialogManager {
 
         // Status
         const status = this.scene.add.text(0, -30, 'Objective not met.', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '24px',
             color: '#333333'
         }).setOrigin(0.5);
@@ -167,7 +167,7 @@ export default class DialogManager {
 
         // Title
         const title = this.scene.add.text(0, -panelHeight / 2 + 40, 'Level Complete!', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '36px',
             color: '#4ade80'
         }).setOrigin(0.5);
@@ -190,7 +190,7 @@ export default class DialogManager {
 
         // Score
         const scoreText = this.scene.add.text(0, -panelHeight / 2 + 160, `Score: ${score}`, {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '28px',
             color: '#333333'
         }).setOrigin(0.5);
@@ -202,7 +202,7 @@ export default class DialogManager {
         // Powerup rewards
         if (awardedPowerups.length > 0) {
             const rewardLabel = this.scene.add.text(0, -panelHeight / 2 + 200, 'Rewards:', {
-                fontFamily: 'Arial, sans-serif',
+                fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
                 fontSize: '18px',
                 color: '#666666'
             }).setOrigin(0.5);
@@ -233,7 +233,7 @@ export default class DialogManager {
                 });
 
                 const plusOne = this.scene.add.text(iconX + 22, -panelHeight / 2 + 215, '+1', {
-                    fontFamily: 'Arial Black',
+                    fontFamily: GameConfig.UI.FONT_FAMILY,
                     fontSize: '14px',
                     color: '#4ade80',
                     stroke: '#ffffff',
@@ -279,7 +279,7 @@ export default class DialogManager {
 
         // Title
         const title = this.scene.add.text(0, -160, 'PAUSED', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '36px',
             color: '#ff6b9d'
         }).setOrigin(0.5);
@@ -297,7 +297,7 @@ export default class DialogManager {
         // Music toggle - consistent checkbox style
         const musicOn = localStorage.getItem('sugarSplash_music') !== 'false';
         const musicText = this.scene.add.text(0, 135, musicOn ? '☑ Music' : '☐ Music', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '22px',
             color: musicOn ? '#4ade80' : '#999999'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -319,7 +319,7 @@ export default class DialogManager {
         // Sound toggle - consistent checkbox style
         const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
         const soundText = this.scene.add.text(0, 175, soundOn ? '☑ Sound' : '☐ Sound', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '22px',
             color: soundOn ? '#4ade80' : '#999999'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -348,7 +348,7 @@ export default class DialogManager {
 
         // Message
         const msg = this.scene.add.text(0, -15, message, {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '18px',
             color: '#333333',
             align: 'center'

@@ -3,40 +3,32 @@ export default class MatchLogic {
         this.board = board;
     }
 
+    canMatch(r, c) {
+        if (!this.board.isValidCell(r, c)) return false;
+        if (this.board.stone[r][c]) return false;
+        if (this.board.chocolate[r][c]) return false;
+        if (this.board.locked[r][c]) return false;
+        if (this.board.crate[r][c] > 0) return false;
+        const type = this.board.grid[r][c];
+        if (type === -1 || type >= 90) return false;
+        return true;
+    }
+
     findMatches() {
         const matches = [];
-        const { rows, cols, grid, locked, stone } = this.board;
-
-        // Helper: check if cell can be part of a match
-        // Stone and chocolate block matches (they block cells entirely)
-        // Locked tiles block matches
-        // Ice, chains, and crates DO NOT block matches (matching breaks them)
-        const canMatch = (r, c) => {
-            if (!this.board.isValidCell(r, c)) return false;
-            if (stone[r][c]) return false;
-            if (this.board.chocolate[r][c]) return false;
-            if (locked[r][c]) return false;
-            const type = grid[r][c];
-            if (type === -1 || type >= 100) return false;
-            return true;
-        };
+        const { rows, cols, grid } = this.board;
+        const canMatch = (r, c) => this.canMatch(r, c);
 
         // 1. Horizontal Matches
         for (let row = 0; row < rows; row++) {
             let col = 0;
             while (col < cols) {
-                // Stone and chocolate cells block matches and have no candy
-                if (stone[row][col] || this.board.chocolate[row][col]) {
+                if (!canMatch(row, col)) {
                     col++;
                     continue;
                 }
 
                 const type = grid[row][col];
-                // Skip empty, locked, and ingredient cells
-                if (type === -1 || locked[row][col] || type >= 100) {
-                    col++;
-                    continue;
-                }
 
                 let matchLength = 1;
                 while (col + matchLength < cols &&
@@ -66,18 +58,12 @@ export default class MatchLogic {
         for (let col = 0; col < cols; col++) {
             let row = 0;
             while (row < rows) {
-                // Stone and chocolate cells block matches and have no candy
-                if (stone[row][col] || this.board.chocolate[row][col]) {
+                if (!canMatch(row, col)) {
                     row++;
                     continue;
                 }
 
                 const type = grid[row][col];
-                // Skip empty, locked, and ingredient cells
-                if (type === -1 || locked[row][col] || type >= 100) {
-                    row++;
-                    continue;
-                }
 
                 let matchLength = 1;
                 while (row + matchLength < rows &&
@@ -159,12 +145,31 @@ export default class MatchLogic {
             specialPosition: null
         };
 
+        const isExistingSpecial = (c) => Boolean(this.board.candies?.[c.row]?.[c.col]?.isSpecial);
+
+        const pickSpecialPos = () => {
+            if (this.board.lastSwappedCells && this.board.lastSwappedCells.length > 0) {
+                // First prefer a swapped cell that is not already a special candy
+                for (const swapped of this.board.lastSwappedCells) {
+                    const found = match.cells.find(c => c.row === swapped.row && c.col === swapped.col && !isExistingSpecial(c));
+                    if (found) return found;
+                }
+            }
+            // Otherwise prefer the middle-most non-special cell in the match so existing specials detonate
+            const midIdx = Math.floor(match.length / 2);
+            if (!isExistingSpecial(match.cells[midIdx])) {
+                return match.cells[midIdx];
+            }
+            const nonSpecialCell = match.cells.find(c => !isExistingSpecial(c));
+            return nonSpecialCell || match.cells[midIdx];
+        };
+
         if (match.length === 4) {
             result.specialToCreate = match.direction === 'horizontal' ? 'line_h' : 'line_v';
-            result.specialPosition = match.cells[Math.floor(match.length / 2)];
+            result.specialPosition = pickSpecialPos();
         } else if (match.length >= 5) {
             result.specialToCreate = 'color_bomb';
-            result.specialPosition = match.cells[Math.floor(match.length / 2)];
+            result.specialPosition = pickSpecialPos();
         }
 
         return result;
@@ -182,11 +187,20 @@ export default class MatchLogic {
             }
         });
 
+        const isExistingSpecial = (c) => Boolean(this.board.candies?.[c.row]?.[c.col]?.isSpecial);
+        let specialPosition = intersection.intersectCell;
+        if (isExistingSpecial(specialPosition)) {
+            const nonSpecialSwapped = (this.board.lastSwappedCells || [])
+                .map(s => allCells.find(c => c.row === s.row && c.col === s.col && !isExistingSpecial(c)))
+                .find(Boolean);
+            specialPosition = nonSpecialSwapped || allCells.find(c => !isExistingSpecial(c)) || intersection.intersectCell;
+        }
+
         return {
             type: intersection.type,
             cells: allCells,
             specialToCreate: 'bomb',
-            specialPosition: intersection.intersectCell
+            specialPosition
         };
     }
 
@@ -233,9 +247,10 @@ export default class MatchLogic {
     }
 
     findValidMove() {
-        const { rows, cols, stone, chocolate } = this.board;
+        const { rows, cols, candies, stone, chocolate } = this.board;
         let bestMove = null;
         let bestScore = -1;
+        let fallbackSpecialTap = null;
 
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
@@ -245,10 +260,28 @@ export default class MatchLogic {
                 // Check if this cell can be swapped
                 if (!this.board.canSwapAt(row, col)) continue;
 
+                const c1 = candies[row][col];
+                if (c1 && c1.isSpecial && !fallbackSpecialTap) {
+                    fallbackSpecialTap = [{ row, col }];
+                }
+
                 // Try swap right
                 if (col < cols - 1 && !stone[row][col + 1] && !chocolate[row][col + 1] &&
                     this.board.canSwapAt(row, col + 1) &&
                     !this.board.hasLicoriceWall(row, col, row, col + 1)) {
+                    const c2 = candies[row][col + 1];
+                    if (c1 && c2 && c1.isSpecial && c2.isSpecial && bestScore < 280) {
+                        bestScore = 280;
+                        bestMove = [{ row, col }, { row, col: col + 1 }];
+                    } else if (c1 && c2 && (c1.isSpecial || c2.isSpecial)) {
+                        const special = c1.isSpecial ? c1 : c2;
+                        const other = c1.isSpecial ? c2 : c1;
+                        if (!(special.specialType === 'color_bomb' && other.isIngredient) && bestScore < 85) {
+                            bestScore = 85;
+                            bestMove = [{ row, col }, { row, col: col + 1 }];
+                        }
+                    }
+
                     this.swapGridData(row, col, row, col + 1);
                     const matches = this.findMatches();
                     if (matches.length > 0) {
@@ -265,6 +298,19 @@ export default class MatchLogic {
                 if (row < rows - 1 && !stone[row + 1][col] && !chocolate[row + 1][col] &&
                     this.board.canSwapAt(row + 1, col) &&
                     !this.board.hasLicoriceWall(row, col, row + 1, col)) {
+                    const c2 = candies[row + 1][col];
+                    if (c1 && c2 && c1.isSpecial && c2.isSpecial && bestScore < 280) {
+                        bestScore = 280;
+                        bestMove = [{ row, col }, { row: row + 1, col }];
+                    } else if (c1 && c2 && (c1.isSpecial || c2.isSpecial)) {
+                        const special = c1.isSpecial ? c1 : c2;
+                        const other = c1.isSpecial ? c2 : c1;
+                        if (!(special.specialType === 'color_bomb' && other.isIngredient) && bestScore < 85) {
+                            bestScore = 85;
+                            bestMove = [{ row, col }, { row: row + 1, col }];
+                        }
+                    }
+
                     this.swapGridData(row, col, row + 1, col);
                     const matches = this.findMatches();
                     if (matches.length > 0) {
@@ -278,7 +324,7 @@ export default class MatchLogic {
                 }
             }
         }
-        return bestMove;
+        return bestMove || fallbackSpecialTap;
     }
 
     // Score matches based on objective progress and special candy creation
@@ -341,12 +387,18 @@ export default class MatchLogic {
                     score += row * 2;
                 }
 
-                // Chocolate adjacency bonus - matches next to chocolate help clear it
-                if (chocolate) {
-                    const neighbors = [[row-1, col], [row+1, col], [row, col-1], [row, col+1]];
-                    for (const [nr, nc] of neighbors) {
-                        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && chocolate[nr][nc]) {
+                // Chocolate, Crate, and Locked adjacency bonus - matches next to them clear/break them
+                const neighbors = [[row-1, col], [row+1, col], [row, col-1], [row, col+1]];
+                for (const [nr, nc] of neighbors) {
+                    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                        if (chocolate && chocolate[nr][nc]) {
                             score += 60; // Clearing chocolate is important
+                        }
+                        if (this.board.crate && this.board.crate[nr][nc] > 0) {
+                            score += 50; // Breaking wooden crates
+                        }
+                        if (this.board.locked && this.board.locked[nr][nc]) {
+                            score += 45; // Unlocking locked tiles
                         }
                     }
                 }

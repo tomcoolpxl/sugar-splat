@@ -451,6 +451,13 @@ export default class ParticleManager {
     }
 
     destroy() {
+        if (this.emitters) {
+            Object.values(this.emitters).forEach(emitter => {
+                if (emitter && typeof emitter.destroy === 'function') {
+                    emitter.destroy();
+                }
+            });
+        }
         this.emitters = {};
         this.emitter = null;
         this.scene = null;

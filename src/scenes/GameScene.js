@@ -158,8 +158,8 @@ export default class GameScene extends Phaser.Scene {
             this.score += points;
             this.hudManager.setScore(this.score);
 
-            // Play sound
-            if (this.soundManager) this.soundManager.play(cascadeLevel > 1 ? 'cascade' : 'match');
+            // Play sound with ascending musical scale on cascades
+            if (this.soundManager) this.soundManager.play(cascadeLevel > 1 ? 'cascade' : 'match', cascadeLevel);
 
             this.hudManager.updateObjectives(this.cameras.main.width, this.score);
             this.hudManager.updateProgressBar(this.score);
@@ -315,64 +315,7 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // Cascade complete - check win/lose conditions
-        this.events.on('cascadeComplete', async () => {
-            if (this.isGameOver) return;
-
-            // Spread honey after each completed cascade (if level has honey)
-            if (this.board.spreadHoney()) {
-                // Check if board is covered in honey (lose condition)
-                let honeyCount = 0;
-                let candyCount = 0;
-                for (let r = 0; r < this.board.rows; r++) {
-                    for (let c = 0; c < this.board.cols; c++) {
-                        if (this.board.candies[r][c]) candyCount++;
-                        if (this.board.honey[r][c]) honeyCount++;
-                    }
-                }
-                const threshold = GameConfig.BLOCKERS.HONEY_COVERAGE_LOSE_THRESHOLD;
-                if (honeyCount >= candyCount * threshold) {
-                    // Almost all covered in honey - lose!
-                    this.showLoseScreen();
-                    return;
-                }
-            }
-
-            // Spread chocolate after each move (more aggressive than honey)
-            if (this.board.spreadChocolate()) {
-                // Check if chocolate has taken over
-                let chocolateCount = 0;
-                let totalCells = 0;
-                for (let r = 0; r < this.board.rows; r++) {
-                    for (let c = 0; c < this.board.cols; c++) {
-                        if (!this.board.stone[r][c]) totalCells++;
-                        if (this.board.chocolate[r][c]) chocolateCount++;
-                    }
-                }
-                const threshold = GameConfig.BLOCKERS.CHOCOLATE_COVERAGE_LOSE_THRESHOLD;
-                if (chocolateCount >= totalCells * threshold) {
-                    this.showLoseScreen();
-                    return;
-                }
-            }
-
-            // Decrement bomb timers - if any expire, it's game over
-            if (this.board.decrementBombTimers()) {
-                return; // bombTimerExpired event will trigger showLoseScreen
-            }
-
-            // Process conveyors (move candies)
-            await this.board.processConveyors();
-
-            if (this.checkWinCondition()) {
-                this.showWinScreen();
-                return;
-            }
-
-            // Check lose condition
-            if (this.movesRemaining <= 0) {
-                this.showLoseScreen();
-            }
-        });
+        this.events.on('cascadeComplete', () => this.onTurnEnd());
 
         // Invalid swap feedback
         this.events.on('invalidSwap', () => {
@@ -401,6 +344,75 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
+    async onTurnEnd() {
+        if (this.isGameOver || !this.board) return;
+
+        // Check if the player's move/cascade already completed all objectives before turn-end hazards
+        if (this.checkWinCondition()) {
+            this.showWinScreen();
+            return;
+        }
+
+        // Spread honey after each completed cascade (if level has honey)
+        if (this.board.spreadHoney()) {
+            let honeyCount = 0;
+            let candyCount = 0;
+            for (let r = 0; r < this.board.rows; r++) {
+                for (let c = 0; c < this.board.cols; c++) {
+                    if (this.board.candies[r][c]) candyCount++;
+                    if (this.board.honey[r][c]) honeyCount++;
+                }
+            }
+            const threshold = GameConfig.BLOCKERS.HONEY_COVERAGE_LOSE_THRESHOLD;
+            if (honeyCount >= candyCount * threshold) {
+                this.showLoseScreen();
+                return;
+            }
+        }
+
+        // Spread chocolate after each move (more aggressive than honey)
+        if (this.board.spreadChocolate()) {
+            let chocolateCount = 0;
+            let totalCells = 0;
+            for (let r = 0; r < this.board.rows; r++) {
+                for (let c = 0; c < this.board.cols; c++) {
+                    if (!this.board.stone[r][c]) totalCells++;
+                    if (this.board.chocolate[r][c]) chocolateCount++;
+                }
+            }
+            const threshold = GameConfig.BLOCKERS.CHOCOLATE_COVERAGE_LOSE_THRESHOLD;
+            if (chocolateCount >= totalCells * threshold) {
+                this.showLoseScreen();
+                return;
+            }
+        }
+
+        // Decrement bomb timers - if any expire, it's game over
+        if (this.board.decrementBombTimers()) {
+            return; // bombTimerExpired event will trigger showLoseScreen
+        }
+
+        // Process conveyors (move candies)
+        await this.board.processConveyors();
+        if (this.isGameOver || !this.board) return;
+
+        if (this.checkWinCondition()) {
+            this.showWinScreen();
+            return;
+        }
+
+        // Check lose condition
+        if (this.movesRemaining <= 0) {
+            this.showLoseScreen();
+            return;
+        }
+
+        // Ensure board still has valid moves after honey/chocolate/conveyor changes
+        if (!this.board.hasValidMoves()) {
+            await this.board.shuffle();
+        }
+    }
+
     checkWinCondition() {
         if (this.isGameOver) return false;
 
@@ -422,6 +434,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     showLoseScreen() {
+        if (this.isGameOver) return;
         this.isGameOver = true;
         if (this.soundManager) this.soundManager.play('levelFail');
         this.board.inputLocked = true;
@@ -434,15 +447,20 @@ export default class GameScene extends Phaser.Scene {
     }
 
     async showWinScreen() {
+        if (this.isGameOver) return;
         this.isGameOver = true;
         this.board.inputLocked = true;
         this.hintManager.clear();
 
+        // Capture moves remaining BEFORE bonus round consumes them for accurate star rating
+        const movesBeforeBonus = this.movesRemaining;
+
         // Play Bonus Round if moves remaining
-        if (this.movesRemaining > 0) {
+        if (this.movesRemaining > 0 && this.bonusRoundManager) {
             this.movesRemaining = await this.bonusRoundManager.play(
                 this.movesRemaining,
                 (moves) => {
+                    if (!this.hudManager) return;
                     this.movesRemaining = moves;
                     this.hudManager.setMoves(moves);
                     this.hudManager.animateMoves();
@@ -450,12 +468,15 @@ export default class GameScene extends Phaser.Scene {
             );
         }
 
+        // Guard if scene was shut down or restarted during async bonus round
+        if (!this.dialogManager || !this.powerupManager) return;
+
         if (this.soundManager) this.soundManager.play('win');
 
-        // Calculate stars
+        // Calculate stars from moves remaining at the moment the objective was completed
         let stars = 1;
-        if (this.movesRemaining > 5) stars = 2;
-        if (this.movesRemaining > 10) stars = 3;
+        if (movesBeforeBonus >= 4) stars = 2;
+        if (movesBeforeBonus >= 8) stars = 3;
 
         this.saveProgress(stars);
 
@@ -574,7 +595,7 @@ export default class GameScene extends Phaser.Scene {
             x: x,
             y: y,
             cellSize: cellSize,
-            candyTypes: 6,
+            candyTypes: this.levelConfig.candyTypes || 6,
             levelConfig: this.levelConfig
         });
     }
@@ -633,6 +654,13 @@ export default class GameScene extends Phaser.Scene {
         this.events.off('chainHit');
         this.events.off('honeyCleared');
         this.events.off('honeySpread');
+        this.events.off('chocolateCleared');
+        this.events.off('chocolateSpread');
+        this.events.off('crateBroken');
+        this.events.off('crateHit');
+        this.events.off('bombTimerCleared');
+        this.events.off('bombTimerExpired');
+        this.events.off('conveyorMoved');
         this.events.off('validSwap');
         this.events.off('cascadeComplete');
         this.events.off('invalidSwap');

@@ -1,10 +1,10 @@
 export const LevelData = {
     // === WORLD 1: BASICS (Levels 1-5) ===
-    // Very easy intro levels - players should win on first try
+    // Gentle intro levels with 4-5 colors and balanced move limits (20-25 moves)
     1: {
-        moves: 40,
+        moves: 20,
         objective: 'score',
-        targetScore: 500,
+        targetScore: 600,
         rows: 8, cols: 8,
         candyTypes: 4,  // Easy - only 4 colors
         tutorial: {
@@ -14,23 +14,23 @@ export const LevelData = {
         }
     },
     2: {
-        moves: 40,
+        moves: 20,
         objective: 'score',
-        targetScore: 800,
+        targetScore: 900,
         rows: 8, cols: 8,
         candyTypes: 4
     },
     3: {
-        moves: 40,
+        moves: 22,
         objective: 'score',
-        targetScore: 1000,
+        targetScore: 1200,
         rows: 8, cols: 8,
         candyTypes: 4  // Keep 4 colors for now
     },
     4: {
-        moves: 45,
+        moves: 22,
         objective: 'score',
-        targetScore: 1200,
+        targetScore: 1400,
         rows: 8, cols: 8,
         candyTypes: 5,  // Introduce 5th color
         // Just 2 decorative locked tiles
@@ -39,9 +39,9 @@ export const LevelData = {
         ]
     },
     5: {
-        moves: 45,
+        moves: 24,
         objective: 'score',
-        targetScore: 1500,
+        targetScore: 1800,
         rows: 8, cols: 8,
         candyTypes: 5,
         // Corner locks - don't affect gameplay much
@@ -54,7 +54,7 @@ export const LevelData = {
     // === WORLD 2: JELLY INTRO (Levels 6-10) ===
     // Gentle intro to jelly mechanics
     6: {
-        moves: 45,
+        moves: 20,
         objective: 'clearJelly',
         rows: 8, cols: 8,
         candyTypes: 4,  // Keep it easy for jelly intro
@@ -70,7 +70,7 @@ export const LevelData = {
         }
     },
     7: {
-        moves: 45,
+        moves: 22,
         objective: 'clearJelly',
         rows: 8, cols: 8,
         candyTypes: 4,  // Keep 4 colors
@@ -82,7 +82,7 @@ export const LevelData = {
         ]
     },
     8: {
-        moves: 50,
+        moves: 24,
         objective: 'clearJelly',
         rows: 8, cols: 8,
         candyTypes: 5,
@@ -95,7 +95,7 @@ export const LevelData = {
         ]
     },
     9: {
-        moves: 50,
+        moves: 24,
         objective: 'clearJelly',
         rows: 8, cols: 8,
         candyTypes: 5,
@@ -106,7 +106,7 @@ export const LevelData = {
         ]
     },
     10: {
-        moves: 50,
+        moves: 25,
         objective: 'clearJelly',
         rows: 8, cols: 8,
         candyTypes: 5,
@@ -120,7 +120,7 @@ export const LevelData = {
     // === WORLD 3: NEW MECHANICS (Levels 11-15) ===
     // Introduce new objective types gently
     11: {
-        moves: 50,
+        moves: 24,
         objective: 'drop',
         drop: 2,  // Just 2 ingredients
         rows: 8, cols: 8,
@@ -132,7 +132,7 @@ export const LevelData = {
         }
     },
     12: {
-        moves: 50,
+        moves: 24,
         objective: 'collect',
         collect: { 0: 15, 1: 15 },  // Red and Blue - very achievable
         rows: 8, cols: 8,
@@ -144,7 +144,7 @@ export const LevelData = {
         }
     },
     13: {
-        moves: 50,
+        moves: 25,
         objective: 'clearJelly',
         rows: 8, cols: 8,
         candyTypes: 5,
@@ -157,7 +157,7 @@ export const LevelData = {
         ]
     },
     14: {
-        moves: 55,
+        moves: 26,
         objective: 'drop',
         drop: 3,
         rows: 8, cols: 8,
@@ -168,7 +168,7 @@ export const LevelData = {
         ]
     },
     15: {
-        moves: 55,
+        moves: 26,
         objective: 'collect',
         collect: { 2: 18, 3: 18 },  // Green and Yellow
         rows: 8, cols: 8,
@@ -179,7 +179,7 @@ export const LevelData = {
     // === WORLD 4: CHALLENGE (Levels 16-20) ===
     // Slightly harder but still very beatable
     16: {
-        moves: 55,
+        moves: 26,
         objective: 'score',
         targetScore: 3000,
         rows: 8, cols: 8,
@@ -189,7 +189,7 @@ export const LevelData = {
         ]
     },
     17: {
-        moves: 55,
+        moves: 28,
         objective: 'clearJelly',
         rows: 8, cols: 8,
         candyTypes: 5,
@@ -202,7 +202,7 @@ export const LevelData = {
         ]
     },
     18: {
-        moves: 60,
+        moves: 28,
         objective: 'mixed',
         drop: 2,  // Just 2 ingredients
         jelly: [
@@ -213,7 +213,7 @@ export const LevelData = {
         candyTypes: 5
     },
     19: {
-        moves: 60,
+        moves: 28,
         objective: 'mixed',
         collect: { 4: 20 },  // Purple - reduced
         jelly: [
@@ -224,15 +224,15 @@ export const LevelData = {
         candyTypes: 5
     },
     20: {
-        moves: 70,
+        moves: 35,
         objective: 'ultimate',
-        targetScore: 5000,  // Reduced
+        targetScore: 4500,
         jelly: [
             { row: 3, col: 3, layers: 2 }, { row: 3, col: 4, layers: 2 },
             { row: 4, col: 3, layers: 2 }, { row: 4, col: 4, layers: 2 }
         ],
         drop: 2,
-        collect: { 0: 15, 1: 15 },  // Reduced
+        collect: { 0: 15, 1: 15 },
         rows: 8, cols: 8,
         candyTypes: 5  // Keep 5 colors even for final level
     },
@@ -241,9 +241,9 @@ export const LevelData = {
     // Introduce ice, chains, and stone blockers
 
     21: {
-        moves: 35,
+        moves: 25,
         objective: 'score',
-        targetScore: 3000,
+        targetScore: 2800,
         rows: 8, cols: 8,
         candyTypes: 5,
         // Ice introduction - 4 single-layer ice tiles
@@ -258,9 +258,9 @@ export const LevelData = {
         }
     },
     22: {
-        moves: 40,
+        moves: 28,
         objective: 'score',
-        targetScore: 3500,
+        targetScore: 3200,
         rows: 8, cols: 8,
         candyTypes: 5,
         // Mix of 1-layer and 2-layer ice
@@ -272,9 +272,9 @@ export const LevelData = {
         ]
     },
     23: {
-        moves: 35,
+        moves: 26,
         objective: 'score',
-        targetScore: 3500,
+        targetScore: 3200,
         rows: 8, cols: 8,
         candyTypes: 5,
         // Chains introduction - candies can match through chains
@@ -290,7 +290,7 @@ export const LevelData = {
         }
     },
     24: {
-        moves: 45,
+        moves: 28,
         objective: 'clearJelly',
         rows: 8, cols: 8,
         candyTypes: 5,
@@ -308,7 +308,7 @@ export const LevelData = {
         ]
     },
     25: {
-        moves: 40,
+        moves: 28,
         objective: 'drop',
         drop: 3,
         rows: 8, cols: 8,
@@ -320,7 +320,7 @@ export const LevelData = {
         ],
         tutorial: {
             title: 'New: Stone Blocks!',
-            text: 'Stone can\'t be cleared.\nCandies fall around it!',
+            text: 'Stone can\'t be cleared.\nCandies slide around it!',
             icon: '🪨'
         }
     },
@@ -329,7 +329,7 @@ export const LevelData = {
     // Introduce spreading honey and licorice walls
 
     26: {
-        moves: 40,
+        moves: 26,
         objective: 'score',
         targetScore: 2500,
         rows: 8, cols: 8,
@@ -345,9 +345,9 @@ export const LevelData = {
         }
     },
     27: {
-        moves: 45,
+        moves: 28,
         objective: 'score',
-        targetScore: 3500,
+        targetScore: 3200,
         rows: 8, cols: 8,
         candyTypes: 5,
         // Honey + Stone to contain it
@@ -360,7 +360,7 @@ export const LevelData = {
         ]
     },
     28: {
-        moves: 45,
+        moves: 28,
         objective: 'collect',
         collect: { 0: 20, 1: 20 },  // Red and Blue
         rows: 8, cols: 8,
@@ -381,7 +381,7 @@ export const LevelData = {
         }
     },
     29: {
-        moves: 50,
+        moves: 30,
         objective: 'mixed',
         drop: 2,
         jelly: [
@@ -404,18 +404,18 @@ export const LevelData = {
         ]
     },
     30: {
-        moves: 70,
+        moves: 35,
         objective: 'ultimate',
         targetScore: 4000,
         drop: 2,
-        collect: { 0: 12, 1: 12 },  // Red and Blue (reduced)
+        collect: { 0: 12, 1: 12 },  // Red and Blue
         jelly: [
             { row: 4, col: 3, layers: 2 }, { row: 4, col: 4, layers: 2 },
             { row: 5, col: 3 }, { row: 5, col: 4 }
         ],
         rows: 8, cols: 8,
-        candyTypes: 5,  // Keep 5 colors for balance
-        // Ultimate Challenge - mix of blocker types (no honey to reduce difficulty)
+        candyTypes: 5,
+        // Ultimate Challenge - mix of blocker types
         ice: [
             { row: 1, col: 1, layers: 1 }, { row: 1, col: 6, layers: 1 }
         ],
@@ -435,7 +435,7 @@ export const LevelData = {
     // Introduce chocolate spreader and crate boxes
 
     31: {
-        moves: 45,
+        moves: 26,
         objective: 'score',
         targetScore: 2500,
         rows: 8, cols: 8,
@@ -451,9 +451,9 @@ export const LevelData = {
         }
     },
     32: {
-        moves: 50,
+        moves: 28,
         objective: 'score',
-        targetScore: 3500,
+        targetScore: 3200,
         rows: 8, cols: 8,
         candyTypes: 5,
         // Multiple chocolate tiles
@@ -466,24 +466,24 @@ export const LevelData = {
         ]
     },
     33: {
-        moves: 40,
+        moves: 26,
         objective: 'score',
-        targetScore: 3500,
+        targetScore: 3000,
         rows: 8, cols: 8,
         candyTypes: 5,
-        // Crate introduction - single layer
+        // Crate introduction - single layer wooden boxes broken by adjacent matches
         crate: [
             { row: 3, col: 3, layers: 1 }, { row: 3, col: 4, layers: 1 },
             { row: 4, col: 3, layers: 1 }, { row: 4, col: 4, layers: 1 }
         ],
         tutorial: {
-            title: 'New: Crates!',
-            text: "Candies in crates can match\nbut can't be swapped!",
+            title: 'New: Wooden Crates!',
+            text: "Match candies NEXT TO crates\nto break open the wooden boxes!",
             icon: '📦'
         }
     },
     34: {
-        moves: 45,
+        moves: 28,
         objective: 'clearJelly',
         rows: 8, cols: 8,
         candyTypes: 5,
@@ -501,9 +501,9 @@ export const LevelData = {
         ]
     },
     35: {
-        moves: 30,
+        moves: 25,
         objective: 'score',
-        targetScore: 4000,
+        targetScore: 3500,
         rows: 8, cols: 8,
         candyTypes: 5,
         // Bomb Timer introduction - must clear before timer runs out
@@ -521,9 +521,9 @@ export const LevelData = {
     // Introduce movement mechanics
 
     36: {
-        moves: 35,
+        moves: 28,
         objective: 'score',
-        targetScore: 4500,
+        targetScore: 3800,
         rows: 8, cols: 8,
         candyTypes: 5,
         // Multiple bomb timers with different countdowns
@@ -538,7 +538,7 @@ export const LevelData = {
         ]
     },
     37: {
-        moves: 40,
+        moves: 28,
         objective: 'drop',
         drop: 4,
         rows: 8, cols: 8,
@@ -552,12 +552,12 @@ export const LevelData = {
         ],
         tutorial: {
             title: 'New: Conveyors!',
-            text: "Conveyors move candies\nin the arrow direction!",
+            text: "Conveyors shift candies\nin the arrow direction each turn!",
             icon: '➡️'
         }
     },
     38: {
-        moves: 45,
+        moves: 30,
         objective: 'collect',
         collect: { 0: 25, 1: 25 },  // Red and Blue
         rows: 8, cols: 8,
@@ -579,9 +579,9 @@ export const LevelData = {
         ]
     },
     39: {
-        moves: 45,
+        moves: 30,
         objective: 'drop',
-        drop: 5,
+        drop: 4,
         rows: 8, cols: 8,
         candyTypes: 5,
         // Portal introduction - teleport candies
@@ -595,14 +595,14 @@ export const LevelData = {
         ],
         tutorial: {
             title: 'New: Portals!',
-            text: "Candies teleport through\npurple to green portals!",
+            text: "Falling candies teleport from\npurple entrances to green exits!",
             icon: '🌀'
         }
     },
     40: {
-        moves: 60,
+        moves: 35,
         objective: 'ultimate',
-        targetScore: 6000,
+        targetScore: 5000,
         drop: 3,
         collect: { 0: 15, 1: 15 },
         jelly: [
@@ -619,7 +619,7 @@ export const LevelData = {
             { row: 3, col: 3, layers: 2 }, { row: 3, col: 4, layers: 2 }
         ],
         bombTimer: [
-            { row: 1, col: 1, moves: 25 }, { row: 1, col: 6, moves: 25 }
+            { row: 1, col: 1, moves: 20 }, { row: 1, col: 6, moves: 20 }
         ],
         conveyor: [
             { row: 4, col: 2, direction: 'right' },
@@ -628,10 +628,10 @@ export const LevelData = {
             { row: 4, col: 5, direction: 'right' }
         ],
         portals: [
-            { entrance: { row: 7, col: 0 }, exit: { row: 0, col: 7 } }
+            { entrance: { row: 6, col: 1 }, exit: { row: 0, col: 6 } }
         ],
         stone: [
-            { row: 0, col: 0 }, { row: 7, col: 7 }
+            { row: 4, col: 0 }, { row: 4, col: 7 }
         ]
     }
 };

@@ -15,6 +15,9 @@ export default class ActionProcessor {
         this.isProcessing = true;
 
         try {
+            // Collect any ingredients that may have reached the bottom row before cascades
+            await this.safeAwait(this.board.checkIngredientCollection());
+
             let matches = initialMatches.length > 0 ? initialMatches : this.board.matchLogic.findMatches();
             let cascadeLevel = 0;
 
@@ -83,8 +86,12 @@ export default class ActionProcessor {
 
                     const score = this.board.calculateScore(cellsToClear.size, cascadeLevel);
                     this.scene.events.emit('scoreUpdate', score, cascadeLevel);
+                    if (typeof this.board.showFloatingScore === 'function') {
+                        this.board.showFloatingScore(Array.from(cellsToClear.values()), score, cascadeLevel);
+                    }
 
                     await this.safeAwait(this.board.clearCandiesWithSpecials(Array.from(cellsToClear.values()), specialsToCreate));
+                    this.board.lastSwappedCells = null;
                     await this.safeAwait(this.board.applyGravity());
                     await this.safeAwait(this.board.fillEmptySpaces());
                     await this.safeAwait(this.board.checkIngredientCollection());
@@ -124,26 +131,44 @@ export default class ActionProcessor {
         const { rows, cols, grid, candies } = this.board;
 
         if (specialType === 'line_h') {
-            for (let c = 0; c < cols; c++) if (candies[row][c]) cells.push({ row, col: c });
+            for (let c = 0; c < cols; c++) {
+                if (!this.board.stone[row][c] && (candies[row][c] || this.board.chocolate[row][c] || this.board.jelly[row][c] > 0)) {
+                    cells.push({ row, col: c });
+                }
+            }
         } else if (specialType === 'line_v') {
-            for (let r = 0; r < rows; r++) if (candies[r][col]) cells.push({ row: r, col });
+            for (let r = 0; r < rows; r++) {
+                if (!this.board.stone[r][col] && (candies[r][col] || this.board.chocolate[r][col] || this.board.jelly[r][col] > 0)) {
+                    cells.push({ row: r, col });
+                }
+            }
         } else if (specialType === 'bomb') {
             for (let r = row - 1; r <= row + 1; r++) {
                 for (let c = col - 1; c <= col + 1; c++) {
-                    if (this.board.isValidCell(r, c) && candies[r][c]) cells.push({ row: r, col: c });
+                    if (this.board.isValidCell(r, c) && !this.board.stone[r][c] && (candies[r][c] || this.board.chocolate[r][c] || this.board.jelly[r][c] > 0)) {
+                        cells.push({ row: r, col: c });
+                    }
                 }
             }
         } else if (specialType === 'color_bomb') {
-            let targetType = targetCandy ? targetCandy.candyType : -1;
+            let targetType = (targetCandy && targetCandy.candyType >= 0 && targetCandy.candyType < 90)
+                ? targetCandy.candyType
+                : -1;
             if (targetType === -1) {
                 const available = [];
-                for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (grid[r][c] >= 0) available.push(grid[r][c]);
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        if (grid[r][c] >= 0 && grid[r][c] < 90) available.push(grid[r][c]);
+                    }
+                }
                 if (available.length > 0) targetType = Phaser.Utils.Array.GetRandom(available);
             }
             if (targetType !== -1) {
                 for (let r = 0; r < rows; r++) {
                     for (let c = 0; c < cols; c++) {
-                        if (grid[r][c] === targetType && candies[r][c]) cells.push({ row: r, col: c });
+                        if (grid[r][c] === targetType && candies[r][c] && !candies[r][c].isIngredient) {
+                            cells.push({ row: r, col: c });
+                        }
                     }
                 }
             }
@@ -152,7 +177,11 @@ export default class ActionProcessor {
         return cells;
     }
 
-    async activateSpecial(candy, targetCandy = null) {
+    async activateSpecial(candy, targetCandy = null, triggeredSet = new Set()) {
+        if (!candy || !candy.active || triggeredSet.has(candy) || candy._activating) return;
+        candy._activating = true;
+        triggeredSet.add(candy);
+
         try {
             const cells = await this.getSpecialActivationCells(candy, targetCandy);
             this.scene.events.emit('specialActivated', candy.specialType, candy.row, candy.col);
@@ -165,7 +194,10 @@ export default class ActionProcessor {
             for (const cell of cells) {
                 this.board.getAdjacentCells(cell.row, cell.col).forEach(adj => adjacentCells.add(`${adj.row},${adj.col}`));
                 const target = this.board.candies[cell.row][cell.col];
-                if (target && target.isSpecial && target !== candy) {
+                if (target && target.isSpecial && target !== candy &&
+                    !target._activating && !triggeredSet.has(target) &&
+                    this.board.crate[cell.row][cell.col] === 0) {
+                    triggeredSet.add(target);
                     specialsToActivate.push(target);
                 } else {
                     cellsToClear.push(cell);
@@ -175,14 +207,19 @@ export default class ActionProcessor {
 
             const score = this.board.calculateScore(cells.length, 1) + 50;
             this.scene.events.emit('scoreUpdate', score, 1);
+            if (typeof this.board.showFloatingScore === 'function') {
+                this.board.showFloatingScore(cellsToClear, score, 1);
+            }
 
             await this.safeAwait(this.board.clearCandies(cellsToClear));
 
             if (specialsToActivate.length > 0) {
-                await Promise.all(specialsToActivate.map(s => this.safeAwait(this.activateSpecial(s))));
+                await Promise.all(specialsToActivate.map(s => this.safeAwait(this.activateSpecial(s, null, triggeredSet))));
             }
         } catch (error) {
             console.error('ActionProcessor: Error in activateSpecial:', error);
+        } finally {
+            candy._activating = false;
         }
     }
 }
