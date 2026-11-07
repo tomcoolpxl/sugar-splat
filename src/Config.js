@@ -357,7 +357,215 @@ export const GameConfig = {
                 37: 'dreamy',     // Conveyor intro
                 38: 'warm',       // Conveyor + blockers
                 39: 'crystal',    // Portal intro
-                40: 'punchy'      // World 8 finale - all mechanics
+                40: 'punchy',     // World 8 finale - all mechanics
+                // Worlds 9-12 Level Palettes
+                41: 'dreamy', 42: 'crystal', 43: 'gentle', 44: 'chiptune', 45: 'warm',
+                46: 'crystal', 47: 'dreamy', 48: 'punchy', 49: 'gentle', 50: 'punchy',
+                51: 'warm', 52: 'punchy', 53: 'chiptune', 54: 'crystal', 55: 'warm',
+                56: 'warm', 57: 'crystal', 58: 'chiptune', 59: 'punchy', 60: 'punchy'
+            },
+
+            // Distinct Compositions for Worlds 1-12
+            // Each world has its own key, chords, melodies, tempo, and mood!
+            WORLD_THEMES: {
+                // World 1: Sweet Meadows (Levels 1-5) - Cheerful C Major
+                1: {
+                    name: 'Sweet Meadows',
+                    tempo: 84,
+                    chords: [
+                        { bass: 130.81, arp: [261.63, 329.63, 392.00], arp_alt: [392.00, 329.63, 261.63], arp_bounce: [261.63, 392.00, 329.63] },
+                        { bass: 110.00, arp: [261.63, 329.63, 440.00], arp_alt: [440.00, 329.63, 261.63], arp_bounce: [261.63, 440.00, 329.63] },
+                        { bass: 174.61, arp: [261.63, 349.23, 440.00], arp_alt: [440.00, 349.23, 261.63], arp_bounce: [261.63, 440.00, 349.23] },
+                        { bass: 196.00, arp: [293.66, 392.00, 493.88], arp_alt: [493.88, 392.00, 293.66], arp_bounce: [293.66, 493.88, 392.00] }
+                    ],
+                    melodies: {
+                        A: [523.25, 659.25, 783.99, 659.25, 587.33, 783.99, 880.00, 783.99, 523.25, 880.00, 783.99, 659.25, 659.25, 587.33, 523.25, -1],
+                        B: [783.99, 659.25, 523.25, -1, 880.00, 783.99, 659.25, 587.33, 523.25, 587.33, 659.25, 783.99, 880.00, 783.99, 659.25, 523.25]
+                    },
+                    palette: { bass: { type: 'triangle', vol: 0.8 }, arp: { type: 'square', vol: 0.28 }, melody: { type: 'square', vol: 0.55 } }
+                },
+                // World 2: Frosty Peaks (Levels 6-10) - Chilly A Minor, crisp bells
+                2: {
+                    name: 'Frosty Peaks',
+                    tempo: 76,
+                    chords: [
+                        { bass: 110.00, arp: [261.63, 329.63, 440.00], arp_alt: [440.00, 329.63, 261.63], arp_bounce: [261.63, 440.00, 329.63] },
+                        { bass: 87.31,  arp: [261.63, 349.23, 440.00], arp_alt: [440.00, 349.23, 261.63], arp_bounce: [261.63, 440.00, 349.23] },
+                        { bass: 146.83, arp: [293.66, 349.23, 440.00], arp_alt: [440.00, 349.23, 293.66], arp_bounce: [293.66, 440.00, 349.23] },
+                        { bass: 164.81, arp: [246.94, 329.63, 392.00], arp_alt: [392.00, 329.63, 246.94], arp_bounce: [246.94, 392.00, 329.63] }
+                    ],
+                    melodies: {
+                        A: [880.00, 659.25, 587.33, 659.25, 880.00, -1, 783.99, 659.25, 698.46, 587.33, 523.25, 587.33, 659.25, -1, 587.33, 440.00],
+                        B: [659.25, 783.99, 880.00, 987.77, 880.00, 783.99, 659.25, -1, 698.46, 659.25, 587.33, 523.25, 440.00, -1, -1, -1]
+                    },
+                    palette: { bass: { type: 'sine', vol: 0.85 }, arp: { type: 'sine', vol: 0.4 }, melody: { type: 'triangle', vol: 0.7 } },
+                    bossPalette: { bass: { type: 'sawtooth', vol: 0.65 }, arp: { type: 'square', vol: 0.35 }, melody: { type: 'square', vol: 0.7 } }
+                },
+                // World 3: Gummy Gardens (Levels 11-15) - Bouncy G Major
+                3: {
+                    name: 'Gummy Gardens',
+                    tempo: 88,
+                    chords: [
+                        { bass: 196.00, arp: [293.66, 392.00, 493.88], arp_alt: [493.88, 392.00, 293.66], arp_bounce: [293.66, 493.88, 392.00] },
+                        { bass: 146.83, arp: [293.66, 369.99, 440.00], arp_alt: [440.00, 369.99, 293.66], arp_bounce: [293.66, 440.00, 369.99] },
+                        { bass: 164.81, arp: [246.94, 329.63, 392.00], arp_alt: [392.00, 329.63, 246.94], arp_bounce: [246.94, 392.00, 329.63] },
+                        { bass: 130.81, arp: [261.63, 329.63, 392.00], arp_alt: [392.00, 329.63, 261.63], arp_bounce: [261.63, 392.00, 329.63] }
+                    ],
+                    melodies: {
+                        A: [783.99, 739.99, 783.99, -1, 587.33, 659.25, 739.99, -1, 659.25, 587.33, 659.25, 783.99, 523.25, 659.25, 587.33, -1],
+                        B: [587.33, 659.25, 783.99, 880.00, 987.77, 880.00, 783.99, -1, 659.25, 783.99, 880.00, 783.99, 587.33, -1, 783.99, -1]
+                    },
+                    palette: { bass: { type: 'triangle', vol: 0.8 }, arp: { type: 'square', vol: 0.28 }, melody: { type: 'square', vol: 0.6 } }
+                },
+                // World 4: Soda Springs (Levels 16-20) - Upbeat F Major Bubble Pop
+                4: {
+                    name: 'Soda Springs',
+                    tempo: 94,
+                    chords: [
+                        { bass: 174.61, arp: [261.63, 349.23, 440.00], arp_alt: [440.00, 349.23, 261.63], arp_bounce: [261.63, 440.00, 349.23] },
+                        { bass: 130.81, arp: [261.63, 329.63, 392.00], arp_alt: [392.00, 329.63, 261.63], arp_bounce: [261.63, 392.00, 329.63] },
+                        { bass: 146.83, arp: [293.66, 349.23, 440.00], arp_alt: [440.00, 349.23, 293.66], arp_bounce: [293.66, 440.00, 349.23] },
+                        { bass: 116.54, arp: [233.08, 293.66, 349.23], arp_alt: [349.23, 293.66, 233.08], arp_bounce: [233.08, 349.23, 293.66] }
+                    ],
+                    melodies: {
+                        A: [698.46, 783.99, 880.00, 783.99, 659.25, -1, 523.25, 659.25, 587.33, 698.46, 587.33, -1, 466.16, 587.33, 523.25, -1],
+                        B: [880.00, 698.46, 880.00, 932.33, 880.00, 783.99, 698.46, -1, 659.25, 698.46, 783.99, 659.25, 587.33, 523.25, 466.16, -1]
+                    },
+                    palette: { bass: { type: 'triangle', vol: 0.85 }, arp: { type: 'sawtooth', vol: 0.22 }, melody: { type: 'square', vol: 0.6 } },
+                    bossPalette: { bass: { type: 'sawtooth', vol: 0.7 }, arp: { type: 'square', vol: 0.35 }, melody: { type: 'sawtooth', vol: 0.65 } }
+                },
+                // World 5: Licorice Maze (Levels 21-25) - Mysterious D Minor Labyrinth
+                5: {
+                    name: 'Licorice Maze',
+                    tempo: 82,
+                    chords: [
+                        { bass: 146.83, arp: [293.66, 349.23, 440.00], arp_alt: [440.00, 349.23, 293.66], arp_bounce: [293.66, 440.00, 349.23] },
+                        { bass: 196.00, arp: [293.66, 392.00, 493.88], arp_alt: [493.88, 392.00, 293.66], arp_bounce: [293.66, 493.88, 392.00] },
+                        { bass: 146.83, arp: [293.66, 349.23, 440.00], arp_alt: [440.00, 349.23, 293.66], arp_bounce: [293.66, 440.00, 349.23] },
+                        { bass: 130.81, arp: [261.63, 329.63, 392.00], arp_alt: [392.00, 329.63, 261.63], arp_bounce: [261.63, 392.00, 329.63] }
+                    ],
+                    melodies: {
+                        A: [587.33, -1, 698.46, 587.33, 783.99, 739.99, 783.99, -1, 587.33, 698.46, 880.00, -1, 783.99, 659.25, 587.33, -1],
+                        B: [880.00, 783.99, 698.46, 587.33, 659.25, 587.33, 523.25, -1, 587.33, 698.46, 783.99, 880.00, 783.99, 698.46, 587.33, -1]
+                    },
+                    palette: { bass: { type: 'triangle', vol: 0.85 }, arp: { type: 'square', vol: 0.3 }, melody: { type: 'sawtooth', vol: 0.45 } }
+                },
+                // World 6: Stone Quarry (Levels 26-30) - Industrial G Minor Pulse
+                6: {
+                    name: 'Stone Quarry',
+                    tempo: 86,
+                    chords: [
+                        { bass: 98.00,  arp: [293.66, 392.00, 466.16], arp_alt: [466.16, 392.00, 293.66], arp_bounce: [293.66, 466.16, 392.00] },
+                        { bass: 77.78,  arp: [311.13, 392.00, 466.16], arp_alt: [466.16, 392.00, 311.13], arp_bounce: [311.13, 466.16, 392.00] },
+                        { bass: 87.31,  arp: [261.63, 349.23, 440.00], arp_alt: [440.00, 349.23, 261.63], arp_bounce: [261.63, 440.00, 349.23] },
+                        { bass: 98.00,  arp: [293.66, 392.00, 466.16], arp_alt: [466.16, 392.00, 293.66], arp_bounce: [293.66, 466.16, 392.00] }
+                    ],
+                    melodies: {
+                        A: [783.99, -1, 622.25, 587.33, 698.46, -1, 587.33, 466.16, 587.33, 622.25, 698.46, -1, 783.99, 698.46, 587.33, -1],
+                        B: [466.16, 587.33, 622.25, 698.46, 783.99, -1, 698.46, -1, 622.25, 587.33, 466.16, 392.00, 466.16, 587.33, 392.00, -1]
+                    },
+                    palette: { bass: { type: 'sawtooth', vol: 0.65 }, arp: { type: 'square', vol: 0.3 }, melody: { type: 'square', vol: 0.55 } },
+                    bossPalette: { bass: { type: 'sawtooth', vol: 0.75 }, arp: { type: 'square', vol: 0.38 }, melody: { type: 'sawtooth', vol: 0.65 } }
+                },
+                // World 7: Cocoa Fortress (Levels 31-35) - Dramatic E Minor Tension
+                7: {
+                    name: 'Cocoa Fortress',
+                    tempo: 90,
+                    chords: [
+                        { bass: 82.41,  arp: [246.94, 329.63, 392.00], arp_alt: [392.00, 329.63, 246.94], arp_bounce: [246.94, 392.00, 329.63] },
+                        { bass: 65.41,  arp: [261.63, 329.63, 392.00], arp_alt: [392.00, 329.63, 261.63], arp_bounce: [261.63, 392.00, 329.63] },
+                        { bass: 98.00,  arp: [293.66, 392.00, 493.88], arp_alt: [493.88, 392.00, 293.66], arp_bounce: [293.66, 493.88, 392.00] },
+                        { bass: 73.42,  arp: [293.66, 369.99, 440.00], arp_alt: [440.00, 369.99, 293.66], arp_bounce: [293.66, 440.00, 369.99] }
+                    ],
+                    melodies: {
+                        A: [659.25, 783.99, 987.77, 880.00, 783.99, -1, 659.25, 783.99, 880.00, 783.99, 739.99, 659.25, 587.33, 659.25, 493.88, -1],
+                        B: [987.77, 880.00, 783.99, 659.25, 783.99, 880.00, 987.77, -1, 880.00, 783.99, 739.99, 587.33, 659.25, -1, -1, -1]
+                    },
+                    palette: { bass: { type: 'triangle', vol: 0.8 }, arp: { type: 'triangle', vol: 0.35 }, melody: { type: 'sawtooth', vol: 0.5 } }
+                },
+                // World 8: Portal Nexus (Levels 36-40) - Cosmic Synthwave D Lydian
+                8: {
+                    name: 'Portal Nexus',
+                    tempo: 80,
+                    chords: [
+                        { bass: 73.42,  arp: [293.66, 369.99, 440.00], arp_alt: [440.00, 369.99, 293.66], arp_bounce: [293.66, 440.00, 369.99] },
+                        { bass: 82.41,  arp: [246.94, 329.63, 392.00], arp_alt: [392.00, 329.63, 246.94], arp_bounce: [246.94, 392.00, 329.63] },
+                        { bass: 110.00, arp: [261.63, 329.63, 440.00], arp_alt: [440.00, 329.63, 261.63], arp_bounce: [261.63, 440.00, 329.63] },
+                        { bass: 123.47, arp: [246.94, 369.99, 440.00], arp_alt: [440.00, 369.99, 246.94], arp_bounce: [246.94, 440.00, 369.99] }
+                    ],
+                    melodies: {
+                        A: [739.99, 880.00, 1108.73, 987.77, 880.00, -1, 739.99, 880.00, 659.25, 739.99, 880.00, -1, 587.33, 739.99, 659.25, -1],
+                        B: [1108.73, 987.77, 880.00, 739.99, 659.25, 739.99, 880.00, -1, 739.99, 659.25, 587.33, 493.88, 587.33, -1, 739.99, -1]
+                    },
+                    palette: { bass: { type: 'sine', vol: 0.8 }, arp: { type: 'sine', vol: 0.45 }, melody: { type: 'triangle', vol: 0.65 } },
+                    bossPalette: { bass: { type: 'sawtooth', vol: 0.7 }, arp: { type: 'square', vol: 0.35 }, melody: { type: 'square', vol: 0.65 } }
+                },
+                // World 9: Cotton Candy Cloud (Levels 41-45) - Dreamy Floating Eb Major
+                9: {
+                    name: 'Cotton Candy Cloud',
+                    tempo: 78,
+                    chords: [
+                        { bass: 77.78,  arp: [311.13, 392.00, 466.16], arp_alt: [466.16, 392.00, 311.13], arp_bounce: [311.13, 466.16, 392.00] },
+                        { bass: 103.83, arp: [311.13, 415.30, 466.16], arp_alt: [466.16, 415.30, 311.13], arp_bounce: [311.13, 466.16, 415.30] },
+                        { bass: 130.81, arp: [261.63, 311.13, 392.00], arp_alt: [392.00, 311.13, 261.63], arp_bounce: [261.63, 392.00, 311.13] },
+                        { bass: 116.54, arp: [293.66, 349.23, 466.16], arp_alt: [466.16, 349.23, 293.66], arp_bounce: [293.66, 466.16, 349.23] }
+                    ],
+                    melodies: {
+                        A: [622.25, 783.99, 932.33, 783.99, 830.61, -1, 622.25, 830.61, 783.99, 622.25, 523.25, -1, 466.16, 587.33, 622.25, -1],
+                        B: [932.33, 830.61, 783.99, 622.25, 587.33, 622.25, 783.99, -1, 830.61, 783.99, 622.25, 466.16, 622.25, -1, -1, -1]
+                    },
+                    palette: { bass: { type: 'sine', vol: 0.85 }, arp: { type: 'sine', vol: 0.45 }, melody: { type: 'triangle', vol: 0.7 } }
+                },
+                // World 10: Peppermint Peak (Levels 46-50) - Frigid Alpine Staccato B Minor
+                10: {
+                    name: 'Peppermint Peak',
+                    tempo: 84,
+                    chords: [
+                        { bass: 123.47, arp: [293.66, 369.99, 493.88], arp_alt: [493.88, 369.99, 293.66], arp_bounce: [293.66, 493.88, 369.99] },
+                        { bass: 73.42,  arp: [293.66, 369.99, 440.00], arp_alt: [440.00, 369.99, 293.66], arp_bounce: [293.66, 440.00, 369.99] },
+                        { bass: 98.00,  arp: [293.66, 392.00, 493.88], arp_alt: [493.88, 392.00, 293.66], arp_bounce: [293.66, 493.88, 392.00] },
+                        { bass: 92.50,  arp: [277.18, 369.99, 440.00], arp_alt: [440.00, 369.99, 277.18], arp_bounce: [277.18, 440.00, 369.99] }
+                    ],
+                    melodies: {
+                        A: [739.99, 880.00, 987.77, 880.00, 739.99, -1, 587.33, 739.99, 783.99, 739.99, 587.33, -1, 493.88, 587.33, 739.99, -1],
+                        B: [987.77, -1, 880.00, 739.99, 587.33, 739.99, 880.00, 987.77, 880.00, 739.99, 587.33, 493.88, 440.00, 493.88, -1, -1]
+                    },
+                    palette: { bass: { type: 'triangle', vol: 0.8 }, arp: { type: 'sine', vol: 0.45 }, melody: { type: 'square', vol: 0.55 } },
+                    bossPalette: { bass: { type: 'sawtooth', vol: 0.7 }, arp: { type: 'square', vol: 0.35 }, melody: { type: 'sawtooth', vol: 0.65 } }
+                },
+                // World 11: Caramel Caverns (Levels 51-55) - Warm Subterranean C Minor
+                11: {
+                    name: 'Caramel Caverns',
+                    tempo: 86,
+                    chords: [
+                        { bass: 130.81, arp: [261.63, 311.13, 392.00], arp_alt: [392.00, 311.13, 261.63], arp_bounce: [261.63, 392.00, 311.13] },
+                        { bass: 87.31,  arp: [261.63, 349.23, 415.30], arp_alt: [415.30, 349.23, 261.63], arp_bounce: [261.63, 415.30, 349.23] },
+                        { bass: 103.83, arp: [261.63, 311.13, 415.30], arp_alt: [415.30, 311.13, 261.63], arp_bounce: [261.63, 415.30, 311.13] },
+                        { bass: 116.54, arp: [293.66, 349.23, 466.16], arp_alt: [466.16, 349.23, 293.66], arp_bounce: [293.66, 466.16, 349.23] }
+                    ],
+                    melodies: {
+                        A: [622.25, -1, 523.25, 622.25, 698.46, 622.25, 523.25, -1, 830.61, 783.99, 698.46, 622.25, 523.25, 622.25, 466.16, -1],
+                        B: [783.99, 698.46, 622.25, 523.25, 622.25, 698.46, 783.99, -1, 698.46, 622.25, 523.25, 466.16, 523.25, -1, -1, -1]
+                    },
+                    palette: { bass: { type: 'triangle', vol: 0.85 }, arp: { type: 'triangle', vol: 0.3 }, melody: { type: 'sawtooth', vol: 0.5 } }
+                },
+                // World 12: Sugar Citadel (Levels 56-60) - Regal Heroic Anthem
+                12: {
+                    name: 'Sugar Citadel',
+                    tempo: 96,
+                    chords: [
+                        { bass: 110.00, arp: [261.63, 329.63, 440.00], arp_alt: [440.00, 329.63, 261.63], arp_bounce: [261.63, 440.00, 329.63] },
+                        { bass: 87.31,  arp: [261.63, 349.23, 440.00], arp_alt: [440.00, 349.23, 261.63], arp_bounce: [261.63, 440.00, 349.23] },
+                        { bass: 130.81, arp: [261.63, 329.63, 392.00], arp_alt: [392.00, 329.63, 261.63], arp_bounce: [261.63, 392.00, 329.63] },
+                        { bass: 98.00,  arp: [293.66, 392.00, 493.88], arp_alt: [493.88, 392.00, 293.66], arp_bounce: [293.66, 493.88, 392.00] }
+                    ],
+                    melodies: {
+                        A: [880.00, -1, 783.99, 880.00, 1046.50, -1, 880.00, 783.99, 659.25, 783.99, 880.00, -1, 783.99, 659.25, 523.25, -1],
+                        B: [1046.50, 987.77, 880.00, 783.99, 880.00, 1046.50, 1174.66, -1, 1046.50, 880.00, 783.99, 659.25, 783.99, -1, 880.00, -1]
+                    },
+                    palette: { bass: { type: 'triangle', vol: 0.85 }, arp: { type: 'square', vol: 0.32 }, melody: { type: 'square', vol: 0.65 } },
+                    bossPalette: { bass: { type: 'sawtooth', vol: 0.8 }, arp: { type: 'square', vol: 0.38 }, melody: { type: 'sawtooth', vol: 0.7 } }
+                }
             }
         },
 

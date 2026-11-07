@@ -41,8 +41,40 @@ export default class SoundManager {
         // Music config from centralized settings
         this.musicConfig = GameConfig.AUDIO.MUSIC;
 
-        // Load sound palette for this level
-        this.loadPalette(level);
+        // Load sound theme and palette for this level
+        this.loadTheme(level);
+    }
+
+    loadTheme(level) {
+        const worldIndex = Math.min(12, Math.max(1, Math.floor((level - 1) / 5) + 1));
+        const isBoss = [10, 20, 30, 40, 50, 60].includes(level);
+        const worldTheme = this.musicConfig?.WORLD_THEMES?.[worldIndex];
+
+        if (worldTheme) {
+            this.tempo = (worldTheme.tempo || 80) + (isBoss ? 8 : 0);
+            this.chords = worldTheme.chords;
+            this.melodies = {
+                A: worldTheme.melodies.A,
+                B: worldTheme.melodies.B || worldTheme.melodies.A,
+                C: worldTheme.melodies.A,
+                D: worldTheme.melodies.B || worldTheme.melodies.A
+            };
+            this.sections = ['A', 'B', 'A', 'B'];
+            this.measuresPerSection = 4;
+            this.palette = isBoss && worldTheme.bossPalette ? worldTheme.bossPalette : worldTheme.palette;
+        } else {
+            this.tempo = this.musicConfig?.TEMPO || 80;
+            this.chords = this.musicConfig?.CHORDS || [];
+            this.melodies = {
+                A: this.musicConfig?.MELODY_A || [],
+                B: this.musicConfig?.MELODY_B || [],
+                C: this.musicConfig?.MELODY_C || [],
+                D: this.musicConfig?.MELODY_D || []
+            };
+            this.sections = this.musicConfig?.SECTIONS || ['A'];
+            this.measuresPerSection = this.musicConfig?.MEASURES_PER_SECTION || 4;
+            this.loadPalette(level);
+        }
     }
 
     loadPalette(level) {
@@ -233,19 +265,8 @@ export default class SoundManager {
         this.isMusicPlaying = true;
         this.nextNoteTime = this.context.currentTime + 0.1;
         this.stepIndex = 0;
-        this.tempo = this.musicConfig.TEMPO || 80;
+        this.loadTheme(this.level);
         this.secondsPerStep = 60 / this.tempo / 4; // 16th notes
-
-        // Load chords and melodies from config
-        this.chords = this.musicConfig.CHORDS || [];
-        this.melodies = {
-            A: this.musicConfig.MELODY_A || this.musicConfig.MELODY || [],
-            B: this.musicConfig.MELODY_B || this.musicConfig.MELODY_A || [],
-            C: this.musicConfig.MELODY_C || this.musicConfig.MELODY_A || [],
-            D: this.musicConfig.MELODY_D || this.musicConfig.MELODY_A || []
-        };
-        this.sections = this.musicConfig.SECTIONS || ['A'];
-        this.measuresPerSection = this.musicConfig.MEASURES_PER_SECTION || 4;
         this.sectionIndex = 0;
         this.measureCount = 0;
 

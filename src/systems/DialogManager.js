@@ -127,14 +127,15 @@ export default class DialogManager {
         this.animateIn(container, 300);
     }
 
-    showLose(onRetry, onLevelSelect) {
+    showLose(onRetry, onLevelSelect, onMainMenu) {
         const overlay = this.createOverlay();
         const container = this.createContainer();
 
-        this.createPanel(container, 360, 320, 25);
+        const panelHeight = onMainMenu ? 370 : 320;
+        this.createPanel(container, 360, panelHeight, 25);
 
         // Title
-        const title = this.scene.add.text(0, -110, 'Out of Moves!', {
+        const title = this.scene.add.text(0, -panelHeight / 2 + 50, 'Out of Moves!', {
             fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '36px',
             color: '#ff4757'
@@ -142,7 +143,7 @@ export default class DialogManager {
         container.add(title);
 
         // Status
-        const status = this.scene.add.text(0, -30, 'Objective not met.', {
+        const status = this.scene.add.text(0, -panelHeight / 2 + 120, 'Objective not met.', {
             fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '24px',
             color: '#333333'
@@ -150,14 +151,19 @@ export default class DialogManager {
         container.add(status);
 
         // Buttons
-        this.createButton(container, 0, 30, 'Try Again', onRetry);
-        this.createButton(container, 0, 100, 'Level Select', onLevelSelect);
+        this.createButton(container, 0, -panelHeight / 2 + 185, 'Try Again', onRetry);
+        if (onMainMenu) {
+            this.createButton(container, -80, -panelHeight / 2 + 250, 'Levels', onLevelSelect, 0.75);
+            this.createButton(container, 80, -panelHeight / 2 + 250, 'Main Menu', onMainMenu, 0.75);
+        } else {
+            this.createButton(container, 0, -panelHeight / 2 + 250, 'Level Select', onLevelSelect);
+        }
 
         this.animateIn(container);
     }
 
     showWin(config) {
-        const { score, stars, awardedPowerups, currentLevel, onNext, onReplay, onLevelSelect, soundManager, maxLevel } = config;
+        const { score, stars, awardedPowerups, currentLevel, onNext, onReplay, onLevelSelect, onMainMenu, soundManager, maxLevel } = config;
         const totalLevels = maxLevel || 60;
 
         const overlay = this.createOverlay();
@@ -265,21 +271,26 @@ export default class DialogManager {
         }
 
         this.createButton(container, 0, buttonStartY + buttonSpacing, 'Replay', onReplay);
-        this.createButton(container, 0, buttonStartY + buttonSpacing * 2, 'Level Select', onLevelSelect);
+        if (onMainMenu) {
+            this.createButton(container, -80, buttonStartY + buttonSpacing * 2, 'Levels', onLevelSelect, 0.75);
+            this.createButton(container, 80, buttonStartY + buttonSpacing * 2, 'Main Menu', onMainMenu, 0.75);
+        } else {
+            this.createButton(container, 0, buttonStartY + buttonSpacing * 2, 'Level Select', onLevelSelect);
+        }
 
         this.animateIn(container);
     }
 
     showPause(config) {
-        const { onResume, onRestart, onQuit, soundManager } = config;
+        const { onResume, onRestart, onLevelSelect, onMainMenu, onQuit, soundManager } = config;
 
         const overlay = this.createOverlay();
         const container = this.createContainer();
 
-        this.createPanel(container, 300, 440, 20);
+        this.createPanel(container, 320, 500, 20);
 
         // Title
-        const title = this.scene.add.text(0, -160, 'PAUSED', {
+        const title = this.scene.add.text(0, -195, 'PAUSED', {
             fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '36px',
             color: '#ff6b9d'
@@ -287,17 +298,18 @@ export default class DialogManager {
         container.add(title);
 
         // Buttons
-        this.createButton(container, 0, -80, 'Resume', () => {
+        this.createButton(container, 0, -130, 'Resume', () => {
             this.close();
             onResume();
         });
 
-        this.createButton(container, 0, -10, 'Restart', onRestart);
-        this.createButton(container, 0, 60, 'Quit', onQuit);
+        this.createButton(container, 0, -70, 'Restart', onRestart);
+        this.createButton(container, 0, -10, 'Level Select', onLevelSelect || onQuit);
+        this.createButton(container, 0, 50, 'Main Menu', onMainMenu || onQuit);
 
         // Music toggle - consistent checkbox style
         const musicOn = localStorage.getItem('sugarSplash_music') !== 'false';
-        const musicText = this.scene.add.text(0, 135, musicOn ? '☑ Music' : '☐ Music', {
+        const musicText = this.scene.add.text(0, 115, musicOn ? '☑ Music' : '☐ Music', {
             fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '22px',
             color: musicOn ? '#4ade80' : '#999999'
@@ -319,7 +331,7 @@ export default class DialogManager {
 
         // Sound toggle - consistent checkbox style
         const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
-        const soundText = this.scene.add.text(0, 175, soundOn ? '☑ Sound' : '☐ Sound', {
+        const soundText = this.scene.add.text(0, 155, soundOn ? '☑ Sound' : '☐ Sound', {
             fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '22px',
             color: soundOn ? '#4ade80' : '#999999'
@@ -334,6 +346,8 @@ export default class DialogManager {
             soundText.setColor(newState ? '#4ade80' : '#999999');
             this.scene.sound.mute = !newState;
         });
+
+        this.animateIn(container);
 
         return { overlay, container };
     }

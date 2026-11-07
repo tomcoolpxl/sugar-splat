@@ -442,7 +442,8 @@ export default class GameScene extends Phaser.Scene {
 
         this.dialogManager.showLose(
             () => this.scene.restart({ level: this.currentLevel }),
-            () => this.scene.start('LevelSelectScene')
+            () => this.scene.start('LevelSelectScene'),
+            () => this.scene.start('MenuScene')
         );
     }
 
@@ -497,6 +498,7 @@ export default class GameScene extends Phaser.Scene {
                 : this.scene.start('LevelSelectScene'),
             onReplay: () => this.scene.restart({ level: this.currentLevel }),
             onLevelSelect: () => this.scene.start('LevelSelectScene'),
+            onMainMenu: () => this.scene.start('MenuScene'),
             soundManager: this.soundManager
         });
     }
@@ -534,17 +536,19 @@ export default class GameScene extends Phaser.Scene {
                 this.hintManager.reset();
             },
             onRestart: () => this.scene.restart({ level: this.currentLevel }),
-            onQuit: () => this.showQuitConfirmation(overlay, pauseContainer),
+            onLevelSelect: () => this.showQuitConfirmation(overlay, pauseContainer, 'Quit to Level Select?\nProgress will be lost.', 'LevelSelectScene'),
+            onMainMenu: () => this.showQuitConfirmation(overlay, pauseContainer, 'Return to Main Menu?\nProgress will be lost.', 'MenuScene'),
+            onQuit: () => this.showQuitConfirmation(overlay, pauseContainer, 'Quit to Level Select?\nProgress will be lost.', 'LevelSelectScene'),
             soundManager: this.soundManager
         });
     }
 
-    showQuitConfirmation(pauseOverlay, pauseMenu) {
+    showQuitConfirmation(pauseOverlay, pauseMenu, message, targetScene) {
         pauseMenu.setVisible(false);
 
         this.dialogManager.showConfirmation(
-            'Quit this level?\nProgress will be lost.',
-            () => this.scene.start('LevelSelectScene'),
+            message || 'Quit this level?\nProgress will be lost.',
+            () => this.scene.start(targetScene || 'LevelSelectScene'),
             () => pauseMenu.setVisible(true)
         );
     }
