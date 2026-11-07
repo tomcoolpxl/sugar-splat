@@ -4,11 +4,11 @@ import C64Sequencer from '../systems/C64Sequencer.js';
 export default class LevelSelectScene extends Phaser.Scene {
     constructor() {
         super('LevelSelectScene');
-        this.totalLevels = 40;
+        this.totalLevels = 60;
         this.columns = 5;
         this.levelsPerPage = 20;
         this.currentPage = 0;
-        this.bossLevels = [10, 20, 30, 40]; // Boss levels with special visuals
+        this.bossLevels = [10, 20, 30, 40, 50, 60]; // Boss levels with special visuals
         this.dragDistance = 0;
         this.worldNames = [
             'World 1: Sweet Meadows',
@@ -18,7 +18,11 @@ export default class LevelSelectScene extends Phaser.Scene {
             'World 5: Licorice Maze',
             'World 6: Stone Quarry',
             'World 7: Cocoa Fortress',
-            'World 8: Portal Nexus'
+            'World 8: Portal Nexus',
+            'World 9: Cotton Candy Cloud',
+            'World 10: Peppermint Peak',
+            'World 11: Caramel Caverns',
+            'World 12: Sugar Citadel'
         ];
     }
 
@@ -435,7 +439,9 @@ export default class LevelSelectScene extends Phaser.Scene {
         this.paginationContainer = this.add.container(width / 2, y);
 
         // Page indicator
-        const worldsRange = this.currentPage === 0 ? 'Worlds 1–4' : 'Worlds 5–8';
+        const startWorld = this.currentPage * 4 + 1;
+        const endWorld = Math.min((this.currentPage + 1) * 4, Math.ceil(this.totalLevels / 5));
+        const worldsRange = `Worlds ${startWorld}–${endWorld}`;
         const pageText = this.add.text(0, 0, `Page ${this.currentPage + 1} / ${totalPages} (${worldsRange})`, {
             fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '18px',

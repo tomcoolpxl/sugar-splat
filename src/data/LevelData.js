@@ -631,4 +631,423 @@ export const LevelData = {
             { row: 4, col: 0 }, { row: 4, col: 7 }
         ]
     }
+,
+    41: {
+        moves: 32,
+        objective: 'score',
+        targetScore: 2200,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        stone: [
+            { row: 3, col: 3 }, { row: 3, col: 4 },
+            { row: 4, col: 3 }, { row: 4, col: 4 }
+        ],
+        portals: [
+            { entrance: { row: 5, col: 2 }, exit: { row: 0, col: 5 } },
+            { entrance: { row: 5, col: 5 }, exit: { row: 0, col: 2 } }
+        ],
+        crate: [
+            { row: 2, col: 2 }, { row: 2, col: 5 },
+            { row: 5, col: 3 }, { row: 5, col: 4 }
+        ]
+    },
+    42: {
+        moves: 32,
+        objective: 'drop',
+        drop: 2,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        stone: [
+            { row: 2, col: 2 }, { row: 2, col: 5 },
+            { row: 5, col: 2 }, { row: 5, col: 5 }
+        ],
+        portals: [
+            { entrance: { row: 4, col: 1 }, exit: { row: 0, col: 6 } }
+        ],
+        ice: [
+            { row: 6, col: 1 }, { row: 6, col: 6 },
+            { row: 7, col: 1 }, { row: 7, col: 6 }
+        ]
+    },
+    43: {
+        moves: 34,
+        objective: 'clearJelly',
+        jelly: [
+            { row: 1, col: 1 }, { row: 1, col: 6 },
+            { row: 6, col: 1 }, { row: 6, col: 6 },
+            { row: 2, col: 3 }, { row: 2, col: 4 },
+            { row: 5, col: 3 }, { row: 5, col: 4 }
+        ],
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        ice: [
+            { row: 3, col: 3 }, { row: 3, col: 4 },
+            { row: 4, col: 3 }, { row: 4, col: 4 }
+        ]
+    },
+    44: {
+        moves: 32,
+        objective: 'collect',
+        collect: { 0: 16, 2: 16 }, // Red and Green
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        conveyor: [
+            { row: 1, col: 0, direction: 'down' },
+            { row: 2, col: 0, direction: 'down' },
+            { row: 3, col: 0, direction: 'down' },
+            { row: 4, col: 7, direction: 'up' },
+            { row: 5, col: 7, direction: 'up' },
+            { row: 6, col: 7, direction: 'up' }
+        ],
+        licorice: [
+            { row1: 2, col1: 0, row2: 2, col2: 1 },
+            { row1: 5, col1: 6, row2: 5, col2: 7 }
+        ],
+        locked: [
+            { row: 3, col: 3 }, { row: 3, col: 4 },
+            { row: 4, col: 3 }, { row: 4, col: 4 }
+        ]
+    },
+    45: {
+        moves: 36,
+        objective: 'ultimate',
+        targetScore: 2200,
+        drop: 2,
+        jelly: [
+            { row: 6, col: 2 }, { row: 6, col: 5 },
+            { row: 7, col: 2 }, { row: 7, col: 5 }
+        ],
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        portals: [
+            { entrance: { row: 5, col: 1 }, exit: { row: 0, col: 6 } }
+        ],
+        crate: [
+            { row: 3, col: 2 }, { row: 3, col: 5 }
+        ],
+        stone: [
+            { row: 4, col: 3 }, { row: 4, col: 4 }
+        ]
+    },
+    46: {
+        moves: 34,
+        objective: 'score',
+        targetScore: 2000,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        stone: [
+            { row: 3, col: 0 }, { row: 3, col: 1 }, { row: 3, col: 6 }, { row: 3, col: 7 },
+            { row: 4, col: 0 }, { row: 4, col: 1 }, { row: 4, col: 6 }, { row: 4, col: 7 }
+        ],
+        ice: [
+            { row: 3, col: 2 }, { row: 3, col: 5 },
+            { row: 4, col: 2 }, { row: 4, col: 5 }
+        ]
+    },
+    47: {
+        moves: 30,
+        objective: 'clearJelly',
+        jelly: [
+            { row: 6, col: 2, layers: 2 }, { row: 6, col: 3, layers: 2 },
+            { row: 6, col: 4, layers: 2 }, { row: 6, col: 5, layers: 2 },
+            { row: 7, col: 3 }, { row: 7, col: 4 }
+        ],
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        ice: [
+            { row: 2, col: 3, layers: 2 }, { row: 2, col: 4, layers: 2 },
+            { row: 3, col: 2 }, { row: 3, col: 5 }
+        ],
+        conveyor: [
+            { row: 4, col: 2, direction: 'right' },
+            { row: 4, col: 3, direction: 'right' },
+            { row: 4, col: 4, direction: 'right' },
+            { row: 4, col: 5, direction: 'right' }
+        ]
+    },
+    48: {
+        moves: 36,
+        objective: 'drop',
+        drop: 2,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        crate: [
+            { row: 4, col: 2 }, { row: 4, col: 3 },
+            { row: 4, col: 4 }, { row: 4, col: 5 }
+        ],
+        stone: [
+            { row: 2, col: 1 }, { row: 2, col: 6 },
+            { row: 6, col: 1 }, { row: 6, col: 6 }
+        ],
+        portals: [
+            { entrance: { row: 5, col: 0 }, exit: { row: 1, col: 7 } }
+        ]
+    },
+    49: {
+        moves: 30,
+        objective: 'collect',
+        collect: { 1: 15, 3: 15 }, // Blue and Yellow
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        bombTimer: [
+            { row: 1, col: 2, moves: 20 },
+            { row: 1, col: 5, moves: 20 }
+        ],
+        locked: [
+            { row: 3, col: 3 }, { row: 3, col: 4 },
+            { row: 4, col: 3 }, { row: 4, col: 4 }
+        ]
+    },
+    50: {
+        moves: 38,
+        objective: 'ultimate',
+        targetScore: 3400,
+        drop: 2,
+        collect: { 0: 12, 1: 12 },
+        jelly: [
+            { row: 6, col: 3, layers: 2 }, { row: 6, col: 4, layers: 2 },
+            { row: 7, col: 3 }, { row: 7, col: 4 }
+        ],
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        ice: [
+            { row: 2, col: 2, layers: 2 }, { row: 2, col: 5, layers: 2 }
+        ],
+        conveyor: [
+            { row: 3, col: 3, direction: 'right' },
+            { row: 3, col: 4, direction: 'down' },
+            { row: 4, col: 4, direction: 'left' },
+            { row: 4, col: 3, direction: 'up' }
+        ],
+        crate: [
+            { row: 5, col: 2 }, { row: 5, col: 5 }
+        ],
+        stone: [
+            { row: 1, col: 0 }, { row: 1, col: 7 }
+        ]
+    },
+    51: {
+        moves: 28,
+        objective: 'score',
+        targetScore: 2600,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        stone: [
+            { row: 3, col: 3 }, { row: 3, col: 4 },
+            { row: 4, col: 3 }, { row: 4, col: 4 }
+        ],
+        conveyor: [
+            { row: 2, col: 2, direction: 'right' },
+            { row: 2, col: 3, direction: 'right' },
+            { row: 2, col: 4, direction: 'right' },
+            { row: 2, col: 5, direction: 'down' },
+            { row: 3, col: 5, direction: 'down' },
+            { row: 4, col: 5, direction: 'down' },
+            { row: 5, col: 5, direction: 'left' },
+            { row: 5, col: 4, direction: 'left' },
+            { row: 5, col: 3, direction: 'left' },
+            { row: 5, col: 2, direction: 'up' },
+            { row: 4, col: 2, direction: 'up' },
+            { row: 3, col: 2, direction: 'up' }
+        ]
+    },
+    52: {
+        moves: 30,
+        objective: 'collect',
+        collect: { 2: 15, 4: 15 }, // Green and Purple
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        honey: [
+            { row: 3, col: 3 }, { row: 3, col: 4 },
+            { row: 4, col: 3 }, { row: 4, col: 4 }
+        ],
+        conveyor: [
+            { row: 1, col: 1, direction: 'right' },
+            { row: 1, col: 2, direction: 'right' },
+            { row: 6, col: 6, direction: 'left' },
+            { row: 6, col: 5, direction: 'left' }
+        ],
+        crate: [
+            { row: 2, col: 5 }, { row: 5, col: 2 }
+        ]
+    },
+    53: {
+        moves: 34,
+        objective: 'drop',
+        drop: 2,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        portals: [
+            { entrance: { row: 4, col: 6 }, exit: { row: 0, col: 1 } }
+        ],
+        conveyor: [
+            { row: 5, col: 1, direction: 'right' },
+            { row: 5, col: 2, direction: 'right' },
+            { row: 5, col: 3, direction: 'right' }
+        ],
+        stone: [
+            { row: 3, col: 0 }, { row: 3, col: 7 },
+            { row: 6, col: 4 }
+        ],
+        crate: [
+            { row: 2, col: 2 }, { row: 2, col: 3 }
+        ]
+    },
+    54: {
+        moves: 32,
+        objective: 'clearJelly',
+        jelly: [
+            { row: 2, col: 1, layers: 2 }, { row: 2, col: 6, layers: 2 },
+            { row: 5, col: 1, layers: 2 }, { row: 5, col: 6, layers: 2 },
+            { row: 6, col: 3 }, { row: 6, col: 4 }
+        ],
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        conveyor: [
+            { row: 1, col: 1, direction: 'down' },
+            { row: 2, col: 1, direction: 'down' },
+            { row: 6, col: 6, direction: 'up' },
+            { row: 5, col: 6, direction: 'up' }
+        ],
+        crate: [
+            { row: 3, col: 3, layers: 2 }, { row: 3, col: 4, layers: 2 },
+            { row: 4, col: 3, layers: 2 }, { row: 4, col: 4, layers: 2 }
+        ]
+    },
+    55: {
+        moves: 34,
+        objective: 'ultimate',
+        targetScore: 2900,
+        drop: 2,
+        jelly: [
+            { row: 6, col: 1 }, { row: 6, col: 6 },
+            { row: 7, col: 1 }, { row: 7, col: 6 }
+        ],
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        chocolate: [
+            { row: 3, col: 3 }
+        ],
+        conveyor: [
+            { row: 4, col: 2, direction: 'right' },
+            { row: 4, col: 3, direction: 'right' },
+            { row: 4, col: 4, direction: 'right' },
+            { row: 4, col: 5, direction: 'right' }
+        ],
+        stone: [
+            { row: 2, col: 1 }, { row: 2, col: 6 }
+        ]
+    },
+    56: {
+        moves: 30,
+        objective: 'score',
+        targetScore: 2800,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        stone: [
+            { row: 2, col: 2 }, { row: 2, col: 5 },
+            { row: 5, col: 2 }, { row: 5, col: 5 }
+        ],
+        crate: [
+            { row: 3, col: 3, layers: 2 }, { row: 3, col: 4, layers: 2 },
+            { row: 4, col: 3, layers: 2 }, { row: 4, col: 4, layers: 2 }
+        ],
+        conveyor: [
+            { row: 0, col: 3, direction: 'right' },
+            { row: 0, col: 4, direction: 'right' },
+            { row: 7, col: 4, direction: 'left' },
+            { row: 7, col: 3, direction: 'left' }
+        ]
+    },
+    57: {
+        moves: 32,
+        objective: 'clearJelly',
+        jelly: [
+            { row: 1, col: 1, layers: 2 }, { row: 1, col: 6, layers: 2 },
+            { row: 6, col: 1, layers: 2 }, { row: 6, col: 6, layers: 2 },
+            { row: 3, col: 3 }, { row: 3, col: 4 }
+        ],
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        portals: [
+            { entrance: { row: 4, col: 1 }, exit: { row: 0, col: 6 } },
+            { entrance: { row: 4, col: 6 }, exit: { row: 0, col: 1 } }
+        ],
+        locked: [
+            { row: 2, col: 1 }, { row: 2, col: 6 },
+            { row: 5, col: 1 }, { row: 5, col: 6 }
+        ]
+    },
+    58: {
+        moves: 36,
+        objective: 'drop',
+        drop: 3,
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        conveyor: [
+            { row: 3, col: 1, direction: 'down' },
+            { row: 4, col: 1, direction: 'right' },
+            { row: 4, col: 2, direction: 'right' },
+            { row: 3, col: 6, direction: 'down' },
+            { row: 4, col: 6, direction: 'left' },
+            { row: 4, col: 5, direction: 'left' }
+        ],
+        crate: [
+            { row: 5, col: 3, layers: 2 }, { row: 5, col: 4, layers: 2 }
+        ],
+        stone: [
+            { row: 2, col: 3 }, { row: 2, col: 4 }
+        ]
+    },
+    59: {
+        moves: 32,
+        objective: 'collect',
+        collect: { 0: 16, 1: 16 }, // Red and Blue
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        bombTimer: [
+            { row: 1, col: 1, moves: 20 },
+            { row: 1, col: 6, moves: 20 }
+        ],
+        ice: [
+            { row: 3, col: 2, layers: 2 }, { row: 3, col: 5, layers: 2 },
+            { row: 4, col: 2, layers: 2 }, { row: 4, col: 5, layers: 2 }
+        ],
+        licorice: [
+            { row1: 2, col1: 3, row2: 2, col2: 4 },
+            { row1: 5, col1: 3, row2: 5, col2: 4 }
+        ]
+    },
+    60: {
+        moves: 40,
+        objective: 'ultimate',
+        targetScore: 4000,
+        drop: 3,
+        collect: { 0: 14, 2: 14 },
+        jelly: [
+            { row: 6, col: 3, layers: 2 }, { row: 6, col: 4, layers: 2 },
+            { row: 7, col: 3 }, { row: 7, col: 4 }
+        ],
+        rows: 8, cols: 8,
+        candyTypes: 5,
+        stone: [
+            { row: 3, col: 0 }, { row: 3, col: 7 }
+        ],
+        bombTimer: [
+            { row: 1, col: 2, moves: 22 },
+            { row: 1, col: 5, moves: 22 }
+        ],
+        crate: [
+            { row: 4, col: 3, layers: 2 }, { row: 4, col: 4, layers: 2 }
+        ],
+        conveyor: [
+            { row: 5, col: 1, direction: 'right' },
+            { row: 5, col: 2, direction: 'right' },
+            { row: 5, col: 5, direction: 'left' },
+            { row: 5, col: 6, direction: 'left' }
+        ],
+        portals: [
+            { entrance: { row: 6, col: 1 }, exit: { row: 0, col: 6 } }
+        ]
+    }
 };
