@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sugar Splat — Audio & Music Jukebox 🎧</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-start: #ffb6c1;
+            --bg-end: #add8e6;
+            --primary: #ff4757;
+            --primary-hover: #ff6b81;
+            --accent: #2ed573;
+            --yellow: #ffd32a;
+            --purple: #a55eea;
+            --dark: #2f3542;
+            --card-bg: rgba(255, 255, 255, 0.92);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #ffd1dc 0%, #b8e2f2 100%);
+            min-height: 100vh;
+            color: var(--dark);
+            padding: 24px 16px 80px;
+        }
+
+        .container {
+            max-width: 980px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-family: 'Fredoka', cursive;
+            font-size: 38px;
+            color: #ff4757;
+            text-shadow: 2px 2px 0 #ffffff, 4px 4px 0 rgba(0,0,0,0.08);
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: #57606f;
+            font-weight: 600;
+        }
+
+        /* Top Sticky Player Bar */
+        .sticky-player {
+            position: sticky;
+            top: 12px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 14px 22px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+            border: 2px solid #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+
+        .now-playing {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 220px;
+        }
+
+        .pulse-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #95a5a6;
+            transition: all 0.3s;
+        }
+
+        .pulse-dot.active {
+            background: #2ed573;
+            box-shadow: 0 0 12px #2ed573;
+            animation: pulse 1.2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.8; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.8; }
+        }
+
+        .track-title {
+            font-family: 'Fredoka', cursive;
+            font-size: 19px;
+            color: var(--dark);
+        }
+
+        .track-desc {
+            font-size: 13px;
+            color: #747d8c;
+            font-weight: 600;
+        }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-stop {
+            background: #ff4757;
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-family: 'Fredoka', cursive;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(255, 71, 87, 0.3);
+            transition: all 0.15s;
+        }
+
+        .btn-stop:hover {
+            transform: translateY(-2px);
+            background: #ff6b81;
+        }
+
+        .btn-back-game {
+            background: #3742fa;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 10px 18px;
+            border-radius: 12px;
+            font-family: 'Fredoka', cursive;
+            font-size: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s;
+        }
+
+        .btn-back-game:hover {
+            background: #5352ed;
+            transform: translateY(-2px);
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #57606f;
+        }
+
+        canvas#visualizer {
+            width: 140px;
+            height: 38px;
+            border-radius: 8px;
+            background: #2f3542;
+        }
+
+        /* Section Headings */
+        .section-header {
+            margin: 32px 0 16px;
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            border-bottom: 2px dashed rgba(255, 255, 255, 0.8);
+            padding-bottom: 8px;
+        }
+
+        .section-header h2 {
+            font-family: 'Fredoka', cursive;
+            font-size: 26px;
+            color: #2f3542;
+        }
+
+        .section-header span {
+            font-size: 14px;
+            color: #57606f;
+            font-weight: 700;
+        }
+
+        /* Card Grids */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 16px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+            border: 2px solid transparent;
+            transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 26px rgba(0, 0, 0, 0.12);
+        }
+
+        .card.active {
+            border-color: #ff4757;
+            background: #ffffff;
+            box-shadow: 0 10px 25px rgba(255, 71, 87, 0.2);
+        }
+
+        .card.active::before {
+            content: 'NOW PLAYING';
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            font-size: 10px;
+            font-weight: 800;
+            color: #ff4757;
+            letter-spacing: 1px;
+            background: #ffe5e8;
+            padding: 2px 8px;
+            border-radius: 8px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .badge-icon {
+            font-size: 28px;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: #f1f2f6;
+            flex-shrink: 0;
+        }
+
+        .card-title {
+            font-family: 'Fredoka', cursive;
+            font-size: 19px;
+            color: #2f3542;
+            line-height: 1.2;
+        }
+
+        .card-tag {
+            font-size: 12px;
+            color: #747d8c;
+            font-weight: 700;
+            margin-top: 3px;
+        }
+
+        .card-desc {
+            font-size: 13.5px;
+            color: #57606f;
+            line-height: 1.45;
+            margin-bottom: 14px;
+        }
+
+        .specs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 14px;
+        }
+
+        .spec-pill {
+            font-size: 11px;
+            font-weight: 700;
+            background: #f1f2f6;
+            color: #57606f;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .spec-pill.muffled {
+            background: #e8f5e9;
+            color: #2e7d32;
+            font-weight: 800;
+        }
+
+        .spec-pill.boss {
+            background: #fff9db;
+            color: #f59f00;
+            font-weight: 800;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-play {
+            flex: 1;
+            background: #2ed573;
+            color: #ffffff;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-family: 'Fredoka', cursive;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(46, 213, 115, 0.25);
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-play:hover {
+            background: #26af5f;
+            transform: translateY(-2px);
+        }
+
+        .btn-play.playing {
+            background: #ff4757;
+            box-shadow: 0 4px 10px rgba(255, 71, 87, 0.25);
+        }
+
+        .btn-section {
+            background: #f1f2f6;
+            color: #2f3542;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-section:hover {
+            background: #dfe4ea;
+        }
+
+        .btn-section.active {
+            background: #ff4757;
+            color: #ffffff;
+        }
+
+        /* SFX Grid */
+        .sfx-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .btn-sfx {
+            background: var(--card-bg);
+            border: 2px solid transparent;
+            border-radius: 14px;
+            padding: 12px 10px;
+            font-family: 'Fredoka', cursive;
+            font-size: 14px;
+            color: #2f3542;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s;
+        }
+
+        .btn-sfx span {
+            font-size: 22px;
+        }
+
+        .btn-sfx:hover {
+            transform: translateY(-3px);
+            border-color: #2ed573;
+            background: #ffffff;
+        }
+
+        .btn-sfx:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Sugar Splat Audio Jukebox 🎧</h1>
+            <p class="subtitle">Click any button below to immediately audition the original themes, muffled variations, world soundtracks, and sound effects!</p>
+        </header>
+
+        <!-- Sticky Floating Master Player -->
+        <div class="sticky-player">
+            <div class="now-playing">
+                <div class="pulse-dot" id="pulseDot"></div>
+                <div>
+                    <div class="track-title" id="nowTitle">No Track Playing</div>
+                    <div class="track-desc" id="nowDesc">Click any play button below to listen</div>
+                </div>
+            </div>
+
+            <canvas id="visualizer" width="140" height="38"></canvas>
+
+            <div class="player-controls">
+                <div class="slider-group">
+                    <label for="tempoSlider">BPM:</label>
+                    <input type="range" id="tempoSlider" min="60" max="120" value="80" step="2" style="width: 70px;">
+                    <span id="tempoVal">80</span>
+                </div>
+                <div class="slider-group">
+                    <label for="volSlider">Vol:</label>
+                    <input type="range" id="volSlider" min="0" max="1" value="0.5" step="0.05" style="width: 60px;">
+                </div>
+                <button class="btn-stop" id="btnStop">⏹ Stop</button>
+                <a href="index.html" class="btn-back-game">🎮 Play Game</a>
+            </div>
+        </div>
+
+        <!-- SECTION 1: The Original Sound Thing & Muffled Variations -->
+        <div class="section-header">
+            <h2>🍬 The Original Sound Thing & Muffled Variations (Levels 1–50)</h2>
+            <span>Happy C Major Chiptune (A-B-C-A-D-A Progression)</span>
+        </div>
+        <p style="margin-bottom: 16px; font-size: 14px; color: #57606f;">
+            The beloved original Sugar Splat theme! Features the classic C-Am-F-G chords with the four melody movements.
+            Listen below to hear how the <strong>Gentle</strong> and <strong>Muffled</strong> palettes soften and muffle the sound into warm, cozy pure tones.
+        </p>
+
+        <div class="grid" id="classicGrid">
+            <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- SECTION 1B: Levels 51-60 End-Game Suite -->
+        <div class="section-header">
+            <h2>🍯 Levels 51–60 End-Game Suite (Same Main Tune, Distinct Envelopes!)</h2>
+            <span>World 11 Caramel Caverns Composition with Level-Specific Timbre Envelopes</span>
+        </div>
+        <p style="margin-bottom: 16px; font-size: 14px; color: #57606f;">
+            Levels 51 to 60 share the beloved <strong>Caramel Caverns main tune</strong>, but each level modifies the <strong>sound envelope</strong> (waveform, cushioned attack, and muffled character):
+            Click below to compare how <strong>Level 51</strong> has the rich warm sawtooth lead, <strong>Level 52</strong> softens into a deeply cushioned muffled pure sine wave, and <strong>Level 53</strong> floats with a dreamy triangle melody!
+        </p>
+
+        <div class="grid" id="endgameGrid">
+            <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- SECTION 2: All 12 World Themes -->
+        <div class="section-header">
+            <h2>🗺️ All 12 World Themes (Levels 1–60)</h2>
+            <span>Each world features a distinct key, chord progression, tempo, and atmosphere</span>
+        </div>
+
+        <div class="grid" id="worldsGrid">
+            <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- SECTION 3: C64 SID Sequencer -->
+        <div class="section-header">
+            <h2>🕹️ C64 SID Retro Sequencer</h2>
+            <span>Menu & Level Select Scene 3-Voice PAL SID Audio</span>
+        </div>
+        <div class="grid" style="grid-template-columns: 1fr;">
+            <div class="card" id="cardC64">
+                <div class="card-header">
+                    <div class="badge-icon">🕹️</div>
+                    <div>
+                        <div class="card-title">Commodore 64 SID Chiptune Sequencer</div>
+                        <div class="card-tag">50Hz PAL Timing • Voice 1 (Melody) • Voice 2 (Square Arp) • Voice 3 (Saw Bass & Noise Snare)</div>
+                    </div>
+                </div>
+                <p class="card-desc">The authentic retro SID engine created for the Main Menu and Level Select. Uses the classic SID noise buffer snare trick and custom frequency tables.</p>
+                <div class="card-actions">
+                    <button class="btn-play" id="btnPlayC64">▶ Play C64 SID Theme</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 4: Sound Effects -->
+        <div class="section-header">
+            <h2>💥 Sound Effects (SFX)</h2>
+            <span>Synthesized real-time game interaction sounds</span>
+        </div>
+        <div class="sfx-grid" id="sfxGrid">
+            <!-- Populated dynamically via JS -->
+        </div>
+    </div>
+
+    <script type="module">
+        import { GameConfig } from './src/Config.js';
+        import C64Sequencer from './src/systems/C64Sequencer.js';
+
+        let audioCtx = null;
+        let analyser = null;
+        let masterGain = null;
+        let isPlaying = false;
+        let currentPlayback = null;
+        let currentCardElement = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 64;
+                masterGain = audioCtx.createGain();
+                masterGain.gain.setValueAtTime(parseFloat(document.getElementById('volSlider').value) * 0.4, audioCtx.currentTime);
+                masterGain.connect(analyser);
+                analyser.connect(audioCtx.destination);
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        // --- Visualizer ---
+        const canvas = document.getElementById('visualizer');
+        const canvasCtx = canvas.getContext('2d');
+        function drawVisualizer() {
+            requestAnimationFrame(drawVisualizer);
+            if (!analyser) return;
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+
+            canvasCtx.fillStyle = '#1e272e';
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const barWidth = (canvas.width / bufferLength) * 1.6;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const barHeight = (dataArray[i] / 255) * canvas.height;
+                canvasCtx.fillStyle = isPlaying ? `hsl(${i * 12 + 100}, 90%, 60%)` : '#57606f';
+                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                x += barWidth + 1;
+            }
+        }
+        drawVisualizer();
+
+        // --- Master UI Elements ---
+        const pulseDot = document.getElementById('pulseDot');
+        const nowTitle = document.getElementById('nowTitle');
+        const nowDesc = document.getElementById('nowDesc');
+        const btnStop = document.getElementById('btnStop');
+        const tempoSlider = document.getElementById('tempoSlider');
+        const tempoVal = document.getElementById('tempoVal');
+        const volSlider = document.getElementById('volSlider');
+
+        volSlider.addEventListener('input', (e) => {
+            if (masterGain && audioCtx) {
+                masterGain.gain.setValueAtTime(parseFloat(e.target.value) * 0.4, audioCtx.currentTime);
+            }
+        });
+
+        tempoSlider.addEventListener('input', (e) => {
+            tempoVal.textContent = e.target.value;
+            if (currentPlayback?.setTempo) {
+                currentPlayback.setTempo(parseInt(e.target.value));
+            }
+        });
+
+        function stopCurrent() {
+            if (currentPlayback) {
+                currentPlayback.stop();
+                currentPlayback = null;
+            }
+            isPlaying = false;
+            pulseDot.classList.remove('active');
+            nowTitle.textContent = 'Stopped';
+            nowDesc.textContent = 'Click any button below to audition';
+            if (currentCardElement) {
+                currentCardElement.classList.remove('active');
+                const btn = currentCardElement.querySelector('.btn-play');
+                if (btn) {
+                    btn.classList.remove('playing');
+                    btn.textContent = '▶ Play';
+                }
+            }
+        }
+        btnStop.addEventListener('click', stopCurrent);
+
+        // --- Chiptune Synth Player Engine ---
+        function playChiptune({ title, subtitle, tempo, chords, melodies, palette, sections = ['A', 'B', 'C', 'A', 'D', 'A'], cardEl }) {
+            stopCurrent();
+            const ctx = getAudioContext();
+
+            tempoSlider.value = tempo;
+            tempoVal.textContent = tempo;
+
+            isPlaying = true;
+            pulseDot.classList.add('active');
+            nowTitle.textContent = title;
+            nowDesc.textContent = subtitle;
+
+            if (cardEl) {
+                currentCardElement = cardEl;
+                cardEl.classList.add('active');
+                const btn = cardEl.querySelector('.btn-play');
+                if (btn) {
+                    btn.classList.add('playing');
+                    btn.textContent = '⏹ Stop';
+                }
+            }
+
+            let stepIndex = 0;
+            let currentTempo = tempo;
+            let currentSection = sections[0] || 'A';
+            let sectionIndex = 0;
+            let measureCount = 0;
+            let isRunning = true;
+            let timerId = null;
+
+            const beatsPerChord = 16;
+            const beatsPerMeasure = beatsPerChord * chords.length;
+
+            function playNote(freq, duration, type, vol, time, opts = {}) {
+                if (!isRunning || !ctx) return;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, time);
+
+                const attack = opts.attack !== undefined ? opts.attack : 0.01;
+                const release = opts.release !== undefined ? opts.release : 0.02;
+                const sustainDuration = Math.max(0, duration - attack - release);
+                const peakVol = vol * 0.35;
+
+                gain.gain.setValueAtTime(0, time);
+                gain.gain.linearRampToValueAtTime(peakVol, time + attack);
+                if (sustainDuration > 0) {
+                    gain.gain.setValueAtTime(peakVol, time + attack + sustainDuration);
+                }
+                gain.gain.linearRampToValueAtTime(0, time + duration);
+
+                if (opts.lowpass) {
+                    const filter = ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(opts.lowpass, time);
+                    osc.connect(filter);
+                    filter.connect(gain);
+                } else {
+                    osc.connect(gain);
+                }
+
+                gain.connect(masterGain);
+
+                osc.start(time);
+                osc.stop(time + duration + 0.02);
+            }
+
+            let nextTime = ctx.currentTime + 0.05;
+
+            function schedule() {
+                if (!isRunning) return;
+                const secondsPerStep = 60 / currentTempo / 4;
+
+                while (nextTime < ctx.currentTime + 0.25) {
+                    const chordIndex = Math.floor(stepIndex / beatsPerChord) % chords.length;
+                    const step = stepIndex % beatsPerChord;
+                    const chord = chords[chordIndex];
+
+                    if (stepIndex > 0 && stepIndex % beatsPerMeasure === 0) {
+                        measureCount++;
+                        if (measureCount >= 4) {
+                            measureCount = 0;
+                            sectionIndex = (sectionIndex + 1) % sections.length;
+                            currentSection = sections[sectionIndex];
+                        }
+                    }
+
+                    let arpKey = 'arp';
+                    if (currentSection === 'B' || currentSection === 'D') arpKey = 'arp_alt';
+                    else if (currentSection === 'C') arpKey = 'arp_bounce';
+                    const arp = chord[arpKey] || chord.arp;
+
+                    const melody = melodies[currentSection] || melodies.A;
+
+                    // Bass on 0 and 8
+                    if ((step === 0 || step === 8) && chord.bass) {
+                        playNote(chord.bass, 0.38, palette.bass.type, palette.bass.vol, nextTime, palette.bass);
+                    }
+
+                    // Arp on 8th notes
+                    if (step % 2 === 0 && arp) {
+                        const arpIdx = (step / 2) % arp.length;
+                        playNote(arp[arpIdx], 0.14, palette.arp.type, palette.arp.vol, nextTime, palette.arp);
+                    }
+
+                    // Melody on quarter notes
+                    if (step % 4 === 0 && melody && melody.length > 0) {
+                        const mIdx = (stepIndex / 4) % melody.length;
+                        const note = melody[mIdx];
+                        if (note > 0) {
+                            playNote(note, 0.34, palette.melody.type, palette.melody.vol, nextTime, palette.melody);
+                        }
+                    }
+
+                    nextTime += secondsPerStep;
+                    stepIndex++;
+                }
+
+                timerId = setTimeout(schedule, 40);
+            }
+
+            schedule();
+
+            currentPlayback = {
+                stop() {
+                    isRunning = false;
+                    clearTimeout(timerId);
+                },
+                setTempo(t) {
+                    currentTempo = t;
+                },
+                setSection(sec) {
+                    currentSection = sec;
+                }
+            };
+        }
+
+        // ==========================================
+        // BUILD SECTION 1: Classic & Muffled Palettes
+        // ==========================================
+        const classicGrid = document.getElementById('classicGrid');
+        const classicPalettes = [
+            {
+                id: 'gentle',
+                name: 'Gentle (The Muffled Classic)',
+                icon: '🍃',
+                desc: 'Soft sine bass with mellow triangle arpeggios and triangle melody. The muffled, mellow acoustic tone you loved in Level 1 & Level 6.',
+                pills: ['Sine Bass', 'Triangle Arp', 'Triangle Melody', 'Muffled / Soft'],
+                palette: GameConfig.AUDIO.MUSIC.PALETTES.gentle,
+                isMuffled: true
+            },
+            {
+                id: 'dreamy',
+                name: 'Dreamy (Muffled Spacious)',
+                icon: '☁️',
+                desc: 'Soft sine tones for both bass and arpeggio with smooth triangle lead. Ethereal, cozy, and floaty.',
+                pills: ['Sine Bass', 'Sine Arp', 'Triangle Melody', 'Muffled / Floaty'],
+                palette: GameConfig.AUDIO.MUSIC.PALETTES.dreamy,
+                isMuffled: true
+            },
+            {
+                id: 'muffled',
+                name: 'Cozy Muffled (Pure Sines)',
+                icon: '🧸',
+                desc: 'Warm, cozy pure sine waves throughout. Zero harsh edges, ultra-muffled, deeply relaxing.',
+                pills: ['Sine Bass', 'Sine Arp', 'Sine Melody', 'Deep Muffled'],
+                palette: GameConfig.AUDIO.MUSIC.PALETTES.muffled,
+                isMuffled: true
+            },
+            {
+                id: 'chiptune',
+                name: 'Classic Chiptune',
+                icon: '👾',
+                desc: 'The original bright 8-bit arcade style with crisp square waves and energetic triangle bass.',
+                pills: ['Triangle Bass', 'Square Arp', 'Square Melody', 'Bright / Crisp'],
+                palette: GameConfig.AUDIO.MUSIC.PALETTES.chiptune
+            },
+            {
+                id: 'warm',
+                name: 'Warm Sawtooth',
+                icon: '🔥',
+                desc: 'Fuller analog feel using gentle sawtooth leads with mellow triangle accompaniment.',
+                pills: ['Triangle Bass', 'Triangle Arp', 'Sawtooth Melody', 'Rich Tone'],
+                palette: GameConfig.AUDIO.MUSIC.PALETTES.warm
+            },
+            {
+                id: 'crystal',
+                name: 'Crystal Shimmer',
+                icon: '💎',
+                desc: 'Bright, pure sine harmonics with sparkling chime-like resonance.',
+                pills: ['Triangle Bass', 'Sine Arp', 'Sine Melody', 'Bright Shimmer'],
+                palette: GameConfig.AUDIO.MUSIC.PALETTES.crystal
+            },
+            {
+                id: 'punchy',
+                name: 'Punchy Drive',
+                icon: '⚡',
+                desc: 'Aggressive sawtooth bass with punchy square wave leads for high energy.',
+                pills: ['Sawtooth Bass', 'Square Arp', 'Square Melody', 'Driving / Crisp'],
+                palette: GameConfig.AUDIO.MUSIC.PALETTES.punchy
+            }
+        ];
+
+        classicPalettes.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div>
+                    <div class="card-header">
+                        <div class="badge-icon">${item.icon}</div>
+                        <div>
+                            <div class="card-title">${item.name}</div>
+                            <div class="card-tag">Original C Major Theme • 80 BPM</div>
+                        </div>
+                    </div>
+                    <p class="card-desc">${item.desc}</p>
+                    <div class="specs">
+                        ${item.pills.map(p => `<span class="spec-pill ${p.includes('Muffled') ? 'muffled' : ''}">${p}</span>`).join('')}
+                    </div>
+                </div>
+                <div>
+                    <div style="display: flex; gap: 4px; margin-bottom: 8px;">
+                        <button class="btn-section active" data-sec="A">Sec A (Theme)</button>
+                        <button class="btn-section" data-sec="B">Sec B (Descend)</button>
+                        <button class="btn-section" data-sec="C">Sec C (Playful)</button>
+                        <button class="btn-section" data-sec="D">Sec D (Calm)</button>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-play">▶ Play ${item.name}</button>
+                    </div>
+                </div>
+            `;
+
+            const btnPlay = card.querySelector('.btn-play');
+            btnPlay.addEventListener('click', () => {
+                if (card.classList.contains('active')) {
+                    stopCurrent();
+                } else {
+                    playChiptune({
+                        title: item.name,
+                        subtitle: 'Original Sugar Splat Classic • C Major',
+                        tempo: 80,
+                        chords: GameConfig.AUDIO.MUSIC.CHORDS,
+                        melodies: {
+                            A: GameConfig.AUDIO.MUSIC.MELODY_A,
+                            B: GameConfig.AUDIO.MUSIC.MELODY_B,
+                            C: GameConfig.AUDIO.MUSIC.MELODY_C,
+                            D: GameConfig.AUDIO.MUSIC.MELODY_D
+                        },
+                        palette: item.palette,
+                        sections: ['A', 'B', 'C', 'A', 'D', 'A'],
+                        cardEl: card
+                    });
+                }
+            });
+
+            const secBtns = card.querySelectorAll('.btn-section');
+            secBtns.forEach(sb => {
+                sb.addEventListener('click', () => {
+                    secBtns.forEach(b => b.classList.remove('active'));
+                    sb.classList.add('active');
+                    if (card.classList.contains('active') && currentPlayback?.setSection) {
+                        currentPlayback.setSection(sb.dataset.sec);
+                    }
+                });
+            });
+
+            classicGrid.appendChild(card);
+        });
+
+        // ==========================================
+        // BUILD SECTION 1B: Levels 51-60 End-Game Suite
+        // (Same World 11 Tune, Per-Level Sound Envelopes!)
+        // ==========================================
+        const endgameGrid = document.getElementById('endgameGrid');
+        const theme11 = GameConfig.AUDIO.MUSIC.WORLD_THEMES[11];
+        const endgameLevels = [
+            {
+                level: 51,
+                paletteKey: 'warm',
+                name: 'Level 51: Warm Rich Lead',
+                icon: '🔥',
+                badge: '⭐ PLAYER FAVORITE',
+                desc: 'The exact rich sawtooth lead you loved when playing Level 51. Warm, assertive, and energetic.',
+                pills: ['Sawtooth Melody', 'Triangle Bass', 'Warm Lead', 'L51 Sound'],
+                palette: GameConfig.AUDIO.MUSIC.PALETTES.warm
+            },
+            {
+                level: 52,
+                paletteKey: 'muffled',
+                name: 'Level 52: Muffled Pure Sine',
+                icon: '🌊',
+                badge: 'MUFFLED ENVELOPE',
+                desc: 'Same Caramel Caverns tune, but transformed into a smooth, muffled pure sine wave with softened 40ms attack and zero harsh harmonics.',
+                pills: ['Pure Sine Melody', 'Pure Sine Arp', 'Pure Sine Bass', 'Soft 40ms Attack', 'Distinctly Muffled'],
+                palette: GameConfig.AUDIO.MUSIC.PALETTES.muffled
+            },
+            {
+                level: 53,
+                paletteKey: 'dreamy',
+                name: 'Level 53: Dreamy Floaty Sine',
+                icon: '☁️',
+                badge: 'DREAMY ENVELOPE',
+                desc: 'Same tune with airy triangle melody over floating sine arpeggios. Ethereal, spacious, and relaxed.',
+                pills: ['Triangle Melody', 'Sine Arp', 'Sine Bass', 'Airy Swell', 'Dreamy Mellow'],
+                palette: GameConfig.AUDIO.MUSIC.PALETTES.dreamy
+            },
+            {
+                level: 54,
+                paletteKey: 'crystal',
+                name: 'Level 54: Crystal Shimmer',
+                icon: '💎',
+                badge: 'CRYSTAL ENVELOPE',
+                desc: 'Same tune with bright, pure crystalline sine harmonics and sparkling chime reflections.',
+                pills: ['Bright Sine Melody', 'Sine Arp', 'Triangle Bass', 'Sparkle'],
+                palette: GameConfig.AUDIO.MUSIC.PALETTES.crystal
+            },
+            {
+                level: 55,
+                paletteKey: 'punchy',
+                name: 'Level 55: Punchy Chiptune',
+                icon: '⚡',
+                badge: 'PUNCHY ENVELOPE',
+                desc: 'Same tune driven by crisp square wave arcade leads and aggressive sawtooth bass.',
+                pills: ['Square Melody', 'Square Arp', 'Sawtooth Bass', 'Snappy Attack'],
+                palette: GameConfig.AUDIO.MUSIC.PALETTES.punchy
+            }
+        ];
+
+        endgameLevels.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div>
+                    <div class="card-header">
+                        <div class="badge-icon">${item.icon}</div>
+                        <div>
+                            <div class="card-title">${item.name}</div>
+                            <div class="card-tag">World 11 Theme • 86 BPM ${item.badge ? `<span style="color:#d97706;font-weight:800;margin-left:4px;">${item.badge}</span>` : ''}</div>
+                        </div>
+                    </div>
+                    <p class="card-desc">${item.desc}</p>
+                    <div class="specs">
+                        ${item.pills.map(p => `<span class="spec-pill ${p.includes('Muffled') ? 'muffled' : ''}">${p}</span>`).join('')}
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <button class="btn-play">▶ Play ${item.name.split(':')[0]}</button>
+                </div>
+            `;
+
+            const btnPlay = card.querySelector('.btn-play');
+            btnPlay.addEventListener('click', () => {
+                if (card.classList.contains('active')) {
+                    stopCurrent();
+                } else {
+                    playChiptune({
+                        title: item.name,
+                        subtitle: 'Levels 51–60 Caramel Caverns Suite • ' + item.paletteKey.toUpperCase() + ' Envelope',
+                        tempo: theme11.tempo,
+                        chords: theme11.chords,
+                        melodies: {
+                            A: theme11.melodies.A,
+                            B: theme11.melodies.B || theme11.melodies.A,
+                            C: theme11.melodies.A,
+                            D: theme11.melodies.B || theme11.melodies.A
+                        },
+                        palette: item.palette,
+                        sections: ['A', 'B', 'A', 'B'],
+                        cardEl: card
+                    });
+                }
+            });
+
+            endgameGrid.appendChild(card);
+        });
+
+        // ==========================================
+        // BUILD SECTION 2: 12 World Themes
+        // ==========================================
+        const worldsGrid = document.getElementById('worldsGrid');
+        const worldIcons = ['🌸', '❄️', '🍬', '🥤', '🌿', '⛏️', '🍫', '🌀', '☁️', '🏔️', '🍯', '👑'];
+        const worldLevelRanges = [
+            'Levels 1–5', 'Levels 6–10', 'Levels 11–15', 'Levels 16–20',
+            'Levels 21–25', 'Levels 26–30', 'Levels 31–35', 'Levels 36–40',
+            'Levels 41–45', 'Levels 46–50', 'Levels 51–55', 'Levels 56–60'
+        ];
+
+        for (let i = 1; i <= 12; i++) {
+            const theme = GameConfig.AUDIO.MUSIC.WORLD_THEMES[i];
+            if (!theme) continue;
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            const isFavorite = i === 11 ? '⭐ PLAYER FAVORITE' : '';
+
+            card.innerHTML = `
+                <div>
+                    <div class="card-header">
+                        <div class="badge-icon">${worldIcons[i - 1]}</div>
+                        <div>
+                            <div class="card-title">World ${i}: ${theme.name}</div>
+                            <div class="card-tag">${worldLevelRanges[i - 1]} • ${theme.tempo} BPM ${isFavorite ? `<span style="color:#d97706;font-weight:800;margin-left:4px;">${isFavorite}</span>` : ''}</div>
+                        </div>
+                    </div>
+                    <p class="card-desc">
+                        ${i === 11 ? 'Sticky subterranean caramel groove with rotating mine chutes (the track you enjoyed in Level 51!).' :
+                          i === 2 ? 'Chilly alpine bells and crystalline arpeggios.' :
+                          i === 5 ? 'Curious labyrinthine mystery in D Dorian.' :
+                          i === 8 ? 'Futuristic cosmic synthwave with wide portal sweeps.' :
+                          i === 12 ? 'The Grand Finale royal anthem of the Sugar Citadel.' :
+                          'Dedicated world progression designed for ' + theme.name + '.'}
+                    </p>
+                    <div class="specs">
+                        <span class="spec-pill">${theme.tempo} BPM</span>
+                        <span class="spec-pill">${theme.chords.length} Chords</span>
+                        <span class="spec-pill">${theme.palette.melody.type} Lead</span>
+                        ${theme.bossPalette ? `<span class="spec-pill boss">Boss Overdrive Avail</span>` : ''}
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <button class="btn-play">▶ Play World ${i}</button>
+                </div>
+            `;
+
+            const btnPlay = card.querySelector('.btn-play');
+            btnPlay.addEventListener('click', () => {
+                if (card.classList.contains('active')) {
+                    stopCurrent();
+                } else {
+                    playChiptune({
+                        title: `World ${i}: ${theme.name}`,
+                        subtitle: `${worldLevelRanges[i - 1]} • ${theme.tempo} BPM`,
+                        tempo: theme.tempo,
+                        chords: theme.chords,
+                        melodies: theme.melodies,
+                        palette: theme.palette,
+                        sections: ['A', 'B', 'A', 'B'],
+                        cardEl: card
+                    });
+                }
+            });
+
+            worldsGrid.appendChild(card);
+        }
+
+        // ==========================================
+        // BUILD SECTION 3: C64 SID Sequencer
+        // ==========================================
+        const cardC64 = document.getElementById('cardC64');
+        const btnPlayC64 = document.getElementById('btnPlayC64');
+        let c64Instance = null;
+
+        btnPlayC64.addEventListener('click', () => {
+            if (cardC64.classList.contains('active')) {
+                stopCurrent();
+            } else {
+                stopCurrent();
+                const ctx = getAudioContext();
+                isPlaying = true;
+                pulseDot.classList.add('active');
+                nowTitle.textContent = 'C64 SID Retro Sequencer';
+                nowDesc.textContent = 'PAL 50Hz 3-Voice Retro Assembly Engine';
+                cardC64.classList.add('active');
+                btnPlayC64.classList.add('playing');
+                btnPlayC64.textContent = '⏹ Stop C64';
+                currentCardElement = cardC64;
+
+                const mockScene = {
+                    sound: {
+                        context: ctx,
+                        locked: false
+                    }
+                };
+
+                c64Instance = new C64Sequencer(mockScene);
+                c64Instance.start();
+
+                currentPlayback = {
+                    stop() {
+                        if (c64Instance) {
+                            c64Instance.destroy();
+                            c64Instance = null;
+                        }
+                    }
+                };
+            }
+        });
+
+        // ==========================================
+        // BUILD SECTION 4: Sound Effects
+        // ==========================================
+        const sfxGrid = document.getElementById('sfxGrid');
+        const sfxList = [
+            { key: 'select', name: 'Select UI', icon: '👆', fn: playToneSfx },
+            { key: 'click', name: 'Button Click', icon: '🔘', fn: playToneSfx },
+            { key: 'swap', name: 'Candy Swap', icon: '↔️', fn: playToneSfx },
+            { key: 'match', name: 'Match 3', icon: '✨', fn: playToneSfx },
+            { key: 'cascade_1', name: 'Combo 1x', icon: '🎵', fn: () => playCascade(1) },
+            { key: 'cascade_2', name: 'Combo 2x', icon: '🎶', fn: () => playCascade(2) },
+            { key: 'cascade_3', name: 'Combo 3x', icon: '🎉', fn: () => playCascade(3) },
+            { key: 'cascade_5', name: 'Combo 5x', icon: '🌟', fn: () => playCascade(5) },
+            { key: 'special_line', name: 'Line Created', icon: '⚡', fn: playToneSfx },
+            { key: 'special_bomb', name: 'Bomb Created', icon: '💣', fn: playToneSfx },
+            { key: 'special_colorbomb', name: 'Color Bomb!', icon: '🌈', fn: playToneSfx },
+            { key: 'line_explode', name: 'Line Clear', icon: '💥', fn: playToneSfx },
+            { key: 'bomb_explode', name: 'Bomb Boom', icon: '🧨', fn: playToneSfx },
+            { key: 'colorblast', name: 'Rainbow Laser', icon: '🎆', fn: playToneSfx },
+            { key: 'cherry_drop', name: 'Cherry Drop', icon: '🍒', fn: playToneSfx },
+            { key: 'win', name: 'Level Win', icon: '🏆', fn: playToneSfx },
+            { key: 'levelFail', name: 'Level Fail', icon: '🥀', fn: playToneSfx }
+        ];
+
+        function playToneSfx(defKey) {
+            const ctx = getAudioContext();
+            const def = GameConfig.AUDIO.SOUNDS[defKey];
+            if (!def) return;
+
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const time = ctx.currentTime;
+            const vol = (def.vol || 0.3) * 0.4;
+
+            osc.type = def.type || 'sine';
+            osc.frequency.setValueAtTime(def.freqStart || 440, time);
+            if (def.freqEnd) {
+                osc.frequency.exponentialRampToValueAtTime(def.freqEnd, time + (def.duration || 0.1));
+            }
+
+            gain.gain.setValueAtTime(0, time);
+            gain.gain.linearRampToValueAtTime(vol, time + (def.attack || 0.01));
+            gain.gain.exponentialRampToValueAtTime(0.001, time + (def.duration || 0.1));
+
+            osc.connect(gain);
+            gain.connect(masterGain);
+
+            osc.start(time);
+            osc.stop(time + (def.duration || 0.1) + 0.02);
+        }
+
+        function playCascade(level) {
+            const ctx = getAudioContext();
+            const majorScale = [1, 9 / 8, 5 / 4, 4 / 3, 3 / 2, 5 / 3, 15 / 8, 2, 9 / 4, 5 / 2];
+            const idx = Math.min(Math.max(0, level - 1), majorScale.length - 1);
+            const baseFreq = 523.25; // C5
+            const freq = baseFreq * majorScale[idx];
+
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const time = ctx.currentTime;
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, time);
+
+            gain.gain.setValueAtTime(0, time);
+            gain.gain.linearRampToValueAtTime(0.25, time + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.25);
+
+            osc.connect(gain);
+            gain.connect(masterGain);
+
+            osc.start(time);
+            osc.stop(time + 0.27);
+        }
+
+        sfxList.forEach(sfx => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-sfx';
+            btn.innerHTML = `<span>${sfx.icon}</span>${sfx.name}`;
+            btn.addEventListener('click', () => {
+                if (sfx.key.startsWith('cascade_')) {
+                    sfx.fn();
+                } else {
+                    playToneSfx(sfx.key);
+                }
+            });
+            sfxGrid.appendChild(btn);
+        });
+    </script>
+</body>
+</html>

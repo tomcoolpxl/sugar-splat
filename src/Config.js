@@ -278,91 +278,115 @@ export const GameConfig = {
             // Sound palettes for different levels - defines instrument timbres
             // Each palette creates a distinct mood while using the same melodies
             PALETTES: {
-                // Soft & Gentle - early levels (sine-heavy, mellow)
+                // Soft & Gentle - early levels (sine-heavy, mellow muffled feel)
                 gentle: {
-                    bass: { type: 'sine', vol: 0.9 },
-                    arp: { type: 'triangle', vol: 0.35 },
-                    melody: { type: 'triangle', vol: 0.7 }
+                    bass: { type: 'sine', vol: 0.9, attack: 0.03, release: 0.03 },
+                    arp: { type: 'triangle', vol: 0.35, attack: 0.02, release: 0.02 },
+                    melody: { type: 'triangle', vol: 0.7, attack: 0.03, release: 0.03 }
+                },
+                // Muffled - warm, cozy, pure mellow sine tones with cushioned envelope and warm lowpass filtering
+                muffled: {
+                    bass: { type: 'sine', vol: 0.95, attack: 0.04, release: 0.04, lowpass: 600 },
+                    arp: { type: 'sine', vol: 0.35, attack: 0.03, release: 0.03, lowpass: 800 },
+                    melody: { type: 'sine', vol: 0.65, attack: 0.04, release: 0.04, lowpass: 900 }
                 },
                 // Classic Chiptune - bright and crisp
                 chiptune: {
-                    bass: { type: 'triangle', vol: 0.8 },
-                    arp: { type: 'square', vol: 0.3 },
-                    melody: { type: 'square', vol: 0.6 }
+                    bass: { type: 'triangle', vol: 0.8, attack: 0.005, release: 0.01 },
+                    arp: { type: 'square', vol: 0.3, attack: 0.005, release: 0.01 },
+                    melody: { type: 'square', vol: 0.6, attack: 0.005, release: 0.01 }
                 },
-                // Warm & Rich - fuller sound with sawtooth
+                // Warm & Rich - fuller sound with sawtooth (the Level 51 favorite lead!)
                 warm: {
-                    bass: { type: 'triangle', vol: 0.85 },
-                    arp: { type: 'triangle', vol: 0.25 },
-                    melody: { type: 'sawtooth', vol: 0.45 }
+                    bass: { type: 'triangle', vol: 0.85, attack: 0.01, release: 0.02 },
+                    arp: { type: 'triangle', vol: 0.25, attack: 0.01, release: 0.02 },
+                    melody: { type: 'sawtooth', vol: 0.45, attack: 0.01, release: 0.02 }
                 },
-                // Dreamy - soft sine tones, spacious
+                // Dreamy - soft sine tones with airy triangle melody
                 dreamy: {
-                    bass: { type: 'sine', vol: 0.7 },
-                    arp: { type: 'sine', vol: 0.4 },
-                    melody: { type: 'triangle', vol: 0.65 }
+                    bass: { type: 'sine', vol: 0.7, attack: 0.03, release: 0.04 },
+                    arp: { type: 'sine', vol: 0.4, attack: 0.02, release: 0.03 },
+                    melody: { type: 'triangle', vol: 0.65, attack: 0.03, release: 0.04 }
                 },
                 // Punchy - more aggressive, game-like
                 punchy: {
-                    bass: { type: 'sawtooth', vol: 0.6 },
-                    arp: { type: 'square', vol: 0.25 },
-                    melody: { type: 'square', vol: 0.55 }
+                    bass: { type: 'sawtooth', vol: 0.6, attack: 0.003, release: 0.01 },
+                    arp: { type: 'square', vol: 0.25, attack: 0.003, release: 0.01 },
+                    melody: { type: 'square', vol: 0.55, attack: 0.003, release: 0.01 }
                 },
                 // Crystal - bright and shimmery
                 crystal: {
-                    bass: { type: 'triangle', vol: 0.75 },
-                    arp: { type: 'sine', vol: 0.45 },
-                    melody: { type: 'sine', vol: 0.8 }
+                    bass: { type: 'triangle', vol: 0.75, attack: 0.01, release: 0.02 },
+                    arp: { type: 'sine', vol: 0.45, attack: 0.01, release: 0.01 },
+                    melody: { type: 'sine', vol: 0.8, attack: 0.005, release: 0.01 }
                 }
             },
 
-            // Level to palette mapping - each level sounds distinct
+            // Level to palette mapping - defines sound envelope / timbre per level
+            // Each level plays the world's main tune with a distinct sound envelope (muffled, dreamy, crystal, etc.)
             LEVEL_PALETTES: {
-                1: 'gentle',      // Easy intro - soft sounds
+                1: 'gentle',      // Muffled / mellow sine
                 2: 'crystal',     // Bright progression
-                3: 'chiptune',    // Classic game feel
-                4: 'dreamy',      // Soft variety
-                5: 'warm',        // Richer as difficulty increases
-                6: 'gentle',      // Jelly intro - calm
+                3: 'chiptune',    // Classic chiptune
+                4: 'dreamy',      // Muffled floaty sine
+                5: 'warm',        // Richer warm sound
+                6: 'gentle',      // Muffled
                 7: 'crystal',     // Clear and bright
-                8: 'punchy',      // Energetic middle
-                9: 'dreamy',      // Ethereal
-                10: 'chiptune',   // Classic milestone
-                11: 'warm',       // New mechanics - rich
+                8: 'punchy',      // Energetic
+                9: 'dreamy',      // Muffled
+                10: 'chiptune',   // Milestone
+                11: 'warm',       // Rich
                 12: 'punchy',     // Energetic
                 13: 'crystal',    // Bright
-                14: 'gentle',     // Calm before storm
+                14: 'gentle',     // Muffled
                 15: 'chiptune',   // Classic
-                16: 'punchy',     // Challenge levels - intense
-                17: 'dreamy',     // Contrast
+                16: 'punchy',     // Energetic
+                17: 'dreamy',     // Muffled
                 18: 'warm',       // Rich
-                19: 'crystal',    // Penultimate - bright
-                20: 'punchy',     // World 4 finale
-                21: 'gentle',     // World 5 - Ice intro
-                22: 'crystal',    // Ice layers - cold feel
-                23: 'chiptune',   // Chains intro
-                24: 'warm',       // Mixed blockers
-                25: 'punchy',     // Stone intro
-                26: 'dreamy',     // Honey intro - sticky
-                27: 'warm',       // Honey + Stone
-                28: 'chiptune',   // Licorice walls
-                29: 'punchy',     // Mixed mayhem
-                30: 'crystal',    // World 6 finale
-                31: 'gentle',     // World 7 - Chocolate intro
-                32: 'warm',       // Chocolate spread
-                33: 'punchy',     // Crate intro
-                34: 'crystal',    // Crate + Ice
-                35: 'chiptune',   // Bomb timer intro
-                36: 'punchy',     // Bomb timer danger
-                37: 'dreamy',     // Conveyor intro
-                38: 'warm',       // Conveyor + blockers
-                39: 'crystal',    // Portal intro
-                40: 'punchy',     // World 8 finale - all mechanics
-                // Worlds 9-12 Level Palettes
-                41: 'dreamy', 42: 'crystal', 43: 'gentle', 44: 'chiptune', 45: 'warm',
-                46: 'crystal', 47: 'dreamy', 48: 'punchy', 49: 'gentle', 50: 'punchy',
-                51: 'warm', 52: 'punchy', 53: 'chiptune', 54: 'crystal', 55: 'warm',
-                56: 'warm', 57: 'crystal', 58: 'chiptune', 59: 'punchy', 60: 'punchy'
+                19: 'crystal',    // Bright
+                20: 'punchy',     // Milestone
+                21: 'gentle',     // Muffled
+                22: 'crystal',    // Cold feel
+                23: 'chiptune',   // Classic
+                24: 'warm',       // Rich
+                25: 'punchy',     // Energetic
+                26: 'dreamy',     // Muffled
+                27: 'gentle',     // Muffled
+                28: 'chiptune',   // Classic
+                29: 'punchy',     // Energetic
+                30: 'crystal',    // Bright
+                31: 'gentle',     // Muffled
+                32: 'warm',       // Rich
+                33: 'punchy',     // Energetic
+                34: 'crystal',    // Bright
+                35: 'chiptune',   // Classic
+                36: 'punchy',     // Energetic
+                37: 'dreamy',     // Muffled
+                38: 'warm',       // Rich
+                39: 'crystal',    // Bright
+                40: 'punchy',     // Milestone
+                // Worlds 9-10 (Levels 41-50)
+                41: 'dreamy',     // Muffled floaty
+                42: 'crystal',    // Bright
+                43: 'gentle',     // Muffled
+                44: 'chiptune',   // Classic
+                45: 'warm',       // Rich
+                46: 'crystal',    // Alpine
+                47: 'dreamy',     // Muffled
+                48: 'punchy',     // Energetic
+                49: 'gentle',     // Muffled
+                50: 'punchy',     // Boss
+                // World 11 & 12 (Levels 51-60) - Distinct sound envelopes per level!
+                51: 'warm',       // Level 51: Warm rich sawtooth envelope (Player favorite)
+                52: 'muffled',    // Level 52: Muffled pure sine envelope!
+                53: 'dreamy',     // Level 53: Muffled floaty sine/triangle envelope
+                54: 'crystal',    // Level 54: Bright crystal envelope
+                55: 'punchy',     // Level 55: Punchy energetic envelope
+                56: 'warm',       // Level 56: Sugar Citadel theme - Warm sawtooth (Player liked)
+                57: 'muffled',    // Level 57: Sugar Citadel theme - Muffled pure sine envelope!
+                58: 'dreamy',     // Level 58: Sugar Citadel theme - Dreamy envelope
+                59: 'crystal',    // Level 59: Sugar Citadel theme - Bright crystal
+                60: 'punchy'      // Level 60: Grand Finale Boss
             },
 
             // Distinct Compositions for Worlds 1-12

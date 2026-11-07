@@ -46,24 +46,53 @@ export default class SoundManager {
     }
 
     loadTheme(level) {
-        const worldIndex = Math.min(12, Math.max(1, Math.floor((level - 1) / 5) + 1));
         const isBoss = [10, 20, 30, 40, 50, 60].includes(level);
-        const worldTheme = this.musicConfig?.WORLD_THEMES?.[worldIndex];
+        const palettes = this.musicConfig?.PALETTES;
+        const levelPalettes = this.musicConfig?.LEVEL_PALETTES;
 
-        if (worldTheme) {
-            this.tempo = (worldTheme.tempo || 80) + (isBoss ? 8 : 0);
-            this.chords = worldTheme.chords;
+        // Resolve sound envelope / timbre palette specifically for this level
+        const paletteKey = levelPalettes?.[level] || (level <= 5 ? 'gentle' : 'chiptune');
+        this.palette = palettes?.[paletteKey] || palettes?.gentle;
+
+        if (level >= 56) {
+            // World 12: Sugar Citadel (Levels 56-60) - Regal Heroic Theme (User liked on L56!)
+            // Features World 12 composition, with per-level sound envelope variations (L56 warm, L57 gentle, L58 muffled, etc.)
+            const theme12 = this.musicConfig?.WORLD_THEMES?.[12];
+            this.tempo = (theme12?.tempo || 96) + (isBoss ? 8 : 0);
+            this.chords = theme12?.chords || this.musicConfig?.CHORDS;
             this.melodies = {
-                A: worldTheme.melodies.A,
-                B: worldTheme.melodies.B || worldTheme.melodies.A,
-                C: worldTheme.melodies.A,
-                D: worldTheme.melodies.B || worldTheme.melodies.A
+                A: theme12?.melodies?.A || this.musicConfig?.MELODY_A,
+                B: theme12?.melodies?.B || theme12?.melodies?.A,
+                C: theme12?.melodies?.A,
+                D: theme12?.melodies?.B || theme12?.melodies?.A
             };
             this.sections = ['A', 'B', 'A', 'B'];
             this.measuresPerSection = 4;
-            this.palette = isBoss && worldTheme.bossPalette ? worldTheme.bossPalette : worldTheme.palette;
+        } else if (level >= 51) {
+            // World 11: Caramel Caverns (Levels 51-55) - Subterranean Theme (User liked on L51!)
+            // Main tune is Caramel Caverns; each level has a distinct sound envelope:
+            // Level 51: warm (sawtooth lead)
+            // Level 52: muffled (pure sine lead, bass & arp with cushioned attack)
+            // Level 53: dreamy (soft floating sine with airy triangle lead)
+            // Level 54: crystal (bright sine with shimmering resonance)
+            // Level 55: punchy (driving chiptune)
+            const theme11 = this.musicConfig?.WORLD_THEMES?.[11];
+            this.tempo = (theme11?.tempo || 86) + (isBoss ? 8 : 0);
+            this.chords = theme11?.chords || this.musicConfig?.CHORDS;
+            this.melodies = {
+                A: theme11?.melodies?.A || this.musicConfig?.MELODY_A,
+                B: theme11?.melodies?.B || theme11?.melodies?.A,
+                C: theme11?.melodies?.A,
+                D: theme11?.melodies?.B || theme11?.melodies?.A
+            };
+            this.sections = ['A', 'B', 'A', 'B'];
+            this.measuresPerSection = 4;
         } else {
-            this.tempo = this.musicConfig?.TEMPO || 80;
+            // Levels 1-50: The beloved original classic tune!
+            // Preserves the player's original favorite tune (C Major chords,
+            // MELODY_A, B, C, D in A-B-C-A-D-A progression)
+            // with all the original sound envelope variations and muffled tones.
+            this.tempo = (this.musicConfig?.TEMPO || 80) + (isBoss ? 8 : 0);
             this.chords = this.musicConfig?.CHORDS || [];
             this.melodies = {
                 A: this.musicConfig?.MELODY_A || [],
@@ -71,9 +100,8 @@ export default class SoundManager {
                 C: this.musicConfig?.MELODY_C || [],
                 D: this.musicConfig?.MELODY_D || []
             };
-            this.sections = this.musicConfig?.SECTIONS || ['A'];
+            this.sections = this.musicConfig?.SECTIONS || ['A', 'B', 'C', 'A', 'D', 'A'];
             this.measuresPerSection = this.musicConfig?.MEASURES_PER_SECTION || 4;
-            this.loadPalette(level);
         }
     }
 
@@ -334,14 +362,14 @@ export default class SoundManager {
 
         // --- Bass on beats 0 and 8 ---
         if (step === 0 || step === 8) {
-            this.playChipNote(chord.bass, 0.4, bassSettings.type, vol * bassSettings.vol, time);
+            this.playChipNote(chord.bass, 0.4, bassSettings.type, vol * bassSettings.vol, time, bassSettings);
         }
 
         // --- Arpeggiated chord ---
         // Play arpeggio notes on steps 0,2,4,6,8,10,12,14 (8th notes)
         if (step % 2 === 0 && arp) {
             const arpIndex = (step / 2) % arp.length;
-            this.playChipNote(arp[arpIndex], 0.15, arpSettings.type, vol * arpSettings.vol, time);
+            this.playChipNote(arp[arpIndex], 0.15, arpSettings.type, vol * arpSettings.vol, time, arpSettings);
         }
 
         // --- Melody ---
@@ -350,13 +378,13 @@ export default class SoundManager {
             const melodyIndex = (this.stepIndex / 4) % melody.length;
             const melodyNote = melody[melodyIndex];
             if (melodyNote > 0) { // -1 = rest
-                this.playChipNote(melodyNote, 0.35, melodySettings.type, vol * melodySettings.vol, time);
+                this.playChipNote(melodyNote, 0.35, melodySettings.type, vol * melodySettings.vol, time, melodySettings);
             }
         }
     }
 
-    // Play a chiptune-style note with slight attack/decay envelope
-    playChipNote(freq, duration, type, vol, time) {
+    // Play a chiptune-style note with customizable attack/sustain/decay envelope
+    playChipNote(freq, duration, type, vol, time, options = {}) {
         if (!this.context || this.context.state !== 'running') return;
 
         const osc = this.context.createOscillator();
@@ -365,17 +393,33 @@ export default class SoundManager {
         osc.type = type;
         osc.frequency.setValueAtTime(freq, time);
 
-        // Chiptune envelope: quick attack, sustain, quick release
+        // Chiptune & muffled envelope: configurable attack, sustain, and release
+        const attack = options.attack !== undefined ? options.attack : 0.01;
+        const release = options.release !== undefined ? options.release : 0.02;
+        const sustainDuration = Math.max(0, duration - attack - release);
+        const peakVol = vol * this.masterVolume;
+
         gain.gain.setValueAtTime(0, time);
-        gain.gain.linearRampToValueAtTime(vol * this.masterVolume, time + 0.01);
-        gain.gain.setValueAtTime(vol * this.masterVolume, time + duration - 0.02);
+        gain.gain.linearRampToValueAtTime(peakVol, time + attack);
+        if (sustainDuration > 0) {
+            gain.gain.setValueAtTime(peakVol, time + attack + sustainDuration);
+        }
         gain.gain.linearRampToValueAtTime(0, time + duration);
 
-        osc.connect(gain);
+        if (options.lowpass) {
+            const filter = this.context.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(options.lowpass, time);
+            osc.connect(filter);
+            filter.connect(gain);
+        } else {
+            osc.connect(gain);
+        }
+
         gain.connect(this.context.destination);
 
         osc.start(time);
-        osc.stop(time + duration + 0.01);
+        osc.stop(time + duration + 0.02);
     }
 
     playSynthNote(freq, duration, type, vol, time) {
