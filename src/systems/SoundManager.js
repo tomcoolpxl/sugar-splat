@@ -46,52 +46,45 @@ export default class SoundManager {
     }
 
     loadTheme(level) {
-        const isBoss = [10, 20, 30, 40, 50, 60].includes(level);
+        const isBoss = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60].includes(level);
+        const worldIndex = Math.min(12, Math.max(1, Math.floor((level - 1) / 5) + 1));
+        const worldTheme = this.musicConfig?.WORLD_THEMES?.[worldIndex];
+
         const palettes = this.musicConfig?.PALETTES;
         const levelPalettes = this.musicConfig?.LEVEL_PALETTES;
 
-        // Resolve sound envelope / timbre palette specifically for this level
-        const paletteKey = levelPalettes?.[level] || (level <= 5 ? 'gentle' : 'chiptune');
+        // Resolve sound envelope / timbre specifically for this level!
+        // Rotates: level 1 intro, level 2 muffled, level 3 dreamy, level 4 crystal, level 5 punchy boss
+        const paletteKey = levelPalettes?.[level] || (isBoss ? 'punchy' : 'warm');
         this.palette = palettes?.[paletteKey] || palettes?.gentle;
 
-        if (level >= 56) {
-            // World 12: Sugar Citadel (Levels 56-60) - Regal Heroic Theme (User liked on L56!)
-            // Features World 12 composition, with per-level sound envelope variations (L56 warm, L57 gentle, L58 muffled, etc.)
-            const theme12 = this.musicConfig?.WORLD_THEMES?.[12];
-            this.tempo = (theme12?.tempo || 96) + (isBoss ? 8 : 0);
-            this.chords = theme12?.chords || this.musicConfig?.CHORDS;
-            this.melodies = {
-                A: theme12?.melodies?.A || this.musicConfig?.MELODY_A,
-                B: theme12?.melodies?.B || theme12?.melodies?.A,
-                C: theme12?.melodies?.A,
-                D: theme12?.melodies?.B || theme12?.melodies?.A
-            };
-            this.sections = ['A', 'B', 'A', 'B'];
-            this.measuresPerSection = 4;
-        } else if (level >= 51) {
-            // World 11: Caramel Caverns (Levels 51-55) - Subterranean Theme (User liked on L51!)
-            // Main tune is Caramel Caverns; each level has a distinct sound envelope:
-            // Level 51: warm (sawtooth lead)
-            // Level 52: muffled (pure sine lead, bass & arp with cushioned attack)
-            // Level 53: dreamy (soft floating sine with airy triangle lead)
-            // Level 54: crystal (bright sine with shimmering resonance)
-            // Level 55: punchy (driving chiptune)
-            const theme11 = this.musicConfig?.WORLD_THEMES?.[11];
-            this.tempo = (theme11?.tempo || 86) + (isBoss ? 8 : 0);
-            this.chords = theme11?.chords || this.musicConfig?.CHORDS;
-            this.melodies = {
-                A: theme11?.melodies?.A || this.musicConfig?.MELODY_A,
-                B: theme11?.melodies?.B || theme11?.melodies?.A,
-                C: theme11?.melodies?.A,
-                D: theme11?.melodies?.B || theme11?.melodies?.A
-            };
-            this.sections = ['A', 'B', 'A', 'B'];
+        if (worldTheme) {
+            // Apply this World's distinct song (All 12 World Themes from the webpage!)
+            this.tempo = (worldTheme.tempo || 80) + (isBoss ? 8 : 0);
+            this.chords = worldTheme.chords;
+
+            if (worldIndex === 1) {
+                // World 1: The original classic C Major suite with all 4 movements (A, B, C, D)
+                this.melodies = {
+                    A: this.musicConfig?.MELODY_A || worldTheme.melodies.A,
+                    B: this.musicConfig?.MELODY_B || worldTheme.melodies.B,
+                    C: this.musicConfig?.MELODY_C || worldTheme.melodies.A,
+                    D: this.musicConfig?.MELODY_D || worldTheme.melodies.B
+                };
+                this.sections = ['A', 'B', 'C', 'A', 'D', 'A'];
+            } else {
+                // Worlds 2-12: Dedicated world compositions from the jukebox
+                this.melodies = {
+                    A: worldTheme.melodies.A,
+                    B: worldTheme.melodies.B || worldTheme.melodies.A,
+                    C: worldTheme.melodies.A,
+                    D: worldTheme.melodies.B || worldTheme.melodies.A
+                };
+                this.sections = ['A', 'B', 'A', 'B'];
+            }
             this.measuresPerSection = 4;
         } else {
-            // Levels 1-50: The beloved original classic tune!
-            // Preserves the player's original favorite tune (C Major chords,
-            // MELODY_A, B, C, D in A-B-C-A-D-A progression)
-            // with all the original sound envelope variations and muffled tones.
+            // Fallback
             this.tempo = (this.musicConfig?.TEMPO || 80) + (isBoss ? 8 : 0);
             this.chords = this.musicConfig?.CHORDS || [];
             this.melodies = {

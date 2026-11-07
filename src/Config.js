@@ -323,70 +323,81 @@ export const GameConfig = {
             },
 
             // Level to palette mapping - defines sound envelope / timbre per level
-            // Each level plays the world's main tune with a distinct sound envelope (muffled, dreamy, crystal, etc.)
+            // Each level plays its world's song with a distinct sound envelope (intro, muffled, dreamy, crystal, punchy boss)
+            // Ensures every consecutive level sounds completely different!
             LEVEL_PALETTES: {
-                1: 'gentle',      // Muffled / mellow sine
-                2: 'crystal',     // Bright progression
-                3: 'chiptune',    // Classic chiptune
-                4: 'dreamy',      // Muffled floaty sine
-                5: 'warm',        // Richer warm sound
-                6: 'gentle',      // Muffled
-                7: 'crystal',     // Clear and bright
-                8: 'punchy',      // Energetic
-                9: 'dreamy',      // Muffled
-                10: 'chiptune',   // Milestone
-                11: 'warm',       // Rich
-                12: 'punchy',     // Energetic
-                13: 'crystal',    // Bright
-                14: 'gentle',     // Muffled
-                15: 'chiptune',   // Classic
-                16: 'punchy',     // Energetic
-                17: 'dreamy',     // Muffled
-                18: 'warm',       // Rich
-                19: 'crystal',    // Bright
-                20: 'punchy',     // Milestone
-                21: 'gentle',     // Muffled
-                22: 'crystal',    // Cold feel
-                23: 'chiptune',   // Classic
-                24: 'warm',       // Rich
-                25: 'punchy',     // Energetic
-                26: 'dreamy',     // Muffled
-                27: 'gentle',     // Muffled
-                28: 'chiptune',   // Classic
-                29: 'punchy',     // Energetic
-                30: 'crystal',    // Bright
-                31: 'gentle',     // Muffled
-                32: 'warm',       // Rich
-                33: 'punchy',     // Energetic
-                34: 'crystal',    // Bright
-                35: 'chiptune',   // Classic
-                36: 'punchy',     // Energetic
-                37: 'dreamy',     // Muffled
-                38: 'warm',       // Rich
-                39: 'crystal',    // Bright
-                40: 'punchy',     // Milestone
-                // Worlds 9-10 (Levels 41-50)
-                41: 'dreamy',     // Muffled floaty
-                42: 'crystal',    // Bright
-                43: 'gentle',     // Muffled
-                44: 'chiptune',   // Classic
-                45: 'warm',       // Rich
-                46: 'crystal',    // Alpine
-                47: 'dreamy',     // Muffled
-                48: 'punchy',     // Energetic
-                49: 'gentle',     // Muffled
-                50: 'punchy',     // Boss
-                // World 11 & 12 (Levels 51-60) - Distinct sound envelopes per level!
-                51: 'warm',       // Level 51: Warm rich sawtooth envelope (Player favorite)
-                52: 'muffled',    // Level 52: Muffled pure sine envelope!
-                53: 'dreamy',     // Level 53: Muffled floaty sine/triangle envelope
-                54: 'crystal',    // Level 54: Bright crystal envelope
-                55: 'punchy',     // Level 55: Punchy energetic envelope
-                56: 'warm',       // Level 56: Sugar Citadel theme - Warm sawtooth (Player liked)
-                57: 'muffled',    // Level 57: Sugar Citadel theme - Muffled pure sine envelope!
-                58: 'dreamy',     // Level 58: Sugar Citadel theme - Dreamy envelope
-                59: 'crystal',    // Level 59: Sugar Citadel theme - Bright crystal
-                60: 'punchy'      // Level 60: Grand Finale Boss
+                // World 1: Sweet Meadows (Levels 1-5)
+                1: 'gentle',      // Mellow sine & triangle intro
+                2: 'muffled',     // Cozy pure sine with lowpass
+                3: 'dreamy',      // Floating airy sine/triangle
+                4: 'crystal',     // Sparkling crystalline
+                5: 'punchy',      // Energetic boss climax
+                // World 2: Frosty Peaks (Levels 6-10)
+                6: 'warm',        // Chilly A Minor theme intro
+                7: 'muffled',     // Muffled pure sine
+                8: 'dreamy',      // Floating airy bells
+                9: 'crystal',     // Crystalline frost
+                10: 'punchy',     // Boss climax (+8 BPM)
+                // World 3: Gummy Gardens (Levels 11-15)
+                11: 'warm',       // Bouncy G Major theme intro
+                12: 'muffled',    // Muffled pure sine
+                13: 'dreamy',     // Floaty
+                14: 'crystal',    // Shimmer
+                15: 'punchy',     // Boss climax (+8 BPM)
+                // World 4: Soda Springs (Levels 16-20)
+                16: 'warm',       // Upbeat bubble pop intro
+                17: 'muffled',    // Muffled pure sine
+                18: 'dreamy',     // Floaty
+                19: 'crystal',    // Shimmer
+                20: 'punchy',     // Boss climax (+8 BPM)
+                // World 5: Licorice Maze (Levels 21-25)
+                21: 'warm',       // Mysterious D Minor intro
+                22: 'muffled',    // Muffled pure sine
+                23: 'dreamy',     // Floaty
+                24: 'crystal',    // Shimmer
+                25: 'punchy',     // Boss climax (+8 BPM)
+                // World 6: Stone Quarry (Levels 26-30)
+                26: 'warm',       // Industrial pulse intro
+                27: 'muffled',    // Muffled pure sine
+                28: 'dreamy',     // Floaty
+                29: 'crystal',    // Shimmer
+                30: 'punchy',     // Boss climax (+8 BPM)
+                // World 7: Cocoa Fortress (Levels 31-35)
+                31: 'warm',       // Dramatic E Minor intro
+                32: 'muffled',    // Muffled pure sine
+                33: 'dreamy',     // Floaty
+                34: 'crystal',    // Shimmer
+                35: 'punchy',     // Boss climax (+8 BPM)
+                // World 8: Portal Nexus (Levels 36-40)
+                36: 'warm',       // Cosmic synthwave intro
+                37: 'muffled',    // Muffled pure sine
+                38: 'dreamy',     // Floaty
+                39: 'crystal',    // Shimmer
+                40: 'punchy',     // Boss climax (+8 BPM)
+                // World 9: Cotton Candy Cloud (Levels 41-45)
+                41: 'warm',       // Dreamy floating Eb Major intro
+                42: 'muffled',    // Muffled pure sine
+                43: 'dreamy',     // Floaty
+                44: 'crystal',    // Shimmer
+                45: 'punchy',     // Boss climax (+8 BPM)
+                // World 10: Peppermint Peak (Levels 46-50)
+                46: 'warm',       // Frigid Alpine B Minor intro
+                47: 'muffled',    // Muffled pure sine
+                48: 'dreamy',     // Floaty
+                49: 'crystal',    // Shimmer
+                50: 'punchy',     // Boss climax (+8 BPM)
+                // World 11: Caramel Caverns (Levels 51-55)
+                51: 'warm',       // Subterranean C Minor intro (Player favorite!)
+                52: 'muffled',    // Muffled pure sine
+                53: 'dreamy',     // Floaty
+                54: 'crystal',    // Shimmer
+                55: 'punchy',     // Boss climax (+8 BPM)
+                // World 12: Sugar Citadel (Levels 56-60)
+                56: 'warm',       // Regal Anthem intro (Player liked!)
+                57: 'muffled',    // Muffled pure sine
+                58: 'dreamy',     // Floaty
+                59: 'crystal',    // Shimmer
+                60: 'punchy'      // Grand Finale Boss (+8 BPM)
             },
 
             // Distinct Compositions for Worlds 1-12
