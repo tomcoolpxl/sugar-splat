@@ -208,13 +208,21 @@ export default class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
         container.add(title);
 
-        // Music toggle
+        // Settings Plate for toggles
+        const toggleBg = this.add.graphics();
+        toggleBg.fillStyle(0xf5f6fa, 0.95);
+        toggleBg.fillRoundedRect(-100, -55, 200, 115, 14);
+        toggleBg.lineStyle(1.5, 0xe2e8f0, 0.8);
+        toggleBg.strokeRoundedRect(-100, -55, 200, 115, 14);
+        container.add(toggleBg);
+
+        // Music toggle - left-aligned checkbox
         const musicOn = localStorage.getItem('sugarSplash_music') !== 'false';
-        const musicText = this.add.text(0, -30, musicOn ? '☑ Music' : '☐ Music', {
+        const musicText = this.add.text(-65, -24, musicOn ? '☑ Music' : '☐ Music', {
             fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
-            fontSize: '28px',
-            color: musicOn ? '#4ade80' : '#666666'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            fontSize: '24px',
+            color: musicOn ? '#2ed573' : '#a4b0be'
+        }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
         container.add(musicText);
 
         musicText.on('pointerup', () => {
@@ -222,7 +230,7 @@ export default class MenuScene extends Phaser.Scene {
             const newState = !currentState;
             localStorage.setItem('sugarSplash_music', newState.toString());
             musicText.setText(newState ? '☑ Music' : '☐ Music');
-            musicText.setColor(newState ? '#4ade80' : '#666666');
+            musicText.setColor(newState ? '#2ed573' : '#a4b0be');
             // Start/stop sequencer
             if (newState) {
                 if (this.sequencer && !this.sequencer.isPlaying) {
@@ -235,13 +243,13 @@ export default class MenuScene extends Phaser.Scene {
             }
         });
 
-        // Sound toggle
+        // Sound toggle - left-aligned checkbox (flush with Music)
         const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
-        const soundText = this.add.text(0, 30, soundOn ? '☑ Sound' : '☐ Sound', {
+        const soundText = this.add.text(-65, 26, soundOn ? '☑ Sound' : '☐ Sound', {
             fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
-            fontSize: '28px',
-            color: soundOn ? '#4ade80' : '#666666'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            fontSize: '24px',
+            color: soundOn ? '#2ed573' : '#a4b0be'
+        }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
         container.add(soundText);
 
         soundText.on('pointerup', () => {
@@ -249,13 +257,13 @@ export default class MenuScene extends Phaser.Scene {
             const newState = !currentState;
             localStorage.setItem('sugarSplash_sound', newState.toString());
             soundText.setText(newState ? '☑ Sound' : '☐ Sound');
-            soundText.setColor(newState ? '#4ade80' : '#666666');
+            soundText.setColor(newState ? '#2ed573' : '#a4b0be');
             this.sound.mute = !newState;
         });
 
         // Close button
-        const closeBtn = this.add.image(0, 115, 'button').setScale(0.9).setInteractive({ useHandCursor: true });
-        const closeBtnText = this.add.text(0, 115, 'Close', {
+        const closeBtn = this.add.image(0, 110, 'button').setScale(0.85).setInteractive({ useHandCursor: true });
+        const closeBtnText = this.add.text(0, 110, 'Close', {
             fontFamily: GameConfig.UI.FONT_FAMILY,
             fontSize: '22px',
             color: '#ffffff'

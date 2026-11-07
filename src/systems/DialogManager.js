@@ -50,15 +50,21 @@ export default class DialogManager {
         const btn = this.scene.add.image(x, y, 'button').setScale(scale).setInteractive({ useHandCursor: true });
         const btnText = this.scene.add.text(x, y, text, {
             fontFamily: GameConfig.UI.FONT_FAMILY,
-            fontSize: scale < 1 ? '20px' : '24px',
+            fontSize: scale <= 0.65 ? '18px' : scale < 0.85 ? '20px' : '23px',
             color: '#ffffff'
         }).setOrigin(0.5);
 
         container.add(btn);
         container.add(btnText);
 
-        btn.on('pointerover', () => btn.setScale(scale * 1.1));
-        btn.on('pointerout', () => btn.setScale(scale));
+        btn.on('pointerover', () => {
+            btn.setScale(scale * 1.05);
+            btnText.setScale(1.05);
+        });
+        btn.on('pointerout', () => {
+            btn.setScale(scale);
+            btnText.setScale(1);
+        });
         btn.on('pointerup', callback);
 
         return { btn, btnText };
@@ -131,32 +137,32 @@ export default class DialogManager {
         const overlay = this.createOverlay();
         const container = this.createContainer();
 
-        const panelHeight = onMainMenu ? 370 : 320;
-        this.createPanel(container, 360, panelHeight, 25);
+        const panelHeight = onMainMenu ? 320 : 275;
+        this.createPanel(container, 350, panelHeight, 24);
 
         // Title
-        const title = this.scene.add.text(0, -panelHeight / 2 + 50, 'Out of Moves!', {
+        const title = this.scene.add.text(0, -panelHeight / 2 + 45, 'Out of Moves!', {
             fontFamily: GameConfig.UI.FONT_FAMILY,
-            fontSize: '36px',
+            fontSize: '34px',
             color: '#ff4757'
         }).setOrigin(0.5);
         container.add(title);
 
         // Status
-        const status = this.scene.add.text(0, -panelHeight / 2 + 120, 'Objective not met.', {
+        const status = this.scene.add.text(0, -panelHeight / 2 + 95, 'Objective not met.', {
             fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
-            fontSize: '24px',
-            color: '#333333'
+            fontSize: '22px',
+            color: '#555555'
         }).setOrigin(0.5);
         container.add(status);
 
-        // Buttons
-        this.createButton(container, 0, -panelHeight / 2 + 185, 'Try Again', onRetry);
+        // Buttons with generous spacing and balanced margins
+        this.createButton(container, 0, -panelHeight / 2 + 165, 'Try Again', onRetry, 0.9);
         if (onMainMenu) {
-            this.createButton(container, -80, -panelHeight / 2 + 250, 'Levels', onLevelSelect, 0.75);
-            this.createButton(container, 80, -panelHeight / 2 + 250, 'Main Menu', onMainMenu, 0.75);
+            this.createButton(container, -85, -panelHeight / 2 + 235, 'Levels', onLevelSelect, 0.72);
+            this.createButton(container, 85, -panelHeight / 2 + 235, 'Main Menu', onMainMenu, 0.72);
         } else {
-            this.createButton(container, 0, -panelHeight / 2 + 250, 'Level Select', onLevelSelect);
+            this.createButton(container, 0, -panelHeight / 2 + 235, 'Level Select', onLevelSelect, 0.9);
         }
 
         this.animateIn(container);
@@ -169,13 +175,13 @@ export default class DialogManager {
         const overlay = this.createOverlay();
         const container = this.createContainer();
 
-        const panelHeight = awardedPowerups.length > 0 ? 480 : 400;
+        const panelHeight = awardedPowerups.length > 0 ? 490 : 410;
         this.createPanel(container, 360, panelHeight, 25);
 
         // Title
-        const title = this.scene.add.text(0, -panelHeight / 2 + 40, 'Level Complete!', {
+        const title = this.scene.add.text(0, -panelHeight / 2 + 42, 'Level Complete!', {
             fontFamily: GameConfig.UI.FONT_FAMILY,
-            fontSize: '36px',
+            fontSize: '35px',
             color: '#4ade80'
         }).setOrigin(0.5);
         container.add(title);
@@ -258,24 +264,24 @@ export default class DialogManager {
             });
             buttonStartY = -panelHeight / 2 + 295;
         } else {
-            buttonStartY = -panelHeight / 2 + 210;
+            buttonStartY = -panelHeight / 2 + 215;
         }
 
-        // Buttons (65px spacing for comfortable touch targets)
-        const buttonSpacing = 65;
+        // Buttons with clean spacing
+        const buttonSpacing = 68;
 
         if (currentLevel < totalLevels) {
-            this.createButton(container, 0, buttonStartY, 'Next Level', onNext);
+            this.createButton(container, 0, buttonStartY, 'Next Level', onNext, 0.9);
         } else {
-            this.createButton(container, 0, buttonStartY, 'Level Select', onNext);
+            this.createButton(container, 0, buttonStartY, 'Level Select', onNext, 0.9);
         }
 
-        this.createButton(container, 0, buttonStartY + buttonSpacing, 'Replay', onReplay);
+        this.createButton(container, 0, buttonStartY + buttonSpacing, 'Replay', onReplay, 0.9);
         if (onMainMenu) {
-            this.createButton(container, -80, buttonStartY + buttonSpacing * 2, 'Levels', onLevelSelect, 0.75);
-            this.createButton(container, 80, buttonStartY + buttonSpacing * 2, 'Main Menu', onMainMenu, 0.75);
+            this.createButton(container, -85, buttonStartY + buttonSpacing * 2, 'Levels', onLevelSelect, 0.72);
+            this.createButton(container, 85, buttonStartY + buttonSpacing * 2, 'Main Menu', onMainMenu, 0.72);
         } else {
-            this.createButton(container, 0, buttonStartY + buttonSpacing * 2, 'Level Select', onLevelSelect);
+            this.createButton(container, 0, buttonStartY + buttonSpacing * 2, 'Level Select', onLevelSelect, 0.9);
         }
 
         this.animateIn(container);
@@ -287,33 +293,47 @@ export default class DialogManager {
         const overlay = this.createOverlay();
         const container = this.createContainer();
 
-        this.createPanel(container, 320, 500, 20);
+        const panelWidth = 340;
+        const panelHeight = 470;
+        this.createPanel(container, panelWidth, panelHeight, 24);
 
         // Title
-        const title = this.scene.add.text(0, -195, 'PAUSED', {
+        const title = this.scene.add.text(0, -185, 'PAUSED', {
             fontFamily: GameConfig.UI.FONT_FAMILY,
-            fontSize: '36px',
+            fontSize: '34px',
             color: '#ff6b9d'
         }).setOrigin(0.5);
         container.add(title);
 
-        // Buttons
-        this.createButton(container, 0, -130, 'Resume', () => {
+        // 4 Action Buttons with clean 10px vertical gap between them
+        const btnScale = 0.88; // 176px wide, 53px high
+        const btnSpacing = 63; // 63 - 53 = 10px clear vertical gap between buttons!
+        const btnStartY = -118;
+
+        this.createButton(container, 0, btnStartY, 'Resume', () => {
             this.close();
             onResume();
-        });
+        }, btnScale);
 
-        this.createButton(container, 0, -70, 'Restart', onRestart);
-        this.createButton(container, 0, -10, 'Level Select', onLevelSelect || onQuit);
-        this.createButton(container, 0, 50, 'Main Menu', onMainMenu || onQuit);
+        this.createButton(container, 0, btnStartY + btnSpacing, 'Restart', onRestart, btnScale);
+        this.createButton(container, 0, btnStartY + btnSpacing * 2, 'Level Select', onLevelSelect || onQuit, btnScale);
+        this.createButton(container, 0, btnStartY + btnSpacing * 3, 'Main Menu', onMainMenu || onQuit, btnScale);
 
-        // Music toggle - consistent checkbox style
+        // Settings Plate for Music & Sound toggles
+        const toggleBg = this.scene.add.graphics();
+        toggleBg.fillStyle(0xf5f6fa, 0.95);
+        toggleBg.fillRoundedRect(-120, 115, 240, 84, 14);
+        toggleBg.lineStyle(1.5, 0xe2e8f0, 0.8);
+        toggleBg.strokeRoundedRect(-120, 115, 240, 84, 14);
+        container.add(toggleBg);
+
+        // Music toggle - left-aligned checkbox row
         const musicOn = localStorage.getItem('sugarSplash_music') !== 'false';
-        const musicText = this.scene.add.text(0, 115, musicOn ? '☑ Music' : '☐ Music', {
+        const musicText = this.scene.add.text(-80, 138, musicOn ? '☑ Music' : '☐ Music', {
             fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '22px',
-            color: musicOn ? '#4ade80' : '#999999'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            color: musicOn ? '#2ed573' : '#a4b0be'
+        }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
         container.add(musicText);
 
         musicText.on('pointerup', () => {
@@ -321,7 +341,7 @@ export default class DialogManager {
             const newState = !currentState;
             localStorage.setItem('sugarSplash_music', newState.toString());
             musicText.setText(newState ? '☑ Music' : '☐ Music');
-            musicText.setColor(newState ? '#4ade80' : '#999999');
+            musicText.setColor(newState ? '#2ed573' : '#a4b0be');
             if (newState) {
                 soundManager?.startMusic();
             } else {
@@ -329,13 +349,13 @@ export default class DialogManager {
             }
         });
 
-        // Sound toggle - consistent checkbox style
+        // Sound toggle - left-aligned checkbox row (flush with Music checkbox!)
         const soundOn = localStorage.getItem('sugarSplash_sound') !== 'false';
-        const soundText = this.scene.add.text(0, 155, soundOn ? '☑ Sound' : '☐ Sound', {
+        const soundText = this.scene.add.text(-80, 175, soundOn ? '☑ Sound' : '☐ Sound', {
             fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '22px',
-            color: soundOn ? '#4ade80' : '#999999'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            color: soundOn ? '#2ed573' : '#a4b0be'
+        }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
         container.add(soundText);
 
         soundText.on('pointerup', () => {
@@ -343,7 +363,7 @@ export default class DialogManager {
             const newState = !currentState;
             localStorage.setItem('sugarSplash_sound', newState.toString());
             soundText.setText(newState ? '☑ Sound' : '☐ Sound');
-            soundText.setColor(newState ? '#4ade80' : '#999999');
+            soundText.setColor(newState ? '#2ed573' : '#a4b0be');
             this.scene.sound.mute = !newState;
         });
 
@@ -355,31 +375,32 @@ export default class DialogManager {
     showConfirmation(message, onYes, onNo) {
         const container = this.createContainer(600);
 
-        this.createPanel(container, 280, 200, 20);
+        this.createPanel(container, 320, 210, 22);
 
         // Icon
-        const icon = this.scene.add.text(0, -60, '⚠️', { fontSize: '36px' }).setOrigin(0.5);
+        const icon = this.scene.add.text(0, -62, '⚠️', { fontSize: '36px' }).setOrigin(0.5);
         container.add(icon);
 
         // Message
-        const msg = this.scene.add.text(0, -15, message, {
+        const msg = this.scene.add.text(0, -12, message, {
             fontFamily: GameConfig.UI.FONT_FAMILY_BODY,
             fontSize: '18px',
             color: '#333333',
-            align: 'center'
+            align: 'center',
+            lineSpacing: 4
         }).setOrigin(0.5);
         container.add(msg);
 
-        // Buttons
-        this.createButton(container, -60, 60, 'Yes', () => {
+        // Buttons (scale 0.58 = 116px width each, placed at -68 and +68 for a clean 20px gap!)
+        this.createButton(container, -68, 58, 'Yes', () => {
             container.destroy();
             onYes();
-        }, 0.7);
+        }, 0.58);
 
-        this.createButton(container, 60, 60, 'No', () => {
+        this.createButton(container, 68, 58, 'No', () => {
             container.destroy();
             onNo();
-        }, 0.7);
+        }, 0.58);
 
         this.animateIn(container, 200);
         return container;
