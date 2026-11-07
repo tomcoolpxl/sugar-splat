@@ -402,11 +402,63 @@
         .btn-sfx:active {
             transform: scale(0.95);
         }
+
+        .nav-crumbs {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .crumb-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            color: #57606f;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 13.5px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .crumb-link:hover {
+            color: var(--primary);
+            transform: translateY(-2px);
+            background: #ffffff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .crumb-link.active {
+            background: #ff4757;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(255, 71, 87, 0.3);
+        }
+
+        .crumb-link.highlight {
+            background: linear-gradient(135deg, #8854d0 0%, #a55eea 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(136, 84, 208, 0.35);
+        }
+        .crumb-link.highlight:hover {
+            transform: translateY(-2px) scale(1.03);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
+            <div class="nav-crumbs">
+                <span class="crumb-link active">🎧 Classic 8-Bit Jukebox (All 60 Levels)</span>
+                <a href="audio_preview_v2.html" class="crumb-link highlight">✨ Audio Studio V2 (Unconstrained Polyphonic & Strings) 🎻</a>
+                <a href="index.html" class="crumb-link">🎮 Play Game</a>
+            </div>
             <h1>Sugar Splat Audio Jukebox 🎧</h1>
             <p class="subtitle">Click any button below to immediately audition the original themes, muffled variations, world soundtracks, and sound effects!</p>
         </header>

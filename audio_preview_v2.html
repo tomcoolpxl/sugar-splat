@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sugar Splat — Audio Studio V2 🎻🎹</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-start: #f8e1eb;
+            --bg-end: #d5ecf7;
+            --primary: #ff4757;
+            --primary-hover: #ff6b81;
+            --accent: #2ed573;
+            --purple: #8854d0;
+            --blue: #2bcbba;
+            --gold: #f39c12;
+            --dark: #2f3542;
+            --card-bg: rgba(255, 255, 255, 0.94);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #fbe8ee 0%, #e1eff6 100%);
+            min-height: 100vh;
+            color: var(--dark);
+            padding: 24px 16px 90px;
+        }
+
+        .container {
+            max-width: 1040px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .nav-crumbs {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .crumb-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            color: #57606f;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 13px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .crumb-link:hover {
+            color: var(--primary);
+            transform: translateY(-1px);
+            background: #ffffff;
+        }
+
+        .crumb-link.active {
+            background: #ff4757;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(255, 71, 87, 0.3);
+        }
+
+        h1 {
+            font-family: 'Fredoka', cursive;
+            font-size: 38px;
+            color: #ff4757;
+            text-shadow: 2px 2px 0 #ffffff, 4px 4px 0 rgba(0,0,0,0.06);
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: #57606f;
+            font-weight: 600;
+            max-width: 680px;
+            margin: 0 auto 18px;
+            line-height: 1.5;
+        }
+
+        /* Top Sticky Player Bar */
+        .sticky-player {
+            position: sticky;
+            top: 12px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.97);
+            backdrop-filter: blur(12px);
+            border-radius: 22px;
+            padding: 16px 24px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.09);
+            border: 2px solid #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+
+        .now-playing {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 240px;
+        }
+
+        .pulse-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #a4b0be;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+
+        .pulse-dot.active {
+            background: #2ed573;
+            box-shadow: 0 0 14px #2ed573;
+            animation: pulse 1.2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .track-title {
+            font-family: 'Fredoka', cursive;
+            font-size: 18px;
+            color: #2f3542;
+            line-height: 1.2;
+        }
+
+        .track-desc {
+            font-size: 13px;
+            color: #747d8c;
+            font-weight: 600;
+        }
+
+        #visualizer {
+            background: #1e272e;
+            border-radius: 10px;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #57606f;
+        }
+
+        .btn-stop {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 12px;
+            font-family: 'Fredoka', cursive;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(255, 71, 87, 0.3);
+        }
+
+        .btn-stop:hover {
+            background: #ff6b81;
+            transform: translateY(-1px);
+        }
+
+        /* Starter Switcher Tabs */
+        .tabs-header {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.85);
+            border: 2px solid transparent;
+            padding: 10px 22px;
+            border-radius: 18px;
+            font-family: 'Fredoka', cursive;
+            font-size: 16px;
+            color: #57606f;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            background: #ffffff;
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .tab-btn.active {
+            background: #ffffff;
+            border-color: #ff4757;
+            color: #ff4757;
+            box-shadow: 0 8px 24px rgba(255, 71, 87, 0.2);
+        }
+
+        /* Live Layer Mixer Panel */
+        .mixer-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 18px 24px;
+            margin-bottom: 28px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+            border: 2px solid #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .mixer-label {
+            font-family: 'Fredoka', cursive;
+            font-size: 17px;
+            color: #2f3542;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mixer-toggles {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .layer-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #57606f;
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 8px;
+            background: #f1f2f6;
+            transition: all 0.15s;
+            user-select: none;
+        }
+
+        .layer-toggle.active {
+            background: #e1f7ea;
+            color: #20bf6b;
+        }
+
+        .layer-toggle input {
+            accent-color: #20bf6b;
+        }
+
+        /* Variations Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+            gap: 20px;
+            margin-bottom: 36px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 22px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+            border: 2px solid #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .card.active {
+            border-color: #2ed573;
+            box-shadow: 0 10px 30px rgba(46, 213, 115, 0.25);
+            background: #ffffff;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 12px;
+        }
+
+        .badge-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            flex-shrink: 0;
+            background: #ffffff;
+        }
+
+        .card-title {
+            font-family: 'Fredoka', cursive;
+            font-size: 20px;
+            color: #2f3542;
+            line-height: 1.2;
+        }
+
+        .card-tag {
+            font-size: 12px;
+            color: #747d8c;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        .card-desc {
+            font-size: 14px;
+            color: #57606f;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .specs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .spec-pill {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 3px 9px;
+            border-radius: 10px;
+            background: #f1f2f6;
+            color: #57606f;
+            letter-spacing: 0.2px;
+        }
+
+        .spec-pill.lush {
+            background: #fce4ec;
+            color: #c2185b;
+        }
+
+        .spec-pill.calm {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .spec-pill.synth {
+            background: #ede7f6;
+            color: #512da8;
+        }
+
+        .card-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-play {
+            flex: 1;
+            background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 14px;
+            font-family: 'Fredoka', cursive;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 14px rgba(255, 71, 87, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-play:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(255, 71, 87, 0.4);
+        }
+
+        .btn-play.playing {
+            background: linear-gradient(135deg, #2ed573 0%, #26af5f 100%);
+            box-shadow: 0 4px 14px rgba(46, 213, 115, 0.35);
+        }
+
+        footer {
+            text-align: center;
+            font-size: 13px;
+            color: #747d8c;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="nav-crumbs">
+                <a href="audio_preview.html" class="crumb-link">🎧 Classic 8-Bit Jukebox</a>
+                <span class="crumb-link active">🎻 Audio Studio V2 (Orchestral & Polyphonic)</span>
+                <a href="index.html" class="crumb-link">🎮 Play Sugar Splat</a>
+            </div>
+            <h1>Sugar Splat Audio Studio V2 🎻🎹</h1>
+            <p class="subtitle">
+                An unconstrained exploration of Sugar Splat's melodies!
+                Here we remove the 3-voice chiptune limit to explore <strong>lush multi-voice string ensembles</strong>, 
+                <strong>cozy FM Rhodes electric pianos</strong>, <strong>dreamy music boxes</strong>, <strong>analog supersaw synths</strong>, and <strong>deep ambient zen soundscapes</strong> with space echoes and vibrato.
+            </p>
+        </header>
+
+        <!-- Sticky Floating Master Player -->
+        <div class="sticky-player">
+            <div class="now-playing">
+                <div class="pulse-dot" id="pulseDot"></div>
+                <div>
+                    <div class="track-title" id="nowTitle">No Track Playing</div>
+                    <div class="track-desc" id="nowDesc">Click any play button below to listen</div>
+                </div>
+            </div>
+
+            <canvas id="visualizer" width="160" height="42"></canvas>
+
+            <div class="player-controls">
+                <div class="slider-group">
+                    <label for="tempoSlider">BPM:</label>
+                    <input type="range" id="tempoSlider" min="50" max="115" value="76" step="2" style="width: 65px;">
+                    <span id="tempoVal">76</span>
+                </div>
+                <div class="slider-group">
+                    <label for="reverbSlider">Space Echo:</label>
+                    <input type="range" id="reverbSlider" min="0" max="0.7" value="0.35" step="0.05" style="width: 55px;">
+                </div>
+                <div class="slider-group">
+                    <label for="volSlider">Vol:</label>
+                    <input type="range" id="volSlider" min="0" max="1" value="0.5" step="0.05" style="width: 55px;">
+                </div>
+                <button class="btn-stop" id="btnStop">⏹ Stop</button>
+            </div>
+        </div>
+
+        <!-- Composition Starter Tabs -->
+        <div class="tabs-header">
+            <button class="tab-btn active" data-composition="classic">
+                <span>🍬</span> Starter 1: Sweet Meadows (Classic C Major)
+            </button>
+            <button class="tab-btn" data-composition="caramel">
+                <span>🍯</span> Starter 2: Caramel Caverns (Level 51 Favorite - C Minor)
+            </button>
+            <button class="tab-btn" data-composition="citadel">
+                <span>👑</span> Starter 3: Sugar Citadel (Level 56 Regal - A Minor)
+            </button>
+        </div>
+
+        <!-- Live Layer Mixer -->
+        <div class="mixer-card">
+            <div class="mixer-label">
+                <span>🎛️ Live Multi-Voice Layer Mixer:</span>
+                <span style="font-size: 13px; color: #747d8c; font-weight: normal;">(Toggle voices in real time)</span>
+            </div>
+            <div class="mixer-toggles">
+                <label class="layer-toggle active" id="toggleMelody">
+                    <input type="checkbox" checked id="chkMelody"> Lead Melody (Violin / Flute / Synth)
+                </label>
+                <label class="layer-toggle active" id="togglePads">
+                    <input type="checkbox" checked id="chkPads"> Polyphonic Pads / Chords (Strings / Rhodes)
+                </label>
+                <label class="layer-toggle active" id="toggleBass">
+                    <input type="checkbox" checked id="chkBass"> Bass Line (Cello / Acoustic / Moog)
+                </label>
+                <label class="layer-toggle active" id="toggleArp">
+                    <input type="checkbox" checked id="chkArp"> Plucks & Chimes (Music Box / Celesta)
+                </label>
+            </div>
+        </div>
+
+        <!-- Variations Grid -->
+        <div class="grid" id="variationsGrid">
+            <!-- Populated via JavaScript -->
+        </div>
+
+        <footer>
+            Sugar Splat Audio Studio V2 • Real-time Web Audio API Polyphonic Synthesis Engine • Zero External Audio Samples Needed
+        </footer>
+    </div>
+
+    <script type="module">
+        import { GameConfig } from './src/Config.js';
+
+        // --- Audio Context & Graph ---
+        let audioCtx = null;
+        let masterGain = null;
+        let delayNode = null;
+        let delayFeedback = null;
+        let delayFilter = null;
+        let analyser = null;
+        let isPlaying = false;
+        let currentPlayback = null;
+        let currentCard = null;
+
+        // Mixer state
+        const mixerState = {
+            melody: true,
+            pads: true,
+            bass: true,
+            arp: true
+        };
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 64;
+
+                masterGain = audioCtx.createGain();
+                masterGain.gain.setValueAtTime(parseFloat(document.getElementById('volSlider').value) * 0.45, audioCtx.currentTime);
+
+                // Space Echo (Feedback Delay with warm lowpass filter)
+                delayNode = audioCtx.createDelay();
+                delayNode.delayTime.setValueAtTime(0.38, audioCtx.currentTime);
+
+                delayFeedback = audioCtx.createGain();
+                const sendVal = parseFloat(document.getElementById('reverbSlider').value);
+                delayFeedback.gain.setValueAtTime(sendVal, audioCtx.currentTime);
+
+                delayFilter = audioCtx.createBiquadFilter();
+                delayFilter.type = 'lowpass';
+                delayFilter.frequency.setValueAtTime(1400, audioCtx.currentTime);
+
+                // Delay loop: delay -> filter -> feedback -> delay
+                delayNode.connect(delayFilter);
+                delayFilter.connect(delayFeedback);
+                delayFeedback.connect(delayNode);
+                delayFilter.connect(masterGain);
+
+                masterGain.connect(analyser);
+                analyser.connect(audioCtx.destination);
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        // --- Canvas Spectrum Visualizer ---
+        const canvas = document.getElementById('visualizer');
+        const canvasCtx = canvas.getContext('2d');
+        function drawVisualizer() {
+            requestAnimationFrame(drawVisualizer);
+            if (!analyser) return;
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+
+            canvasCtx.fillStyle = '#1e272e';
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const barWidth = (canvas.width / bufferLength) * 1.5;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const barHeight = (dataArray[i] / 255) * canvas.height;
+                canvasCtx.fillStyle = isPlaying ? `hsl(${i * 10 + 140}, 90%, 65%)` : '#57606f';
+                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                x += barWidth + 1;
+            }
+        }
+        drawVisualizer();
+
+        // --- Master UI Elements ---
+        const pulseDot = document.getElementById('pulseDot');
+        const nowTitle = document.getElementById('nowTitle');
+        const nowDesc = document.getElementById('nowDesc');
+        const btnStop = document.getElementById('btnStop');
+        const tempoSlider = document.getElementById('tempoSlider');
+        const tempoVal = document.getElementById('tempoVal');
+        const volSlider = document.getElementById('volSlider');
+        const reverbSlider = document.getElementById('reverbSlider');
+
+        volSlider.addEventListener('input', (e) => {
+            if (masterGain && audioCtx) {
+                masterGain.gain.setValueAtTime(parseFloat(e.target.value) * 0.45, audioCtx.currentTime);
+            }
+        });
+
+        reverbSlider.addEventListener('input', (e) => {
+            if (delayFeedback && audioCtx) {
+                delayFeedback.gain.setValueAtTime(parseFloat(e.target.value), audioCtx.currentTime);
+            }
+        });
+
+        tempoSlider.addEventListener('input', (e) => {
+            tempoVal.textContent = e.target.value;
+            if (currentPlayback?.setTempo) {
+                currentPlayback.setTempo(parseInt(e.target.value));
+            }
+        });
+
+        // Layer Mixer Toggles
+        ['Melody', 'Pads', 'Bass', 'Arp'].forEach(name => {
+            const lower = name.toLowerCase();
+            const chk = document.getElementById('chk' + name);
+            const toggle = document.getElementById('toggle' + name);
+
+            chk.addEventListener('change', () => {
+                mixerState[lower] = chk.checked;
+                toggle.classList.toggle('active', chk.checked);
+            });
+        });
+
+        function stopCurrent() {
+            if (currentPlayback) {
+                currentPlayback.stop();
+                currentPlayback = null;
+            }
+            isPlaying = false;
+            pulseDot.classList.remove('active');
+            nowTitle.textContent = 'No Track Playing';
+            nowDesc.textContent = 'Click any play button below to listen';
+            if (currentCard) {
+                currentCard.classList.remove('active');
+                const btn = currentCard.querySelector('.btn-play');
+                if (btn) {
+                    btn.classList.remove('playing');
+                    btn.textContent = '▶ Play ' + (btn.dataset.label || '');
+                }
+                currentCard = null;
+            }
+        }
+        btnStop.addEventListener('click', stopCurrent);
+
+        // ==============================================================
+        // ADVANCED INSTRUMENT SYNTHESIZERS (UNCONSTRAINED WEB AUDIO API)
+        // ==============================================================
+
+        // 1. Lush Detuned Strings Voice (warm bow attack, chorus unison, vibrato LFO)
+        function playStringNote(ctx, freq, duration, time, vol = 0.22, isLead = false) {
+            if (!ctx) return;
+
+            // Two detuned oscillators for natural chorus warmth
+            const osc1 = ctx.createOscillator();
+            const osc2 = ctx.createOscillator();
+            const filter = ctx.createBiquadFilter();
+            const gain = ctx.createGain();
+
+            osc1.type = 'sawtooth';
+            osc2.type = 'triangle';
+
+            // Detuning in cents
+            osc1.detune.setValueAtTime(+5, time);
+            osc2.detune.setValueAtTime(-5, time);
+
+            osc1.frequency.setValueAtTime(freq, time);
+            osc2.frequency.setValueAtTime(freq, time);
+
+            // Warm lowpass bow filter
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(isLead ? 2200 : 1200, time);
+            filter.frequency.exponentialRampToValueAtTime(isLead ? 3000 : 1600, time + 0.1);
+            filter.frequency.exponentialRampToValueAtTime(isLead ? 1800 : 1000, time + duration);
+
+            // Vibrato LFO on lead notes
+            if (isLead && duration > 0.3) {
+                const lfo = ctx.createOscillator();
+                const lfoGain = ctx.createGain();
+                lfo.frequency.setValueAtTime(5.4, time); // 5.4 Hz violin vibrato
+                lfoGain.gain.setValueAtTime(0, time);
+                lfoGain.gain.linearRampToValueAtTime(freq * 0.015, time + 0.25); // Fade in vibrato
+                lfo.connect(lfoGain);
+                lfoGain.connect(osc1.frequency);
+                lfoGain.connect(osc2.frequency);
+                lfo.start(time);
+                lfo.stop(time + duration + 0.1);
+            }
+
+            // Envelope: gentle bow swell attack, sustain, smooth release
+            const attack = isLead ? 0.06 : 0.12;
+            const release = 0.18;
+            gain.gain.setValueAtTime(0, time);
+            gain.gain.linearRampToValueAtTime(vol, time + attack);
+            gain.gain.setValueAtTime(vol * 0.9, time + duration - release);
+            gain.gain.linearRampToValueAtTime(0, time + duration);
+
+            osc1.connect(filter);
+            osc2.connect(filter);
+            filter.connect(gain);
+            gain.connect(masterGain);
+            if (delayNode) gain.connect(delayNode);
+
+            osc1.start(time);
+            osc2.start(time);
+            osc1.stop(time + duration + 0.05);
+            osc2.stop(time + duration + 0.05);
+        }
+
+        // 2. FM Electric Piano (Rhodes / Tine Bell sound)
+        function playFMRhodes(ctx, freq, duration, time, vol = 0.25) {
+            if (!ctx) return;
+
+            const carrier = ctx.createOscillator();
+            const modulator = ctx.createOscillator();
+            const modGain = ctx.createGain();
+            const outGain = ctx.createGain();
+
+            carrier.type = 'sine';
+            modulator.type = 'sine';
+
+            carrier.frequency.setValueAtTime(freq, time);
+            modulator.frequency.setValueAtTime(freq * 2, time); // 2:1 harmonic ratio for bell chime
+
+            // FM index envelope: bright metallic bell attack decaying into warm sine body
+            modGain.gain.setValueAtTime(freq * 1.8, time);
+            modGain.gain.exponentialRampToValueAtTime(1, time + 0.15);
+
+            modulator.connect(modGain);
+            modGain.connect(carrier.frequency);
+
+            // Amplitude envelope
+            outGain.gain.setValueAtTime(0, time);
+            outGain.gain.linearRampToValueAtTime(vol, time + 0.01);
+            outGain.gain.exponentialRampToValueAtTime(0.001, time + duration + 0.2);
+
+            carrier.connect(outGain);
+            outGain.connect(masterGain);
+            if (delayNode) outGain.connect(delayNode);
+
+            modulator.start(time);
+            carrier.start(time);
+            modulator.stop(time + duration + 0.25);
+            carrier.stop(time + duration + 0.25);
+        }
+
+        // 3. Music Box / Celesta (pure high crystalline plucks)
+        function playMusicBox(ctx, freq, duration, time, vol = 0.18) {
+            if (!ctx) return;
+
+            const osc = ctx.createOscillator();
+            const overtone = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const overGain = ctx.createGain();
+
+            osc.type = 'sine';
+            overtone.type = 'sine';
+
+            osc.frequency.setValueAtTime(freq, time);
+            overtone.frequency.setValueAtTime(freq * 3.01, time); // Subtle metallic overtone
+
+            gain.gain.setValueAtTime(vol, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+
+            overGain.gain.setValueAtTime(vol * 0.35, time);
+            overGain.gain.exponentialRampToValueAtTime(0.0001, time + 0.1);
+
+            osc.connect(gain);
+            overtone.connect(overGain);
+            gain.connect(masterGain);
+            overGain.connect(masterGain);
+            if (delayNode) {
+                gain.connect(delayNode);
+                overGain.connect(delayNode);
+            }
+
+            osc.start(time);
+            overtone.start(time);
+            osc.stop(time + duration + 0.02);
+            overtone.stop(time + duration + 0.02);
+        }
+
+        // 4. Analog Supersaw Synth Pad (Dreamwave / Synthwave)
+        function playSupersaw(ctx, freq, duration, time, vol = 0.2) {
+            if (!ctx) return;
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.Q.setValueAtTime(2.5, time);
+            filter.frequency.setValueAtTime(800, time);
+            filter.frequency.exponentialRampToValueAtTime(2800, time + duration * 0.4);
+            filter.frequency.exponentialRampToValueAtTime(900, time + duration);
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0, time);
+            gain.gain.linearRampToValueAtTime(vol, time + 0.08);
+            gain.gain.setValueAtTime(vol * 0.85, time + duration - 0.1);
+            gain.gain.linearRampToValueAtTime(0, time + duration);
+
+            [-8, 0, +8].forEach(detune => {
+                const osc = ctx.createOscillator();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(freq, time);
+                osc.detune.setValueAtTime(detune, time);
+                osc.connect(filter);
+                osc.start(time);
+                osc.stop(time + duration + 0.05);
+            });
+
+            filter.connect(gain);
+            gain.connect(masterGain);
+            if (delayNode) gain.connect(delayNode);
+        }
+
+        // 5. Wooden Marimba / Kalimba Pluck
+        function playMarimba(ctx, freq, duration, time, vol = 0.24) {
+            if (!ctx) return;
+
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = 'triangle';
+            // Fast pitch envelope gives the wooden mallet 'thump'
+            osc.frequency.setValueAtTime(freq * 1.4, time);
+            osc.frequency.exponentialRampToValueAtTime(freq, time + 0.025);
+
+            gain.gain.setValueAtTime(vol, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+
+            osc.connect(gain);
+            gain.connect(masterGain);
+            if (delayNode) gain.connect(delayNode);
+
+            osc.start(time);
+            osc.stop(time + duration + 0.02);
+        }
+
+        // 6. Deep Analog Moog / Acoustic Bass
+        function playDeepBass(ctx, freq, duration, time, vol = 0.35, isAnalog = false) {
+            if (!ctx) return;
+
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const filter = ctx.createBiquadFilter();
+
+            osc.type = isAnalog ? 'sawtooth' : 'triangle';
+            osc.frequency.setValueAtTime(freq, time);
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(isAnalog ? 450 : 280, time);
+            if (isAnalog) {
+                filter.Q.setValueAtTime(3, time);
+                filter.frequency.exponentialRampToValueAtTime(150, time + 0.18);
+            }
+
+            gain.gain.setValueAtTime(0, time);
+            gain.gain.linearRampToValueAtTime(vol, time + 0.02);
+            gain.gain.setValueAtTime(vol * 0.9, time + duration - 0.04);
+            gain.gain.linearRampToValueAtTime(0, time + duration);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(masterGain);
+
+            osc.start(time);
+            osc.stop(time + duration + 0.02);
+        }
+
+        // ==============================================================
+        // MASTER MULTI-VOICE SEQUENCING ENGINE
+        // ==============================================================
+        function playSuite({ title, styleName, chords, melodies, tempo, styleId, cardEl }) {
+            stopCurrent();
+            const ctx = getAudioContext();
+
+            tempoSlider.value = tempo;
+            tempoVal.textContent = tempo;
+
+            isPlaying = true;
+            pulseDot.classList.add('active');
+            nowTitle.textContent = title;
+            nowDesc.textContent = styleName + ' • ' + tempo + ' BPM (Polyphonic Studio)';
+
+            if (cardEl) {
+                currentCard = cardEl;
+                cardEl.classList.add('active');
+                const btn = cardEl.querySelector('.btn-play');
+                if (btn) {
+                    btn.classList.add('playing');
+                    btn.textContent = '⏹ Stop Playing';
+                }
+            }
+
+            let stepIndex = 0;
+            let currentTempo = tempo;
+            let currentSection = 'A';
+            let sectionIndex = 0;
+            let measureCount = 0;
+            let isRunning = true;
+            let timerId = null;
+
+            const sections = ['A', 'B', 'A', 'B'];
+            const beatsPerChord = 16;
+            const beatsPerMeasure = beatsPerChord * chords.length;
+
+            let nextTime = ctx.currentTime + 0.05;
+
+            function schedule() {
+                if (!isRunning) return;
+                const secondsPerStep = 60 / currentTempo / 4;
+
+                while (nextTime < ctx.currentTime + 0.3) {
+                    const chordIndex = Math.floor(stepIndex / beatsPerChord) % chords.length;
+                    const step = stepIndex % beatsPerChord;
+                    const chord = chords[chordIndex];
+
+                    if (stepIndex > 0 && stepIndex % beatsPerMeasure === 0) {
+                        measureCount++;
+                        if (measureCount >= 4) {
+                            measureCount = 0;
+                            sectionIndex = (sectionIndex + 1) % sections.length;
+                            currentSection = sections[sectionIndex];
+                        }
+                    }
+
+                    const melody = melodies[currentSection] || melodies.A;
+
+                    // 1. POLYPHONIC CHORD PADS (Beat 0 of each measure - sustains for 4 beats!)
+                    if (step === 0 && chord.arp && mixerState.pads) {
+                        const padDuration = secondsPerStep * 15;
+                        chord.arp.forEach((noteFreq, idx) => {
+                            if (styleId === 'strings') {
+                                playStringNote(ctx, noteFreq, padDuration, nextTime, 0.16, false);
+                            } else if (styleId === 'rhodes') {
+                                playFMRhodes(ctx, noteFreq, padDuration, nextTime, 0.18);
+                            } else if (styleId === 'synthwave') {
+                                playSupersaw(ctx, noteFreq, padDuration, nextTime, 0.16);
+                            } else if (styleId === 'zen') {
+                                playStringNote(ctx, noteFreq * 0.5, padDuration * 1.5, nextTime, 0.14, false);
+                            } else if (styleId === 'marimba') {
+                                playMarimba(ctx, noteFreq, secondsPerStep * 2, nextTime, 0.15);
+                            }
+                        });
+                    }
+
+                    // 2. BASS LINE (Steps 0 and 8)
+                    if ((step === 0 || step === 8) && chord.bass && mixerState.bass) {
+                        const bassDur = secondsPerStep * 6;
+                        if (styleId === 'synthwave') {
+                            playDeepBass(ctx, chord.bass, bassDur, nextTime, 0.32, true); // Moog saw
+                        } else if (styleId === 'strings') {
+                            playStringNote(ctx, chord.bass, bassDur, nextTime, 0.28, false); // Cello
+                        } else {
+                            playDeepBass(ctx, chord.bass, bassDur, nextTime, 0.35, false); // Acoustic sine/triangle
+                        }
+                    }
+
+                    // 3. ARPEGGIOS & PLUCKS (Every 2nd step)
+                    if (step % 2 === 0 && chord.arp && mixerState.arp) {
+                        const arpIdx = (step / 2) % chord.arp.length;
+                        const arpNote = chord.arp[arpIdx];
+                        const arpDur = secondsPerStep * 1.6;
+
+                        if (styleId === 'marimba') {
+                            playMarimba(ctx, arpNote, arpDur, nextTime, 0.2);
+                        } else if (styleId === 'rhodes') {
+                            playMusicBox(ctx, arpNote * 2, arpDur, nextTime, 0.15);
+                        } else if (styleId === 'zen') {
+                            playMusicBox(ctx, arpNote, arpDur * 2, nextTime, 0.12);
+                        } else if (styleId === 'strings') {
+                            playMarimba(ctx, arpNote, arpDur, nextTime, 0.12);
+                        } else if (styleId === 'synthwave') {
+                            playFMRhodes(ctx, arpNote, arpDur, nextTime, 0.18);
+                        }
+                    }
+
+                    // 4. LEAD MELODY (Every 4th step - quarter notes)
+                    if (step % 4 === 0 && melody && melody.length > 0 && mixerState.melody) {
+                        const mIdx = (stepIndex / 4) % melody.length;
+                        const note = melody[mIdx];
+                        if (note > 0) {
+                            const noteDur = secondsPerStep * 3.6;
+                            if (styleId === 'strings') {
+                                playStringNote(ctx, note, noteDur, nextTime, 0.28, true); // Soaring Solo Violin
+                            } else if (styleId === 'rhodes') {
+                                playFMRhodes(ctx, note, noteDur, nextTime, 0.26); // Bell Lead
+                            } else if (styleId === 'synthwave') {
+                                playSupersaw(ctx, note, noteDur, nextTime, 0.25); // Lead Synth
+                            } else if (styleId === 'marimba') {
+                                playMarimba(ctx, note, noteDur, nextTime, 0.28); // Resonant Mallet
+                            } else if (styleId === 'zen') {
+                                playMusicBox(ctx, note, noteDur * 1.5, nextTime, 0.22); // Celestial Chime
+                            }
+                        }
+                    }
+
+                    nextTime += secondsPerStep;
+                    stepIndex++;
+                }
+
+                timerId = setTimeout(schedule, 35);
+            }
+
+            schedule();
+
+            currentPlayback = {
+                stop() {
+                    isRunning = false;
+                    clearTimeout(timerId);
+                },
+                setTempo(t) {
+                    currentTempo = t;
+                }
+            };
+        }
+
+        // ==============================================================
+        // COMPOSITION STARTERS & VARIATIONS DEFINITIONS
+        // ==============================================================
+        const compositions = {
+            classic: {
+                id: 'classic',
+                name: 'Sweet Meadows',
+                subtitle: 'The Beloved Sugar Splat Original Theme (C Major)',
+                tempo: 78,
+                chords: GameConfig.AUDIO.MUSIC.CHORDS,
+                melodies: {
+                    A: GameConfig.AUDIO.MUSIC.MELODY_A,
+                    B: GameConfig.AUDIO.MUSIC.MELODY_B,
+                    C: GameConfig.AUDIO.MUSIC.MELODY_C,
+                    D: GameConfig.AUDIO.MUSIC.MELODY_D
+                }
+            },
+            caramel: {
+                id: 'caramel',
+                name: 'Caramel Caverns',
+                subtitle: 'Level 51 Favorite • Warm Subterranean Groove (C Minor)',
+                tempo: 84,
+                chords: GameConfig.AUDIO.MUSIC.WORLD_THEMES[11].chords,
+                melodies: {
+                    A: GameConfig.AUDIO.MUSIC.WORLD_THEMES[11].melodies.A,
+                    B: GameConfig.AUDIO.MUSIC.WORLD_THEMES[11].melodies.B
+                }
+            },
+            citadel: {
+                id: 'citadel',
+                name: 'Sugar Citadel',
+                subtitle: 'Level 56 Regal Anthem • Heroic Royal Harmony (A Minor)',
+                tempo: 90,
+                chords: GameConfig.AUDIO.MUSIC.WORLD_THEMES[12].chords,
+                melodies: {
+                    A: GameConfig.AUDIO.MUSIC.WORLD_THEMES[12].melodies.A,
+                    B: GameConfig.AUDIO.MUSIC.WORLD_THEMES[12].melodies.B
+                }
+            }
+        };
+
+        const variationStyles = [
+            {
+                id: 'strings',
+                title: 'Lush Chamber Strings Ensemble',
+                tag: 'Calm & Warm • Polyphonic Strings',
+                icon: '🎻',
+                desc: 'Warm cello bassline, multi-voice viola & violin chord pads with detuned chorus warmth, and a soaring expressive solo violin lead with natural vibrato.',
+                pills: ['Multi-Voice Strings', 'Vibrato LFO Lead', 'Detuned Chorus', 'Calm & Elegant', 'Pad Sustain'],
+                pillClass: 'lush',
+                tempoOffset: -4
+            },
+            {
+                id: 'rhodes',
+                title: 'Cozy Rhodes & Music Box',
+                tag: 'Nostalgic & Dreamy • FM Tine Synthesis',
+                icon: '🎹',
+                desc: 'Authentic 2-operator FM electric piano chords paired with high crystalline music box chimes, warm acoustic sine bass, and spacious analog echo.',
+                pills: ['FM Electric Piano', 'Music Box Bells', 'Analog Tape Echo', 'Ultra Cozy', 'Dreamy Plucks'],
+                pillClass: 'calm',
+                tempoOffset: -6
+            },
+            {
+                id: 'synthwave',
+                title: '80s Dreamwave Supersaw Pad',
+                tag: 'Rich & Euphoric • Analog Synth Suite',
+                icon: '🌌',
+                desc: 'Lush 3-voice unison supersaw pads with filter sweeps, punchy analog Moog-style resonant bass, and shimmering chorus bell counter-melodies.',
+                pills: ['Triple Supersaw', 'Analog Moog Bass', 'Chorus Echo', 'Filter Sweeps', 'Rich Harmonics'],
+                pillClass: 'synth',
+                tempoOffset: 2
+            },
+            {
+                id: 'marimba',
+                title: 'Enchanted Marimba & Kalimba',
+                tag: 'Organic & Whimsical • Mallet Percussion',
+                icon: '🪵',
+                desc: 'Warm wooden mallet strikes with fast pitch-drop percussive attacks, organic marimba arpeggios, and resonant wooden lead melodies.',
+                pills: ['Wooden Marimba', 'Kalimba Plucks', 'Airy Flute', 'Whimsical', 'Percussive Bounce'],
+                pillClass: 'calm',
+                tempoOffset: 0
+            },
+            {
+                id: 'zen',
+                title: 'Deep Ambient Zen & Celestial Harp',
+                tag: 'Deeply Calming • Spacious Meditation',
+                icon: '🌊',
+                desc: 'Slow-evolving ambient drone pads with celestial chimes and spacious echoes. Stripped of harshness to create pure, meditative relaxation.',
+                pills: ['Evolving Drones', 'Celestial Chimes', 'Wide Space Reverb', 'Stress-Relief', 'Slow Swell'],
+                pillClass: 'calm',
+                tempoOffset: -12
+            }
+        ];
+
+        let currentCompositionKey = 'classic';
+
+        function renderGrid() {
+            const comp = compositions[currentCompositionKey];
+            const grid = document.getElementById('variationsGrid');
+            grid.innerHTML = '';
+
+            variationStyles.forEach(style => {
+                const card = document.createElement('div');
+                card.className = 'card';
+
+                const effectiveTempo = Math.max(50, comp.tempo + style.tempoOffset);
+
+                card.innerHTML = `
+                    <div>
+                        <div class="card-header">
+                            <div class="badge-icon">${style.icon}</div>
+                            <div>
+                                <div class="card-title">${style.title}</div>
+                                <div class="card-tag">${comp.name} • ${style.tag}</div>
+                            </div>
+                        </div>
+                        <p class="card-desc">${style.desc}</p>
+                        <div class="specs">
+                            <span class="spec-pill ${style.pillClass}">${effectiveTempo} BPM</span>
+                            ${style.pills.map(p => `<span class="spec-pill ${style.pillClass}">${p}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-play" data-label="${style.title.split(' ')[0]}">
+                            ▶ Play ${style.title.split(' ')[0]} Suite
+                        </button>
+                    </div>
+                `;
+
+                const btnPlay = card.querySelector('.btn-play');
+                btnPlay.addEventListener('click', () => {
+                    if (card.classList.contains('active')) {
+                        stopCurrent();
+                    } else {
+                        playSuite({
+                            title: `${comp.name} — ${style.title}`,
+                            styleName: style.title,
+                            chords: comp.chords,
+                            melodies: comp.melodies,
+                            tempo: effectiveTempo,
+                            styleId: style.id,
+                            cardEl: card
+                        });
+                    }
+                });
+
+                grid.appendChild(card);
+            });
+        }
+
+        // Tab Switching
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentCompositionKey = btn.dataset.composition;
+                stopCurrent();
+                renderGrid();
+            });
+        });
+
+        // Initial Render
+        renderGrid();
+    </script>
+</body>
+</html>
