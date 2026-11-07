@@ -483,15 +483,18 @@ export default class GameScene extends Phaser.Scene {
         // Award powerups based on stars
         const awardedPowerups = this.powerupManager.award(stars);
 
+        const totalLevels = Object.keys(LevelData).length;
+
         // Show win dialog
         this.dialogManager.showWin({
             score: this.score,
             stars,
             awardedPowerups,
             currentLevel: this.currentLevel,
-            onNext: () => this.currentLevel < 40
+            maxLevel: totalLevels,
+            onNext: () => this.currentLevel < totalLevels
                 ? this.scene.restart({ level: this.currentLevel + 1 })
-                : this.scene.start('MenuScene'),
+                : this.scene.start('LevelSelectScene'),
             onReplay: () => this.scene.restart({ level: this.currentLevel }),
             onLevelSelect: () => this.scene.start('LevelSelectScene'),
             soundManager: this.soundManager

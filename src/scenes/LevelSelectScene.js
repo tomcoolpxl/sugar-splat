@@ -1,10 +1,11 @@
 import { GameConfig } from '../Config.js';
 import C64Sequencer from '../systems/C64Sequencer.js';
+import { LevelData } from '../data/LevelData.js';
 
 export default class LevelSelectScene extends Phaser.Scene {
     constructor() {
         super('LevelSelectScene');
-        this.totalLevels = 60;
+        this.totalLevels = Object.keys(LevelData).length;
         this.columns = 5;
         this.levelsPerPage = 20;
         this.currentPage = 0;

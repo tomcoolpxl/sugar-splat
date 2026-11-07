@@ -157,7 +157,8 @@ export default class DialogManager {
     }
 
     showWin(config) {
-        const { score, stars, awardedPowerups, currentLevel, onNext, onReplay, onLevelSelect, soundManager } = config;
+        const { score, stars, awardedPowerups, currentLevel, onNext, onReplay, onLevelSelect, soundManager, maxLevel } = config;
+        const totalLevels = maxLevel || 60;
 
         const overlay = this.createOverlay();
         const container = this.createContainer();
@@ -257,10 +258,10 @@ export default class DialogManager {
         // Buttons (65px spacing for comfortable touch targets)
         const buttonSpacing = 65;
 
-        if (currentLevel < 40) {
+        if (currentLevel < totalLevels) {
             this.createButton(container, 0, buttonStartY, 'Next Level', onNext);
         } else {
-            this.createButton(container, 0, buttonStartY, 'Main Menu', onNext);
+            this.createButton(container, 0, buttonStartY, 'Level Select', onNext);
         }
 
         this.createButton(container, 0, buttonStartY + buttonSpacing, 'Replay', onReplay);
